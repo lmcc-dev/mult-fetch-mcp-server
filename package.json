@@ -1,0 +1,48 @@
+{
+  "name": "mult-fetch-mcp-server",
+  "version": "1.0.0",
+  "description": "一个基于 MCP 协议的网页内容获取工具，支持多种模式和格式，可与 Claude 等 AI 助手集成",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "mult-fetch-mcp-server": "./dist/index.js"
+  },
+  "license": "MIT",
+  "author": "Martin (@lmcc.dev)",
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/src/*.js dist/tests/*.js || true && shx chmod +x dist/*.js || true",
+    "prepare": "npm run build",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "test:mcp": "node dist/tests/test-mcp.js",
+    "test:mini4k": "node dist/tests/test-mini4k.js",
+    "test:direct": "node dist/tests/test-direct-client.js",
+    "client": "node dist/src/client.js",
+    "server": "node dist/index.js",
+    "publish": "npm publish --access public"
+  },
+  "keywords": [],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "@types/node-fetch": "^2.6.12",
+    "@types/puppeteer": "^5.4.7",
+    "http-proxy-agent": "^7.0.2",
+    "https-proxy-agent": "^7.0.6",
+    "i18next": "^24.2.2",
+    "jsdom": "^25.0.1",
+    "node-fetch": "^2.7.0",
+    "puppeteer": "^24.4.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "socks-proxy-agent": "^8.0.5",
+    "turndown": "^7.2.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^22.10.2",
+    "@types/turndown": "^5.0.5",
+    "shx": "^0.3.4",
+    "typescript": "^5.7.2"
+  }
+}

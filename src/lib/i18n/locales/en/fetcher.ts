@@ -1,0 +1,52 @@
+/**
+ * Author: Martin <lmccc.dev@gmail.com>  
+ * Co-Author: AI Assistant (Claude)
+ * Description: This code was collaboratively developed by Martin and AI Assistant.
+ */
+
+// 获取器相关消息 (Fetcher related messages)
+export const fetcher = {
+  addingDelay: "Adding random delay",
+  delayCompleted: "Delay completed after {{delay}}ms",
+  usingProxy: "Using proxy: {{proxy}}",
+  usingSpecifiedProxy: "Using specified proxy: {{proxy}}",
+  attemptingToUseSystemProxy: "Attempting to use system proxy",
+  notUsingProxy: "Not using any proxy",
+  finalProxyUsed: "Final proxy used: {{proxy}}",
+  noProxy: "No proxy will be used",
+  fetchingUrl: "Fetching URL: {{url}} (Redirect: {{redirect}})",
+  usingUserAgent: "Using User-Agent: {{userAgent}}",
+  usingHttpsProxy: "Using HTTPS proxy",
+  usingHttpProxy: "Using HTTP proxy",
+  requestOptions: "Request options: {{options}}",
+  startingFetch: "Starting fetch",
+  fetchCompleted: "Fetch completed in {{duration}}ms",
+  responseStatus: "Response status: {{status}} {{statusText}}",
+  redirectingTo: "Redirecting to: {{location}}",
+  constructedFullRedirectUrl: "Constructed full redirect URL: {{redirectUrl}}",
+  requestSuccess: "Request successful",
+  errorResponse: "Error response: {{status}} {{statusText}}",
+  errorResponseBody: "Error response body (first 200 chars): {{body}}",
+  errorReadingBody: "Error reading response body: {{error}}",
+  fetchError: "Fetch error: {{error}}",
+  requestAborted: "Request aborted after {{duration}}ms",
+  networkError: "Network error ({{code}}), might retry with browser mode",
+  requestTimeout: "Request timeout after {{duration}}ms",
+  fetchFailed: "Failed to fetch: {{error}}",
+  tooManyRedirects: "Too many redirects ({{redirects}})",
+  startingHtmlFetch: "Starting HTML fetch",
+  readingText: "Reading text content",
+  htmlContentLength: "HTML content length: {{length}} bytes",
+  startingJsonFetch: "Starting JSON fetch",
+  parsingJson: "Parsing JSON",
+  jsonParsed: "JSON parsed successfully",
+  jsonParseError: "JSON parse error: {{error}}",
+  startingTxtFetch: "Starting text fetch",
+  textContentLength: "Text content length: {{length}} bytes",
+  startingMarkdownFetch: "Starting Markdown fetch",
+  creatingTurndown: "Creating Turndown service",
+  convertingToMarkdown: "Converting to Markdown",
+  markdownContentLength: "Markdown content length: {{length}} bytes",
+  debug: "{{message}}",
+  none: "none"
+}; 

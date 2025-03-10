@@ -1,0 +1,34 @@
+# 源代码文件（已编译到 dist 目录）
+src/
+tests/
+
+# 开发配置文件
+.git/
+.github/
+.vscode/
+.idea/
+.editorconfig
+.eslintrc
+.prettierrc
+tsconfig.json
+
+# 测试文件
+*.test.js
+*.spec.js
+test/
+coverage/
+
+# 临时文件和日志
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+
+# 其他不需要发布的文件
+.gitignore
+.travis.yml
+.gitlab-ci.yml
+CONTRIBUTING.md
+CHANGELOG.md 
