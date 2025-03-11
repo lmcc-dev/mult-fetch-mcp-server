@@ -1,15 +1,15 @@
 # mult-fetch-mcp-server
 
-[![npm version](https://img.shields.io/npm/v/mult-fetch-mcp-server.svg)](https://www.npmjs.com/package/mult-fetch-mcp-server)
+[![npm version](https://img.shields.io/npm/v/@lmcc-dev/mult-fetch-mcp-server.svg)](https://www.npmjs.com/package/@lmcc-dev/mult-fetch-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/node/v/mult-fetch-mcp-server)](https://nodejs.org/)
+[![Node.js Version](https://img.shields.io/node/v/@lmcc-dev/mult-fetch-mcp-server)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.6.1-brightgreen.svg)](https://github.com/modelcontextprotocol/typescript-sdk)
 [![GitHub Stars](https://img.shields.io/github/stars/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/pulls)
-[![npm downloads](https://img.shields.io/npm/dm/mult-fetch-mcp-server.svg)](https://www.npmjs.com/package/mult-fetch-mcp-server)
+[![npm downloads](https://img.shields.io/badge/downloads-coming%20soon-lightgrey)](https://www.npmjs.com/package/@lmcc-dev/mult-fetch-mcp-server)
 [![GitHub last commit](https://img.shields.io/github/last-commit/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/commits/main)
 [![GitHub contributors](https://img.shields.io/github/contributors/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/graphs/contributors)
 
@@ -85,13 +85,13 @@ npm install
 ### Global Installation
 
 ```bash
-npm install -g mult-fetch-mcp-server
+npm install -g @lmcc-dev/mult-fetch-mcp-server
 ```
 
 Or use npx to run directly (no installation required):
 
 ```bash
-npx mult-fetch-mcp-server
+npx @lmcc-dev/mult-fetch-mcp-server
 ```
 
 ## Integration with Claude
@@ -114,7 +114,7 @@ This method is the simplest, doesn't require specifying the full path, and is su
   "mcpServers": {
     "mult-fetch-mcp-server": {
       "command": "npx",
-      "args": ["mult-fetch-mcp-server"],
+      "args": ["@lmcc-dev/mult-fetch-mcp-server"],
       "env": {
         "MCP_LANG": "en"  // Set language to English, options: "zh" or "en"
       }
@@ -132,7 +132,7 @@ If you need to use a specific installation location, you can specify the full pa
   "mcpServers": {
     "mult-fetch-mcp-server": {
       "command": "path-to/bin/node",
-      "args": ["path-to/mult-fetch-mcp-server/dist/index.js"],
+      "args": ["path-to/@lmcc-dev/mult-fetch-mcp-server/dist/index.js"],
       "env": {
         "MCP_LANG": "en"  // Set language to English, options: "zh" or "en"
       }
@@ -141,7 +141,7 @@ If you need to use a specific installation location, you can specify the full pa
 }
 ```
 
-Please replace `path-to/bin/node` with the path to the Node.js executable on your system, and replace `path-to/mult-fetch-mcp-server` with the actual path to this project.
+Please replace `path-to/bin/node` with the path to the Node.js executable on your system, and replace `path-to/@lmcc-dev/mult-fetch-mcp-server` with the actual path to this project.
 
 ### Usage Examples
 
@@ -173,9 +173,9 @@ npm run server
 # or
 node dist/index.js
 # if globally installed, you can run directly
-mult-fetch-mcp-server
+@lmcc-dev/mult-fetch-mcp-server
 # or use npx
-npx mult-fetch-mcp-server
+npx @lmcc-dev/mult-fetch-mcp-server
 ```
 
 ## Run Client

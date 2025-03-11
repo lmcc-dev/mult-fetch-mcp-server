@@ -1,15 +1,15 @@
 # mult-fetch-mcp-server
 
-[![npm 版本](https://img.shields.io/npm/v/mult-fetch-mcp-server.svg)](https://www.npmjs.com/package/mult-fetch-mcp-server)
+[![npm 版本](https://img.shields.io/npm/v/@lmcc-dev/mult-fetch-mcp-server.svg)](https://www.npmjs.com/package/@lmcc-dev/mult-fetch-mcp-server)
 [![许可证: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js 版本](https://img.shields.io/node/v/mult-fetch-mcp-server)](https://nodejs.org/)
+[![Node.js 版本](https://img.shields.io/node/v/@lmcc-dev/mult-fetch-mcp-server)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.6.1-brightgreen.svg)](https://github.com/modelcontextprotocol/typescript-sdk)
 [![GitHub Stars](https://img.shields.io/github/stars/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/pulls)
-[![npm 下载量](https://img.shields.io/npm/dm/mult-fetch-mcp-server.svg)](https://www.npmjs.com/package/mult-fetch-mcp-server)
+[![npm 下载量](https://img.shields.io/badge/下载量-即将更新-lightgrey)](https://www.npmjs.com/package/@lmcc-dev/mult-fetch-mcp-server)
 [![GitHub 最后提交](https://img.shields.io/github/last-commit/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/commits/main)
 [![GitHub 贡献者](https://img.shields.io/github/contributors/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/graphs/contributors)
 
@@ -132,7 +132,7 @@ npx mult-fetch-mcp-server
   "mcpServers": {
     "mult-fetch-mcp-server": {
       "command": "path-to/bin/node",
-      "args": ["path-to/mult-fetch-mcp-server/dist/index.js"],
+      "args": ["path-to/@lmcc-dev/mult-fetch-mcp-server/dist/index.js"],
       "env": {
         "MCP_LANG": "zh"  // 设置语言为中文，可选值: "zh" 或 "en"
       }
@@ -141,7 +141,7 @@ npx mult-fetch-mcp-server
 }
 ```
 
-请将 `path-to/bin/node` 替换为您系统上 Node.js 可执行文件的路径，将 `path-to/mult-fetch-mcp-server` 替换为此项目的实际路径。
+请将 `path-to/bin/node` 替换为您系统上 Node.js 可执行文件的路径，将 `path-to/@lmcc-dev/mult-fetch-mcp-server` 替换为此项目的实际路径。
 
 ### 使用示例
 
