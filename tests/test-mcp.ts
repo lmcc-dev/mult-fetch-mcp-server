@@ -51,7 +51,10 @@ async function testMCP() {
     const transport = new StdioClientTransport({
       command: 'node',
       args: [serverPath],
-      stderr: 'inherit'
+      stderr: 'inherit',
+      env: {
+        ...process.env,  // 传递所有环境变量，包括MCP_LANG
+      }
     });
     
     // 创建客户端
