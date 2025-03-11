@@ -4,18 +4,13 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { JSDOM } from "jsdom";
 import TurndownService from "turndown";
 import { RequestPayload } from "./types.js";
 import fetch from "node-fetch";
 import { HttpProxyAgent } from "http-proxy-agent";
 import { HttpsProxyAgent } from "https-proxy-agent";
 import { Agent } from "http";
-import fs from 'fs';
-import path from 'path';
 import { execSync } from 'child_process';
-import os from 'os';
-import { SocksProxyAgent } from 'socks-proxy-agent';
 import { t } from './i18n/index.js';
 import { log, COMPONENTS } from './logger.js';
 

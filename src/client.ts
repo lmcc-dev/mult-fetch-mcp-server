@@ -6,8 +6,6 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { spawn } from 'child_process';
-import { BrowserFetcher } from './lib/BrowserFetcher.js';
 import { RequestPayload } from './lib/types.js';
 import path from 'path';
 import { fileURLToPath } from 'url';

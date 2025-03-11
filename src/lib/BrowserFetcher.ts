@@ -4,19 +4,14 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import puppeteer from 'puppeteer';
 import { Browser, Page } from 'puppeteer';
 import puppeteerExtra from 'puppeteer-extra';
 import { RequestPayload } from './types.js';
 import TurndownService from 'turndown';
-import fs from 'fs';
-import path from 'path';
 import { execSync } from 'child_process';
-import os from 'os';
 import { t } from './i18n/index.js';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { log, COMPONENTS } from './logger.js';
-import { NodeFetcher } from './NodeFetcher.js';
 import { JSDOM } from 'jsdom';
 
 // 添加stealth插件
