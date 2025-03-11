@@ -5,6 +5,7 @@
  */
 
 import { createLogger } from './i18n/logger.js';
+import { t } from './i18n/index.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -49,13 +50,33 @@ function getLogger(component: string) {
 }
 
 /**
+ * 获取格式化的本地时间 (Get formatted local time)
+ * @returns 格式化的本地时间字符串 (Formatted local time string)
+ */
+function getFormattedLocalTime(): string {
+  const now = new Date();
+  
+  // 获取本地时间的年、月、日、时、分、秒、毫秒
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+  
+  // 格式化为 YYYY-MM-DD HH:MM:SS.mmm
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
+/**
  * 将日志写入文件 (Write log to file)
  * @param component 组件名称 (Component name)
  * @param message 日志消息 (Log message)
  */
 function writeToLogFile(component: string, message: string): void {
   try {
-    const timestamp = new Date().toISOString();
+    const timestamp = getFormattedLocalTime();
     const logEntry = `${timestamp} [${component}] ${message}\n`;
     fs.appendFileSync(LOG_FILE, logEntry);
   } catch (error) {
@@ -102,7 +123,17 @@ export function log(key: string, debug: boolean = false, options?: any, componen
   // 输出到控制台 (Output to console)
   logger.debug(key, options, debug);
   
+  // 翻译消息 (Translate message)
+  let translatedMessage;
+  try {
+    const translated = t(key, options);
+    // 确保 translatedMessage 是字符串 (Ensure translatedMessage is a string)
+    translatedMessage = typeof translated === 'string' ? translated : JSON.stringify(translated);
+  } catch (error) {
+    // 如果翻译失败，使用原始消息 (If translation fails, use original message)
+    translatedMessage = typeof key === 'string' ? key : JSON.stringify(key);
+  }
+  
   // 写入日志文件 (Write to log file)
-  const message = typeof key === 'string' ? key : JSON.stringify(key);
-  writeToLogFile(component, message);
+  writeToLogFile(component, translatedMessage);
 } 

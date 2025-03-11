@@ -247,9 +247,68 @@ npm run server
 // 访问调试日志文件
 const result = await client.readResource({ uri: "file:///logs/debug" });
 console.log(result.contents[0].text);
+
+// 清除调试日志文件
+const clearResult = await client.readResource({ uri: "file:///logs/clear" });
+console.log(clearResult.contents[0].text);
 ```
 
 日志文件包含来自所有组件（服务器、客户端、获取器）的带时间戳的条目，可用于排查问题。
+
+## 代理设置
+
+本工具支持多种配置代理设置的方法：
+
+### 1. 使用 `proxy` 参数
+
+最直接的方式是在请求参数中指定代理：
+
+```json
+{
+  "url": "https://example.com",
+  "proxy": "http://your-proxy-server:port",
+  "debug": true
+}
+```
+
+### 2. 使用环境变量
+
+工具会自动检测并使用标准环境变量中的代理设置：
+
+```bash
+# 设置代理环境变量
+export HTTP_PROXY=http://your-proxy-server:port
+export HTTPS_PROXY=http://your-proxy-server:port
+
+# 运行服务器
+npm run server
+```
+
+### 3. 系统代理检测
+
+工具会根据您的操作系统尝试检测系统代理设置：
+
+- **Windows**：使用 `set` 命令从环境变量中读取代理设置
+- **macOS/Linux**：使用 `env` 命令从环境变量中读取代理设置
+
+### 4. 代理故障排除
+
+如果您在代理检测方面遇到问题：
+
+1. 使用 `debug: true` 参数查看有关代理检测的详细日志
+2. 使用 `proxy` 参数明确指定代理
+3. 确保您的代理 URL 格式正确：`http://host:port` 或 `https://host:port`
+4. 对于需要浏览器功能的网站，设置 `useBrowser: true` 使用浏览器模式
+
+### 5. 浏览器模式和代理
+
+当使用浏览器模式（`useBrowser: true`）时，工具将：
+
+1. 首先尝试使用明确指定的代理（如果提供）
+2. 然后尝试使用系统代理设置
+3. 最后，如果没有找到代理，则不使用代理继续
+
+浏览器模式对于实现了反爬虫措施或需要 JavaScript 执行的网站特别有用。
 
 ## 参数处理
 

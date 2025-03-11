@@ -16,6 +16,7 @@ export default {
   // Error messages
   notFound: "Prompt template not found",
   missingRequiredArg: "Missing required argument",
+  useBrowserValue: "Processing useBrowser parameter: original={original}, parsed={parsed}",
   
   // Generic prompt
   generic: {

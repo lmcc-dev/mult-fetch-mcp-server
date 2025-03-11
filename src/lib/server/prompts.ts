@@ -7,63 +7,64 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ListPromptsRequestSchema, GetPromptRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { log, COMPONENTS } from '../logger.js';
+import { t } from '../i18n/index.js';
 
 // 定义提示模板 (Define prompt templates)
 const PROMPTS = {
   "fetch-website": {
-    name: "fetch-website",
-    description: "prompts.fetchWebsite.description",
+    name: "mult-fetch-mcp:prompt:fetch-website",
+    description: t('prompts.fetchWebsite.description'),
     arguments: [
       {
         name: "url",
-        description: "prompts.url.description",
+        description: t('prompts.url.description'),
         required: true
       },
       {
         name: "format",
-        description: "prompts.format.description",
+        description: t('prompts.format.description'),
         required: false
       },
       {
         name: "useBrowser",
-        description: "prompts.useBrowser.description",
+        description: t('prompts.useBrowser.description'),
         required: false
       }
     ]
   },
   "extract-content": {
-    name: "extract-content",
-    description: "prompts.extractContent.description",
+    name: "mult-fetch-mcp:prompt:extract-content",
+    description: t('prompts.extractContent.description'),
     arguments: [
       {
         name: "url",
-        description: "prompts.url.description",
+        description: t('prompts.url.description'),
         required: true
       },
       {
         name: "selector",
-        description: "prompts.selector.description",
+        description: t('prompts.selector.description'),
         required: false
       },
       {
         name: "dataType",
-        description: "prompts.dataType.description",
+        description: t('prompts.dataType.description'),
         required: false
       }
     ]
   },
   "debug-fetch": {
-    name: "debug-fetch",
-    description: "prompts.debugFetch.description",
+    name: "mult-fetch-mcp:prompt:debug-fetch",
+    description: t('prompts.debugFetch.description'),
     arguments: [
       {
         name: "url",
-        description: "prompts.url.description",
+        description: t('prompts.url.description'),
         required: true
       },
       {
         name: "error",
-        description: "prompts.error.description",
+        description: t('prompts.error.description'),
         required: true
       }
     ]
@@ -95,7 +96,7 @@ export function registerPrompts(server: Server): void {
     
     // 检查提示是否存在
     if (!PROMPTS[promptName]) {
-      throw new Error(`prompts.notFound: ${promptName}`);
+      throw new Error(t('prompts.notFound') + `: ${promptName}`);
     }
     
     // 检查必需参数
@@ -104,7 +105,7 @@ export function registerPrompts(server: Server): void {
     
     for (const arg of requiredArgs) {
       if (args[arg.name] === undefined) {
-        throw new Error(`prompts.missingRequiredArg: ${arg.name}`);
+        throw new Error(t('prompts.missingRequiredArg') + `: ${arg.name}`);
       }
     }
     
@@ -112,7 +113,20 @@ export function registerPrompts(server: Server): void {
     if (promptName === "fetch-website") {
       const url = args.url;
       const format = args.format || "html";
-      const useBrowser = typeof args.useBrowser === 'boolean' ? args.useBrowser : false;
+      let useBrowser = false;
+      
+      if (args.useBrowser !== undefined) {
+        if (typeof args.useBrowser === 'boolean') {
+          useBrowser = args.useBrowser;
+        } else if (typeof args.useBrowser === 'string') {
+          const useBrowserStr = args.useBrowser.toLowerCase().trim();
+          useBrowser = useBrowserStr === 'true' || useBrowserStr === 'yes' || useBrowserStr === '是' || useBrowserStr === '1';
+        } else if (typeof args.useBrowser === 'number') {
+          useBrowser = args.useBrowser !== 0;
+        }
+      }
+      
+      log('prompts.useBrowserValue', debug, { original: args.useBrowser, parsed: useBrowser }, COMPONENTS.PROMPTS);
       
       let toolName = "fetch_html";
       if (format === "json") toolName = "fetch_json";
@@ -120,29 +134,29 @@ export function registerPrompts(server: Server): void {
       if (format === "markdown") toolName = "fetch_markdown";
       
       return {
-        description: `prompts.fetchWebsite.result`,
+        description: t('prompts.fetchWebsite.result'),
         messages: [
           {
             role: "user",
             content: {
               type: "text",
-              text: `prompts.fetchWebsite.message`
+              text: t('prompts.fetchWebsite.message')
             }
           },
           {
             role: "assistant",
             content: {
               type: "text",
-              text: `prompts.fetchWebsite.response`
+              text: t('prompts.fetchWebsite.response')
             }
           },
           {
             role: "user",
             content: {
               type: "text",
-              text: `prompts.fetchWebsite.instruction: ${url}\n\n` +
-                   `prompts.fetchWebsite.formatInstruction: ${format}\n\n` +
-                   `prompts.fetchWebsite.browserInstruction: ${useBrowser ? 'prompts.yes' : 'prompts.no'}`
+              text: `${t('prompts.fetchWebsite.instruction')}: ${url}\n\n` +
+                   `${t('prompts.fetchWebsite.formatInstruction')}: ${format}\n\n` +
+                   `${t('prompts.fetchWebsite.browserInstruction')}: ${useBrowser ? t('prompts.yes') : t('prompts.no')}`
             }
           }
         ]
@@ -153,15 +167,15 @@ export function registerPrompts(server: Server): void {
       const dataType = args.dataType || "text";
       
       return {
-        description: `prompts.extractContent.result`,
+        description: t('prompts.extractContent.result'),
         messages: [
           {
             role: "user",
             content: {
               type: "text",
-              text: `prompts.extractContent.message: ${url}\n\n` +
-                   `prompts.extractContent.selectorInstruction: ${selector}\n\n` +
-                   `prompts.extractContent.dataTypeInstruction: ${dataType}`
+              text: `${t('prompts.extractContent.message')}: ${url}\n\n` +
+                   `${t('prompts.extractContent.selectorInstruction')}: ${selector}\n\n` +
+                   `${t('prompts.extractContent.dataTypeInstruction')}: ${dataType}`
             }
           }
         ]
@@ -171,15 +185,15 @@ export function registerPrompts(server: Server): void {
       const error = args.error;
       
       return {
-        description: `prompts.debugFetch.result`,
+        description: t('prompts.debugFetch.result'),
         messages: [
           {
             role: "user",
             content: {
               type: "text",
-              text: `prompts.debugFetch.message: ${url}\n\n` +
-                   `prompts.debugFetch.errorDetails: ${error}\n\n` +
-                   `prompts.debugFetch.instruction`
+              text: `${t('prompts.debugFetch.message')}: ${url}\n\n` +
+                   `${t('prompts.debugFetch.errorDetails')}: ${error}\n\n` +
+                   `${t('prompts.debugFetch.instruction')}`
             }
           }
         ]
@@ -188,14 +202,14 @@ export function registerPrompts(server: Server): void {
     
     // 默认情况下返回一个通用消息
     return {
-      description: `prompts.generic.result`,
+      description: t('prompts.generic.result'),
       messages: [
         {
           role: "user",
           content: {
             type: "text",
-            text: `prompts.generic.message: ${promptName}\n\n` +
-                 `prompts.generic.args: ${JSON.stringify(args, null, 2)}`
+            text: `${t('prompts.generic.message')}: ${promptName}\n\n` +
+                 `${t('prompts.generic.args')}: ${JSON.stringify(args, null, 2)}`
           }
         }
       ]

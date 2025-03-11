@@ -247,9 +247,66 @@ This log file can be accessed through the MCP resources API:
 // Access the debug log file
 const result = await client.readResource({ uri: "file:///logs/debug" });
 console.log(result.contents[0].text);
+
+// Clear the debug log file
+const clearResult = await client.readResource({ uri: "file:///logs/clear" });
+console.log(clearResult.contents[0].text);
 ```
 
-The log file contains timestamped entries from all components (server, client, fetchers) and can be useful for troubleshooting issues.
+## Proxy Settings
+
+This tool supports various methods to configure proxy settings:
+
+### 1. Using the `proxy` Parameter
+
+The most direct way is to specify the proxy in the request parameters:
+
+```json
+{
+  "url": "https://example.com",
+  "proxy": "http://your-proxy-server:port",
+  "debug": true
+}
+```
+
+### 2. Using Environment Variables
+
+The tool will automatically detect and use proxy settings from standard environment variables:
+
+```bash
+# Set proxy environment variables
+export HTTP_PROXY=http://your-proxy-server:port
+export HTTPS_PROXY=http://your-proxy-server:port
+
+# Run the server
+npm run server
+```
+
+### 3. System Proxy Detection
+
+The tool attempts to detect system proxy settings based on your operating system:
+
+- **Windows**: Reads proxy settings from environment variables using the `set` command
+- **macOS/Linux**: Reads proxy settings from environment variables using the `env` command
+
+### 4. Proxy Troubleshooting
+
+If you're having issues with proxy detection:
+
+1. Use the `debug: true` parameter to see detailed logs about proxy detection
+2. Explicitly specify the proxy using the `proxy` parameter
+3. Ensure your proxy URL is in the correct format: `http://host:port` or `https://host:port`
+4. For websites that require browser capabilities, set `useBrowser: true` to use browser mode
+
+### 5. Browser Mode and Proxies
+
+When using browser mode (`useBrowser: true`), the tool will:
+
+1. First try to use the explicitly specified proxy (if provided)
+2. Then try to use system proxy settings
+3. Finally, proceed without a proxy if none is found
+
+Browser mode is particularly useful for websites that implement anti-scraping measures or require JavaScript execution.
 
 ## Parameter Handling
 

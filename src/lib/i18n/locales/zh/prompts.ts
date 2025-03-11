@@ -16,6 +16,7 @@ export default {
   // 错误消息 (Error messages)
   notFound: "提示模板未找到",
   missingRequiredArg: "缺少必需参数",
+  useBrowserValue: "处理浏览器模式参数: 原始值={original}, 解析后={parsed}",
   
   // 通用提示 (Generic prompt)
   generic: {

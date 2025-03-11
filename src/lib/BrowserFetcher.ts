@@ -126,12 +126,12 @@ export class BrowserFetcher {
     log('fetcher.checkingProxyEnv', debug, {}, COMPONENTS.BROWSER_FETCH);
     for (const varName of proxyVars) {
       log('fetcher.envVarValue', debug, { 
-        name: varName, 
+        envVar: varName, 
         value: process.env[varName] || t('fetcher.notSet') 
       }, COMPONENTS.BROWSER_FETCH);
     }
     
-    // 尝试获取代理设置
+    // 尝试获取代理设置 (Try to get proxy settings)
     const proxyUrl = process.env.HTTP_PROXY || process.env.HTTPS_PROXY || 
                      process.env.http_proxy || process.env.https_proxy || 
                      process.env.ALL_PROXY || process.env.all_proxy;
@@ -145,22 +145,41 @@ export class BrowserFetcher {
     try {
       let shellOutput = '';
       if (process.platform === 'win32') {
-        shellOutput = execSync('set | findstr proxy', { encoding: 'utf8' });
+        // Windows 系统使用 set 命令，忽略错误 (Windows systems use set command, ignore errors)
+        try {
+          shellOutput = execSync('set http_proxy & set https_proxy & set HTTP_PROXY & set HTTPS_PROXY', { encoding: 'utf8' });
+        } catch (winError) {
+          log('fetcher.errorGettingWindowsEnvVars', debug, { error: winError.toString() }, COMPONENTS.BROWSER_FETCH);
+        }
       } else {
-        shellOutput = execSync('env | grep -i proxy', { encoding: 'utf8' });
+        // Unix 系统使用 env 命令，忽略错误 (Unix systems use env command, ignore errors)
+        try {
+          // 使用 env 命令获取所有环境变量，不使用 grep 过滤，避免在没有匹配时返回非零退出码
+          shellOutput = execSync('env', { encoding: 'utf8' });
+          // 在代码中过滤代理相关的环境变量
+          shellOutput = shellOutput.split('\n')
+            .filter(line => line.toLowerCase().includes('proxy'))
+            .join('\n');
+        } catch (unixError) {
+          log('fetcher.errorGettingUnixEnvVars', debug, { error: unixError.toString() }, COMPONENTS.BROWSER_FETCH);
+        }
       }
       
-      log('fetcher.systemCommandProxySettings', debug, { output: shellOutput.trim() }, COMPONENTS.BROWSER_FETCH);
-      
-      // 解析输出找到代理 URL
-      const proxyMatch = shellOutput.match(/(?:HTTP_PROXY|HTTPS_PROXY|http_proxy|https_proxy)=([^\s]+)/i);
-      if (proxyMatch && proxyMatch[1]) {
-        const systemProxyUrl = proxyMatch[1];
-        log('fetcher.foundProxyFromCommand', debug, { proxy: systemProxyUrl }, COMPONENTS.BROWSER_FETCH);
-        return systemProxyUrl;
+      if (shellOutput.trim()) {
+        log('fetcher.systemCommandProxySettings', debug, { output: shellOutput.trim() }, COMPONENTS.BROWSER_FETCH);
+        
+        // 解析输出找到代理 URL
+        const proxyMatch = shellOutput.match(/(?:HTTP_PROXY|HTTPS_PROXY|http_proxy|https_proxy)=([^\s]+)/i);
+        if (proxyMatch && proxyMatch[1]) {
+          const systemProxyUrl = proxyMatch[1];
+          log('fetcher.foundProxyFromCommand', debug, { proxy: systemProxyUrl }, COMPONENTS.BROWSER_FETCH);
+          return systemProxyUrl;
+        }
+      } else {
+        log('fetcher.noSystemProxyFound', debug, {}, COMPONENTS.BROWSER_FETCH);
       }
     } catch (error) {
-      log('fetcher.errorGettingProxyFromCommand', debug, { error: error.toString() }, COMPONENTS.BROWSER_FETCH);
+      log('fetcher.errorGettingSystemEnvVars', debug, { error: error.toString() }, COMPONENTS.BROWSER_FETCH);
     }
     
     // 检查是否设置了 NO_PROXY
@@ -169,7 +188,6 @@ export class BrowserFetcher {
       log('fetcher.foundNoProxy', debug, { noProxy: noProxy }, COMPONENTS.BROWSER_FETCH);
     }
     
-    log('fetcher.noSystemProxyFound', debug, {}, COMPONENTS.BROWSER_FETCH);
     return undefined;
   }
 
@@ -203,14 +221,14 @@ export class BrowserFetcher {
         
         // 详细记录代理设置情况
         if (proxy) {
-          log('browser.usingSpecifiedProxy', debug, { proxy }, COMPONENTS.BROWSER_FETCH);
+          log('fetcher.usingSpecifiedProxy', debug, { proxy }, COMPONENTS.BROWSER_FETCH);
         } else if (useSystemProxy) {
-          log('browser.attemptingToUseSystemProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
+          log('fetcher.attemptingToUseSystemProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
         } else {
-          log('browser.notUsingProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
+          log('fetcher.notUsingProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
         }
         
-        log('browser.finalProxyUsed', debug, { proxy: proxyServer || t('fetcher.none') }, COMPONENTS.BROWSER_FETCH);
+        log('fetcher.finalProxyUsed', debug, { proxy: proxyServer || t('fetcher.none') }, COMPONENTS.BROWSER_FETCH);
         
         // 启动浏览器
         const args = [
@@ -477,14 +495,14 @@ export class BrowserFetcher {
     
     // 详细记录代理设置情况
     if (proxy) {
-      log('browser.usingSpecifiedProxy', debug, { proxy }, COMPONENTS.BROWSER_FETCH);
+      log('fetcher.usingSpecifiedProxy', debug, { proxy }, COMPONENTS.BROWSER_FETCH);
     } else if (useSystemProxy) {
-      log('browser.attemptingToUseSystemProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
+      log('fetcher.attemptingToUseSystemProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
     } else {
-      log('browser.notUsingProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
+      log('fetcher.notUsingProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
     }
     
-    log('browser.finalProxyUsed', debug, { proxy: effectiveProxy || t('fetcher.none') }, COMPONENTS.BROWSER_FETCH);
+    log('fetcher.finalProxyUsed', debug, { proxy: effectiveProxy || t('fetcher.none') }, COMPONENTS.BROWSER_FETCH);
 
     try {
       // 如果只是要关闭浏览器，不需要获取内容

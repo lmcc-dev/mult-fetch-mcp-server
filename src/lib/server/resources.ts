@@ -6,7 +6,7 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ListResourcesRequestSchema, ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { log, getLogFilePath, COMPONENTS } from '../logger.js';
+import { log, getLogFilePath, clearLogFile, COMPONENTS } from '../logger.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -31,14 +31,30 @@ export function registerResources(server: Server): void {
       resources: [
         // 项目文档资源 (Project documentation resources)
         {
+          name: 'mult-fetch-mcp:log:debug-log',
           uri: 'file:///logs/debug',
           description: 'Debug log file containing all debug messages from the server'
+        },
+        // 清理日志资源 (Clear log resource)
+        {
+          name: 'mult-fetch-mcp:log:clear-debug-log',
+          uri: 'file:///logs/clear',
+          description: 'Clear the debug log file'
         }
       ],
       resourceTemplates: [
         // 源代码文件模板 (Source code file template)
-        
-    
+        {
+          uriTemplate: 'file:///src/{path}',
+          description: 'Source code files in the project',
+          name: 'mult-fetch-mcp:src:file'
+        },
+        // 文档文件模板 (Documentation file template)
+        {
+          uriTemplate: 'file:///docs/{path}',
+          description: 'Documentation files in the project',
+          name: 'mult-fetch-mcp:docs:file'
+        }
       ]
     };
   });
@@ -86,6 +102,11 @@ function parseResourceUri(uri: string): string | null {
     return getLogFilePath();
   }
   
+  // 处理清理日志文件URI
+  if (uri === 'file:///logs/clear') {
+    return 'CLEAR_LOG';  // 特殊标记，表示清理日志文件
+  }
+  
   // 处理预定义的URI模式
   if (uri.startsWith('file:///docs/')) {
     const resourceName = uri.substring('file:///docs/'.length);
@@ -117,6 +138,12 @@ function parseResourceUri(uri: string): string | null {
  */
 async function readFileContent(filePath: string): Promise<string> {
   try {
+    // 处理清理日志文件的特殊标记
+    if (filePath === 'CLEAR_LOG') {
+      clearLogFile();
+      return '日志文件已清理 (Log file has been cleared)';
+    }
+    
     return fs.readFileSync(filePath, 'utf-8');
   } catch (error) {
     log('resources.fileReadError', true, { filePath, error: error instanceof Error ? error.message : String(error) }, COMPONENTS.RESOURCES);

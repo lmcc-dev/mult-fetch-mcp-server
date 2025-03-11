@@ -84,19 +84,55 @@ export class NodeFetcher {
       }
     }
     
-    // 尝试从Git配置获取代理 (Try to get proxy from Git configuration)
+    // 尝试使用系统命令获取环境变量 (Try to get environment variables using system commands)
     try {
-      const shellOutput = execSync('git config --global http.proxy').toString();
-      log('fetcher.systemCommandProxySettings', true, { output: shellOutput.trim() }, COMPONENTS.NODE_FETCH);
+      const platform = process.platform;
+      let proxyUrl: string | undefined;
       
-      // 解析代理URL (Parse proxy URL)
-      const proxyMatch = shellOutput.match(/^(https?:\/\/[^:]+:\d+)\s*$/);
-      if (proxyMatch && proxyMatch[1]) {
-        log('fetcher.foundProxyFromCommand', true, { proxy: proxyMatch[1] }, COMPONENTS.NODE_FETCH);
-        return proxyMatch[1];
+      log('fetcher.checkingSystemEnvVars', true, { platform }, COMPONENTS.NODE_FETCH);
+      
+      if (platform === 'win32') {
+        // Windows系统 - 使用set命令 (Windows - use set command)
+        try {
+          // 使用set命令获取代理环境变量 (Use set command to get proxy environment variables)
+          const setOutput = execSync('set http_proxy & set https_proxy & set HTTP_PROXY & set HTTPS_PROXY').toString();
+          log('fetcher.windowsEnvVars', true, { output: setOutput.trim() }, COMPONENTS.NODE_FETCH);
+          
+          // 解析输出找到代理设置 (Parse output to find proxy settings)
+          const proxyMatch = setOutput.match(/(?:http_proxy|https_proxy|HTTP_PROXY|HTTPS_PROXY)=(https?:\/\/[^=\r\n]+)/i);
+          if (proxyMatch && proxyMatch[1]) {
+            proxyUrl = proxyMatch[1].trim();
+            log('fetcher.foundWindowsEnvProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
+          }
+        } catch (winError) {
+          log('fetcher.errorGettingWindowsEnvVars', true, { error: String(winError) }, COMPONENTS.NODE_FETCH);
+        }
+      } else {
+        // Unix系统 (macOS/Linux) - 使用export或env命令 (Unix systems - use export or env command)
+        try {
+          // 使用env命令获取所有环境变量 (Use env command to get all environment variables)
+          const envOutput = execSync('env').toString();
+          log('fetcher.unixEnvVars', true, { output: envOutput.length > 200 ? envOutput.substring(0, 200) + '...' : envOutput }, COMPONENTS.NODE_FETCH);
+          
+          // 解析输出找到代理设置 (Parse output to find proxy settings)
+          const proxyMatch = envOutput.match(/(?:http_proxy|https_proxy|HTTP_PROXY|HTTPS_PROXY)=(https?:\/\/[^=\n]+)/i);
+          if (proxyMatch && proxyMatch[1]) {
+            proxyUrl = proxyMatch[1].trim();
+            log('fetcher.foundUnixEnvProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
+          }
+        } catch (unixError) {
+          log('fetcher.errorGettingUnixEnvVars', true, { error: String(unixError) }, COMPONENTS.NODE_FETCH);
+        }
       }
+      
+      if (proxyUrl) {
+        return proxyUrl;
+      }
+      
+      // 如果没有找到代理，记录日志 (If no proxy is found, log a message)
+      log('fetcher.noSystemProxyFound', true, {}, COMPONENTS.NODE_FETCH);
     } catch (error) {
-      log('fetcher.errorGettingProxyFromCommand', true, { error: String(error) }, COMPONENTS.NODE_FETCH);
+      log('fetcher.errorGettingSystemEnvVars', true, { error: String(error) }, COMPONENTS.NODE_FETCH);
     }
     
     // 检查NO_PROXY环境变量 (Check NO_PROXY environment variable)
@@ -105,7 +141,6 @@ export class NodeFetcher {
       log('fetcher.foundNoProxy', true, { noProxy }, COMPONENTS.NODE_FETCH);
     }
     
-    log('fetcher.noSystemProxyFound', true, {}, COMPONENTS.NODE_FETCH);
     return undefined;
   }
 
@@ -192,6 +227,7 @@ export class NodeFetcher {
         // 记录请求详情 (Log request details)
         log('node.requestDetails', debug, {
           url: currentUrl,
+          method: fetchOptions.method || 'GET',
           headers: requestHeaders,
           proxy: finalProxy,
           timeout,

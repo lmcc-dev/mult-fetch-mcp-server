@@ -233,14 +233,40 @@ async function main() {
       log('client.usingEnvProxy', debug, { proxy: envProxy }, COMPONENTS.CLIENT);
       params.proxy = envProxy;
     } else {
-      // 尝试从shell获取代理设置 (Try to get proxy settings from shell)
+      // 尝试使用系统命令获取环境变量 (Try to get environment variables using system commands)
       try {
-        const shellProxy = execSync('git config --global http.proxy || git config --global https.proxy || echo ""').toString().trim();
-        if (shellProxy) {
-          log('client.usingShellProxy', debug, { proxy: shellProxy }, COMPONENTS.CLIENT);
-          params.proxy = shellProxy;
+        let proxyUrl: string | undefined;
+        const platform = process.platform;
+        
+        if (platform === 'win32') {
+          // Windows系统 - 使用set命令 (Windows - use set command)
+          try {
+            const setOutput = execSync('set http_proxy & set https_proxy & set HTTP_PROXY & set HTTPS_PROXY').toString();
+            const proxyMatch = setOutput.match(/(?:http_proxy|https_proxy|HTTP_PROXY|HTTPS_PROXY)=(https?:\/\/[^=\r\n]+)/i);
+            if (proxyMatch && proxyMatch[1]) {
+              proxyUrl = proxyMatch[1].trim();
+            }
+          } catch (error) {
+            // 忽略错误 (Ignore errors)
+          }
         } else {
-          log('client.noShellProxy', debug, {}, COMPONENTS.CLIENT);
+          // Unix系统 (macOS/Linux) - 使用env命令 (Unix systems - use env command)
+          try {
+            const envOutput = execSync('env | grep -i proxy').toString();
+            const proxyMatch = envOutput.match(/(?:http_proxy|https_proxy|HTTP_PROXY|HTTPS_PROXY)=(https?:\/\/[^=\n]+)/i);
+            if (proxyMatch && proxyMatch[1]) {
+              proxyUrl = proxyMatch[1].trim();
+            }
+          } catch (error) {
+            // 忽略错误 (Ignore errors)
+          }
+        }
+        
+        if (proxyUrl) {
+          log('client.usingSystemProxy', debug, { proxy: proxyUrl }, COMPONENTS.CLIENT);
+          params.proxy = proxyUrl;
+        } else {
+          log('client.noSystemProxy', debug, {}, COMPONENTS.CLIENT);
         }
       } catch (error) {
         // 忽略错误 (Ignore errors)
