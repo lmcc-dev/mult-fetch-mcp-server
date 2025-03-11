@@ -1,5 +1,24 @@
 # mult-fetch-mcp-server
 
+[![npm version](https://img.shields.io/npm/v/mult-fetch-mcp-server.svg)](https://www.npmjs.com/package/mult-fetch-mcp-server)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/node/v/mult-fetch-mcp-server)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
+[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.6.1-brightgreen.svg)](https://github.com/modelcontextprotocol/typescript-sdk)
+[![GitHub Stars](https://img.shields.io/github/stars/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/pulls)
+[![npm downloads](https://img.shields.io/npm/dm/mult-fetch-mcp-server.svg)](https://www.npmjs.com/package/mult-fetch-mcp-server)
+[![GitHub last commit](https://img.shields.io/github/last-commit/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/graphs/contributors)
+
+<!-- Future badges to consider:
+[![codecov](https://codecov.io/gh/lmcc-dev/mult-fetch-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/lmcc-dev/mult-fetch-mcp-server)
+[![CodeFactor](https://www.codefactor.io/repository/github/lmcc-dev/mult-fetch-mcp-server/badge)](https://www.codefactor.io/repository/github/lmcc-dev/mult-fetch-mcp-server)
+[![Maintainability](https://api.codeclimate.com/v1/badges/a99a88d28ad37a79dbf6/maintainability)](https://codeclimate.com/github/lmcc-dev/mult-fetch-mcp-server/maintainability)
+-->
+
 This project implements an MCP-compliant client and server for communication between AI assistants and external tools.
 
 [English](./README.md) | [中文文档](./README.zh.md)
