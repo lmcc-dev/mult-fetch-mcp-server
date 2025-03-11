@@ -124,6 +124,14 @@ npx mult-fetch-mcp-server
 
 请将 `path-to/bin/node` 替换为您系统上 Node.js 可执行文件的路径，将 `path-to/mult-fetch-mcp-server` 替换为此项目的实际路径。
 
+### 使用示例
+
+以下是在 Claude 桌面客户端中使用此工具的示例：
+
+![Claude 桌面客户端示例](./images/example_zh.png)
+
+图片展示了 Claude 如何使用 fetch 工具获取网页内容并根据您的指令进行处理。
+
 ### 使用方法
 
 配置完成后，重启 Claude 桌面版，然后您可以在对话中使用以下工具：

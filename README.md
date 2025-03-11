@@ -124,6 +124,14 @@ If you need to use a specific installation location, you can specify the full pa
 
 Please replace `path-to/bin/node` with the path to the Node.js executable on your system, and replace `path-to/mult-fetch-mcp-server` with the actual path to this project.
 
+### Usage Examples
+
+Below is an example of using this tool in Claude desktop client:
+
+![Claude Desktop Client Example](./images/example_en.png)
+
+The image shows how Claude can use the fetch tools to retrieve web content and process it according to your instructions.
+
 ### Usage
 
 After configuration, restart Claude desktop, and you can use the following tools in your conversation:
@@ -404,3 +412,7 @@ When `debug: true` is set, the logs will be output to stderr with the following 
 ## License
 
 MIT
+
+---
+
+Updated by lmcc-dev
