@@ -1,11 +1,11 @@
 {
-  "name": "mult-fetch-mcp-server",
-  "version": "1.0.0",
-  "description": "一个基于 MCP 协议的网页内容获取工具，支持多种模式和格式，可与 Claude 等 AI 助手集成",
+  "name": "@lmcc-dev/mult-fetch-mcp-server",
+  "version": "1.0.2",
+  "description": "An MCP protocol-based web content fetching tool that supports multiple modes and formats, can be integrated with AI assistants like Claude",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "mult-fetch-mcp-server": "./dist/index.js"
+    "mult-fetch-mcp-server": "dist/index.js"
   },
   "license": "MIT",
   "author": "Martin (@lmcc.dev)",
@@ -31,7 +31,7 @@
     "client": "node dist/src/client.js",
     "server": "node dist/index.js",
     "prepublishOnly": "npm run build",
-    "publish": "npm publish --access public"
+    "release": "npm publish --access public"
   },
   "keywords": [
     "mcp",
