@@ -7,11 +7,8 @@
 import { BrowserFetcher } from '../BrowserFetcher.js';
 import { NodeFetcher } from '../NodeFetcher.js';
 import { FetchParams } from './types.js';
-import { createLogger } from '../i18n/logger.js';
+import { log, COMPONENTS } from '../logger.js';
 import { initializeBrowser, closeBrowserInstance, shouldSwitchToBrowser } from './browser.js';
-
-// 创建服务器获取器日志记录器 (Create server fetcher logger)
-const logger = createLogger('MCP-SERVER');
 
 /**
  * 辅助函数：根据类型和参数自动选择合适的获取方法 (Helper function: automatically select appropriate fetching method based on type and parameters)
@@ -33,7 +30,7 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
       // 如果使用浏览器模式，确保浏览器已初始化 (If using browser mode, ensure browser is initialized)
       await initializeBrowser(debug);
       if (debug) {
-        logger.info('server.usingBrowserMode', { type, url: params.url });
+        log('server.usingBrowserMode', debug, { type, url: params.url }, COMPONENTS.SERVER);
       }
       
       // 确保params中包含debug参数 (Ensure params contains debug parameter)
@@ -53,33 +50,50 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
     } else {
       // 使用标准模式
       if (debug) {
-        logger.info('server.usingAutoDetectMode', { type, url: params.url });
+        log('server.usingAutoDetectMode', debug, { type, url: params.url }, COMPONENTS.SERVER);
       }
       
       try {
         // 根据类型选择合适的标准获取方法 (Choose appropriate standard fetching method based on type)
-        let result;
         switch (type) {
-          case 'html':
-            result = await NodeFetcher.html(params);
-            break;
-          case 'json':
-            result = await NodeFetcher.json(params);
-            break;
-          case 'txt':
-            result = await NodeFetcher.txt(params);
-            break;
-          case 'markdown':
-            result = await NodeFetcher.markdown(params);
-            break;
+          case 'html': {
+            const result = await NodeFetcher.html(params);
+            // 转换为统一格式 (Convert to unified format)
+            return {
+              content: [{ type: 'text', text: result.html }],
+              isError: false
+            };
+          }
+          case 'json': {
+            const result = await NodeFetcher.json(params);
+            // 转换为统一格式 (Convert to unified format)
+            return {
+              content: [{ type: 'text', text: typeof result.json === 'string' ? result.json : JSON.stringify(result.json, null, 2) }],
+              isError: false
+            };
+          }
+          case 'txt': {
+            const result = await NodeFetcher.txt(params);
+            // 转换为统一格式 (Convert to unified format)
+            return {
+              content: [{ type: 'text', text: result.text }],
+              isError: false
+            };
+          }
+          case 'markdown': {
+            const result = await NodeFetcher.markdown(params);
+            // 转换为统一格式 (Convert to unified format)
+            return {
+              content: [{ type: 'text', text: result.markdown }],
+              isError: false
+            };
+          }
         }
-        
-        return result;
       } catch (error) {
         // 如果标准模式失败且启用了自动检测
         if (autoDetectMode && shouldSwitchToBrowser(error)) {
           if (debug) {
-            logger.info('server.switchingToBrowserMode', { url: params.url });
+            log('server.switchingToBrowserMode', debug, { url: params.url }, COMPONENTS.SERVER);
           }
           
           // 确保浏览器已初始化
@@ -109,7 +123,7 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
   } catch (error) {
     // 处理所有错误
     if (debug) {
-      logger.error('server.fetchError', { type, error: error instanceof Error ? error.message : String(error) });
+      log('server.fetchError', debug, { type, error: error instanceof Error ? error.message : String(error) }, COMPONENTS.SERVER);
     }
     
     // 如果出错且启用了关闭浏览器选项，确保浏览器被关闭
@@ -119,4 +133,10 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
     
     throw error;
   }
+  
+  // 如果没有匹配的类型，返回错误
+  return {
+    content: [{ type: 'text', text: `Unsupported content type: ${type}` }],
+    isError: true
+  };
 }

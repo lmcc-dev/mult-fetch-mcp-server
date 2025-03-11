@@ -7,6 +7,7 @@
 // 服务器相关消息 (Server related messages)
 export const server = {
   starting: "MCP server starting...",
+  connecting: "Connecting to MCP transport: {{transport}}",
   started: "MCP server started",
   stopping: "MCP server stopping...",
   stopped: "MCP server stopped",
@@ -28,5 +29,6 @@ export const server = {
   usingBrowserMode: "Using browser mode to fetch {{type}}: {{url}}",
   usingAutoDetectMode: "Using auto-detect mode to fetch {{type}}: {{url}}",
   switchingToBrowserMode: "Standard mode failed, switching to browser mode: {{url}}",
-  fetchError: "Error fetching {{type}}: {{error}}"
+  fetchError: "Error fetching {{type}}: {{error}}",
+  connectionError: "Error connecting to transport: {{error}}"
 }; 

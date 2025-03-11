@@ -6,15 +6,11 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { log } from './logger.js';
+import { log, COMPONENTS } from '../logger.js';
 import { closeBrowserInstance } from './browser.js';
 import { registerTools } from './tools.js';
 import { registerResources } from './resources.js';
 import { registerPrompts } from './prompts.js';
-import { createLogger } from '../i18n/logger.js';
-
-// 创建服务器日志记录器 (Create server logger)
-const logger = createLogger('MCP-SERVER');
 
 // 创建MCP服务器
 const server = new Server(
@@ -49,41 +45,41 @@ export async function startServer(): Promise<void> {
   // 注册提示
   registerPrompts(server);
   
-  logger.info('server.starting');
+  log('server.starting', true, {}, COMPONENTS.SERVER);
   // 初始化 StdioServerTransport，不传递任何参数
   const transport = new StdioServerTransport();
   
   // 设置进程退出时的清理逻辑 (Set up cleanup logic when process exits)
   process.on('exit', () => {
-    logger.info('server.stopping');
+    log('server.stopping', true, {}, COMPONENTS.SERVER);
     // 同步清理逻辑 (Synchronous cleanup logic)
   });
   
   process.on('SIGINT', async () => {
-    logger.info('server.receivedInterruptSignal');
+    log('server.receivedInterruptSignal', true, {}, COMPONENTS.SERVER);
     await closeBrowserInstance(false);
     process.exit(0);
   });
   
   process.on('SIGTERM', async () => {
-    logger.info('server.receivedTerminateSignal');
+    log('server.receivedTerminateSignal', true, {}, COMPONENTS.SERVER);
     await closeBrowserInstance(false);
     process.exit(0);
   });
   
   // 处理未捕获的异常
   process.on('uncaughtException', async (error) => {
-    logger.error('server.uncaughtException', { error: error.message });
+    log('server.uncaughtException', true, { error: error.message }, COMPONENTS.SERVER);
     await closeBrowserInstance(false);
     process.exit(1);
   });
   
   try {
-    logger.info('server.connecting', { transport: 'stdio' });
+    log('server.connecting', true, { transport: 'stdio' }, COMPONENTS.SERVER);
     await server.connect(transport);
-    logger.info('server.started');
+    log('server.started', true, {}, COMPONENTS.SERVER);
   } catch (error) {
-    logger.error('server.connectionError', { error: error instanceof Error ? error.message : String(error) });
+    log('server.connectionError', true, { error: error instanceof Error ? error.message : String(error) }, COMPONENTS.SERVER);
     await closeBrowserInstance(false);
     process.exit(1);
   }

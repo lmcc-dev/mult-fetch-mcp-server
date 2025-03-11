@@ -16,28 +16,8 @@ import path from 'path';
 import { execSync } from 'child_process';
 import os from 'os';
 import { SocksProxyAgent } from 'socks-proxy-agent';
-import { createLogger } from './i18n/logger.js';
 import { t } from './i18n/index.js';
-
-// 创建Node获取器日志记录器 (Create Node fetcher logger)
-const logger = createLogger('NODE-FETCH');
-
-/**
- * 日志函数 (Log function)
- * 输出调试信息到标准错误流 (Output debug information to standard error stream)
- * @param key 翻译键或消息 (Translation key or message)
- * @param debug 是否为调试模式 (Whether in debug mode)
- * @param options 翻译选项 (Translation options)
- */
-function log(key: string, debug: boolean = false, options?: any): void {
-  // 只有在明确设置 debug 为 true 时才输出日志 (Only output logs when debug is explicitly set to true)
-  if (!debug) {
-    return;
-  }
-  
-  // 所有日志消息都使用翻译键 (All log messages use translation keys)
-  logger.debug(key, options, debug);
-}
+import { log, COMPONENTS } from './logger.js';
 
 export class NodeFetcher {
   /**
@@ -80,81 +60,59 @@ export class NodeFetcher {
 
   /**
    * 获取系统代理设置 (Get system proxy settings)
-   * 从环境变量和系统命令中获取代理设置 (Get proxy settings from environment variables and system commands)
    * @param useSystemProxy 是否使用系统代理 (Whether to use system proxy)
    * @returns 代理URL或undefined (Proxy URL or undefined)
    */
   private static getSystemProxy(useSystemProxy: boolean = true): string | undefined {
-    // 如果禁用了系统代理检测，直接返回undefined (If system proxy detection is disabled, return undefined directly)
     if (!useSystemProxy) {
       return undefined;
     }
     
-    // 检查环境变量中的代理设置 (Check proxy settings in environment variables)
-    const proxyVars = [
-      'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
-      'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy'
-    ];
-    
-    // 输出所有环境变量的值，帮助调试
-    log('fetcher.checkingProxyEnv', true, {});
-    for (const varName of proxyVars) {
-      log('fetcher.envVarValue', true, { 
-        name: varName, 
-        value: process.env[varName] || t('fetcher.notSet') 
-      });
-    }
-    
-    // 尝试获取代理设置
-    const proxyUrl = process.env.HTTP_PROXY || process.env.HTTPS_PROXY || 
-                     process.env.http_proxy || process.env.https_proxy || 
-                     process.env.ALL_PROXY || process.env.all_proxy;
-    
-    if (proxyUrl) {
-      log('fetcher.foundSystemProxy', true, { proxy: proxyUrl });
-      return proxyUrl;
-    }
-    
-    // 如果环境变量中没有找到代理，尝试从系统命令获取 (If no proxy found in environment variables, try getting from system commands)
-    try {
-      const platform = os.platform();
-      let shellOutput = '';
+    // 检查环境变量 (Check environment variables)
+    log('fetcher.checkingProxyEnv', true, {}, COMPONENTS.NODE_FETCH);
+    const envVars = ['https_proxy', 'HTTPS_PROXY', 'http_proxy', 'HTTP_PROXY'];
+    for (const envVar of envVars) {
+      log('fetcher.envVarValue', true, {
+        envVar,
+        value: process.env[envVar]
+      }, COMPONENTS.NODE_FETCH);
       
-      if (platform === 'win32') {
-        // Windows 系统
-        shellOutput = execSync('set | findstr "HTTP_PROXY HTTPS_PROXY http_proxy https_proxy"').toString();
-      } else if (platform === 'darwin' || platform === 'linux') {
-        // macOS 或 Linux 系统
-        shellOutput = execSync('env | grep -i -E "HTTP_PROXY|HTTPS_PROXY|http_proxy|https_proxy"').toString();
+      if (process.env[envVar]) {
+        const proxyUrl = process.env[envVar] as string;
+        log('fetcher.foundSystemProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
+        return proxyUrl;
       }
+    }
+    
+    // 尝试从Git配置获取代理 (Try to get proxy from Git configuration)
+    try {
+      const shellOutput = execSync('git config --global http.proxy').toString();
+      log('fetcher.systemCommandProxySettings', true, { output: shellOutput.trim() }, COMPONENTS.NODE_FETCH);
       
-      log('fetcher.systemCommandProxySettings', true, { output: shellOutput.trim() });
-      
-      // 解析输出找到代理 URL (Parse output to find proxy URL)
-      const proxyMatch = shellOutput.match(/(?:HTTP_PROXY|HTTPS_PROXY|http_proxy|https_proxy)=([^\s]+)/i);
+      // 解析代理URL (Parse proxy URL)
+      const proxyMatch = shellOutput.match(/^(https?:\/\/[^:]+:\d+)\s*$/);
       if (proxyMatch && proxyMatch[1]) {
-        log('fetcher.foundProxyFromCommand', true, { proxy: proxyMatch[1] });
+        log('fetcher.foundProxyFromCommand', true, { proxy: proxyMatch[1] }, COMPONENTS.NODE_FETCH);
         return proxyMatch[1];
       }
     } catch (error) {
-      log('fetcher.errorGettingProxyFromCommand', true, { error: String(error) });
+      log('fetcher.errorGettingProxyFromCommand', true, { error: String(error) }, COMPONENTS.NODE_FETCH);
     }
     
-    // 检查 NO_PROXY 设置 (Check NO_PROXY settings)
+    // 检查NO_PROXY环境变量 (Check NO_PROXY environment variable)
     const noProxy = process.env.NO_PROXY || process.env.no_proxy;
     if (noProxy) {
-      log('fetcher.foundNoProxy', true, { noProxy });
+      log('fetcher.foundNoProxy', true, { noProxy }, COMPONENTS.NODE_FETCH);
     }
     
-    log('fetcher.noSystemProxyFound', true, {});
+    log('fetcher.noSystemProxyFound', true, {}, COMPONENTS.NODE_FETCH);
     return undefined;
   }
 
   /**
-   * 处理重定向的fetch函数 (Fetch function that handles redirects)
-   * 支持自动跟随重定向和代理设置 (Supports automatic redirect following and proxy settings)
-   * @param params 请求参数 (Request parameters)
-   * @returns 响应结果 (Response result)
+   * 执行带重定向处理的HTTP请求 (Perform HTTP request with redirect handling)
+   * @param requestPayload 请求参数 (Request parameters)
+   * @returns 响应数据 (Response data)
    */
   private static async _fetchWithRedirects({
     url,
@@ -166,411 +124,337 @@ export class NodeFetcher {
     useSystemProxy = true, // 是否使用系统代理
     debug = false, // 是否启用调试模式
   }: RequestPayload): Promise<any> {
-    // 记录开始获取URL的日志
-    log('node.fetchingUrl', debug, { url });
+    log('node.fetchingUrl', debug, { url }, COMPONENTS.NODE_FETCH);
     
-    // 如果没有禁用随机延迟，则添加随机延迟
-    if (!noDelay) {
-      await this.randomDelay();
-    }
-    
-    // 获取系统代理
+    // 处理代理设置 (Handle proxy settings)
     const systemProxy = this.getSystemProxy(useSystemProxy);
-    
-    // 确定最终使用的代理
     const finalProxy = proxy || systemProxy;
+    
     if (finalProxy) {
-      log('node.usingProxy', debug, { proxy: finalProxy });
+      log('node.usingProxy', debug, { proxy: finalProxy }, COMPONENTS.NODE_FETCH);
     }
     
+    // 初始化重定向计数器 (Initialize redirect counter)
     let redirectCount = 0;
     let currentUrl = url;
     
-    // 添加随机User-Agent (Add random User-Agent)
-    if (!headers['User-Agent']) {
-      headers['User-Agent'] = this.getRandomUserAgent();
-    }
+    // 记录请求开始时间 (Record request start time)
+    const fetchStart = Date.now();
     
-    while (redirectCount < maxRedirects) {
-      // 声明在try块外部，以便在catch块中可以访问
-      let timeoutId: NodeJS.Timeout;
-      let fetchStart: number;
-      
-      try {
-        log('node.fetchingUrl', debug, { url: currentUrl, redirect: redirectCount });
+    // 创建AbortController用于超时控制 (Create AbortController for timeout control)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      // 处理重定向循环 (Handle redirect loop)
+      while (redirectCount < maxRedirects) {
+        log('node.fetchingUrl', debug, { url: currentUrl, redirect: redirectCount }, COMPONENTS.NODE_FETCH);
         
-        // 创建AbortController用于超时控制
-        const controller = new AbortController();
-        timeoutId = setTimeout(() => {
-          controller.abort();
-        }, timeout);
-        
-        // 记录开始获取的时间
-        fetchStart = Date.now();
-        
-        // 构建请求选项
-        const userAgent = this.getRandomUserAgent();
-        log('node.usingUserAgent', debug, { userAgent });
-        
-        const options: any = {
-          method: 'GET',
-          headers: {
-            ...headers,
-            'User-Agent': userAgent
-          },
-          redirect: 'manual', // 手动处理重定向
-          signal: controller.signal,
-          follow: 0 // 不自动跟随重定向
-        };
-        
-        // 如果有代理，添加代理设置
-        if (finalProxy) {
-          const isHttps = currentUrl.startsWith("https://");
-          if (isHttps) {
-            log('node.usingHttpsProxy', debug);
-            options.agent = new HttpsProxyAgent(finalProxy);
-          } else {
-            log('node.usingHttpProxy', debug);
-            options.agent = new HttpProxyAgent(finalProxy);
-          }
+        // 如果启用了随机延迟且不是第一个请求，则添加延迟 (Add delay if random delay is enabled and not the first request)
+        if (!noDelay && redirectCount > 0) {
+          await this.randomDelay();
         }
         
-        // 记录请求详情
+        // 准备请求头 (Prepare request headers)
+        const requestHeaders: Record<string, string> = {
+          ...headers
+        };
+        
+        // 添加随机User-Agent (Add random User-Agent)
+        if (!requestHeaders['User-Agent']) {
+          const userAgent = this.getRandomUserAgent();
+          requestHeaders['User-Agent'] = userAgent;
+          log('node.usingUserAgent', debug, { userAgent }, COMPONENTS.NODE_FETCH);
+        }
+        
+        // 准备请求选项 (Prepare request options)
+        const fetchOptions: any = {
+          method: 'GET',
+          headers: requestHeaders,
+          timeout,
+          signal: controller.signal,
+        };
+        
+        // 设置代理 (Set proxy)
+        let agent: Agent | undefined = undefined;
+        
+        if (finalProxy) {
+          if (currentUrl.startsWith('https://')) {
+            agent = new HttpsProxyAgent(finalProxy);
+            log('node.usingHttpsProxy', debug, {}, COMPONENTS.NODE_FETCH);
+          } else {
+            agent = new HttpProxyAgent(finalProxy);
+            log('node.usingHttpProxy', debug, {}, COMPONENTS.NODE_FETCH);
+          }
+          fetchOptions.agent = agent;
+        }
+        
+        // 记录请求详情 (Log request details)
         log('node.requestDetails', debug, {
           url: currentUrl,
-          method: options.method,
-          headers: options.headers,
-          redirect: options.redirect,
-          proxy: finalProxy ? "Set" : "None"
-        });
+          headers: requestHeaders,
+          proxy: finalProxy,
+          timeout,
+        }, COMPONENTS.NODE_FETCH);
         
-        // 发送请求
-        const response = await fetch(currentUrl, options);
+        // 执行请求 (Execute request)
+        const response = await fetch(currentUrl, fetchOptions);
         
-        // 记录响应状态
-        log('node.responseStatus', debug, { 
-          status: response.status, 
+        // 记录响应状态 (Log response status)
+        log('node.responseStatus', debug, {
+          status: response.status,
           statusText: response.statusText,
-          url: response.url
-        });
+          headers: Object.fromEntries(response.headers.entries()),
+        }, COMPONENTS.NODE_FETCH);
         
-        // 清除超时定时器
-        clearTimeout(timeoutId);
-        
-        // 如果是重定向
+        // 处理重定向 (Handle redirects)
         if (response.status >= 300 && response.status < 400 && response.headers.has('location')) {
-          const location = response.headers.get('location');
-          log('node.redirectingTo', debug, { location });
+          redirectCount++;
           
-          // 构建完整的重定向URL
+          // 获取重定向URL (Get redirect URL)
+          const location = response.headers.get('location') as string;
+          log('node.redirectingTo', debug, { location }, COMPONENTS.NODE_FETCH);
+          
+          // 构建完整的重定向URL (Build complete redirect URL)
           let redirectUrl = location;
           if (location.startsWith('/')) {
-            // 相对路径，需要构建完整URL
-            try {
-              const baseUrl = new URL(currentUrl);
-              redirectUrl = `${baseUrl.protocol}//${baseUrl.host}${location}`;
-              log('node.constructedFullRedirectUrl', debug, { redirectUrl });
-            } catch (e) {
-              // 忽略URL解析错误
-            }
+            const urlObj = new URL(currentUrl);
+            redirectUrl = `${urlObj.protocol}//${urlObj.host}${location}`;
+          } else if (!location.startsWith('http')) {
+            redirectUrl = new URL(location, currentUrl).toString();
           }
           
-          // 更新当前URL和重定向计数
+          log('node.constructedFullRedirectUrl', debug, { redirectUrl }, COMPONENTS.NODE_FETCH);
+          
+          // 更新当前URL为重定向URL (Update current URL to redirect URL)
           currentUrl = redirectUrl;
-          redirectCount++;
           continue;
         }
         
-        // 如果是成功响应
-        if (response.status >= 200 && response.status < 300) {
-          log('node.requestSuccess', debug);
+        // 如果响应成功，返回响应 (If response is successful, return response)
+        if (response.ok) {
+          log('node.requestSuccess', debug, {}, COMPONENTS.NODE_FETCH);
           return response;
+        } else {
+          // 处理错误响应 (Handle error response)
+          log('node.errorResponse', debug, { status: response.status, statusText: response.statusText }, COMPONENTS.NODE_FETCH);
+          
+          // 尝试读取错误响应体 (Try to read error response body)
+          let errorText = '';
+          try {
+            errorText = await response.text();
+            log('node.errorResponseBody', debug, { body: errorText.substring(0, 200) + (errorText.length > 200 ? '...' : '') }, COMPONENTS.NODE_FETCH);
+          } catch (textError) {
+            log('node.errorReadingBody', debug, { error: String(textError) }, COMPONENTS.NODE_FETCH);
+          }
+          
+          // 创建错误对象 (Create error object)
+          const error = new Error(`HTTP Error ${response.status}: ${response.statusText}`);
+          (error as any).status = response.status;
+          (error as any).statusText = response.statusText;
+          (error as any).body = errorText;
+          
+          throw error;
         }
-        
-        // 如果是错误响应
-        log('node.errorResponse', debug, { status: response.status, statusText: response.statusText });
-        
-        // 尝试读取响应内容
-        let errorText = '';
-        try {
-          errorText = await response.text();
-          log('node.errorResponseBody', debug, { body: errorText.substring(0, 200) + (errorText.length > 200 ? '...' : '') });
-        } catch (textError) {
-          log('node.errorReadingBody', debug, { error: String(textError) });
-        }
-        
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `HTTP Error ${response.status}: ${response.statusText}\n\n${errorText}`
-            }
-          ]
-        };
-        
-      } catch (error) {
-        // 清除超时定时器
-        clearTimeout(timeoutId);
-        
-        // 详细记录错误信息
-        log('node.fetchError', debug, { error: String(error) });
-        if (error.name === 'AbortError') {
-          log('node.requestAborted', debug, { duration: Date.now() - fetchStart });
-        }
-        
-        // 如果是网络错误，可能需要使用浏览器模式重试
-        if (
-          error.code === 'ENOTFOUND' || 
-          error.code === 'ECONNREFUSED' || 
-          error.code === 'ECONNRESET' || 
-          error.code === 'ETIMEDOUT' || 
-          error.name === 'AbortError'
-        ) {
-          log('node.networkError', debug, { code: error.code || error.name });
-        }
-        
-        throw error;
       }
+      
+      // 如果达到最大重定向次数，抛出错误 (If maximum redirects reached, throw error)
+      throw new Error(`Too many redirects (${maxRedirects})`);
+    } catch (error: any) {
+      // 清除超时定时器 (Clear timeout timer)
+      clearTimeout(timeoutId);
+      
+      // 记录错误 (Log error)
+      log('node.fetchError', debug, { error: String(error) }, COMPONENTS.NODE_FETCH);
+      
+      // 处理超时错误 (Handle timeout error)
+      if (error.name === 'AbortError') {
+        log('node.requestAborted', debug, { duration: Date.now() - fetchStart }, COMPONENTS.NODE_FETCH);
+        const timeoutError = new Error(`Request timeout after ${timeout}ms`);
+        (timeoutError as any).code = 'ETIMEDOUT';
+        (timeoutError as any).timeout = timeout;
+        throw timeoutError;
+      }
+      
+      // 处理网络错误 (Handle network error)
+      if (error.code) {
+        log('node.networkError', debug, { code: error.code || error.name }, COMPONENTS.NODE_FETCH);
+        const networkError = new Error(`Network error: ${error.code || error.message}`);
+        (networkError as any).code = error.code;
+        (networkError as any).originalError = error;
+        throw networkError;
+      }
+      
+      // 处理重定向错误 (Handle redirect error)
+      if (redirectCount >= maxRedirects) {
+        log('node.tooManyRedirects', debug, { redirects: maxRedirects }, COMPONENTS.NODE_FETCH);
+        const redirectError = new Error(`Too many redirects (${maxRedirects})`);
+        (redirectError as any).code = 'EMAXREDIRECTS';
+        (redirectError as any).redirects = redirectCount;
+        throw redirectError;
+      }
+      
+      // 重新抛出其他错误 (Rethrow other errors)
+      throw error;
+    } finally {
+      // 清除超时定时器 (Clear timeout timer)
+      clearTimeout(timeoutId);
     }
-    
-    log('node.tooManyRedirects', debug, { redirects: maxRedirects });
-    return {
-      isError: true,
-      content: [
-        {
-          type: "text",
-          text: `Too many redirects (${maxRedirects})`
-        }
-      ]
-    };
   }
 
   /**
    * 获取HTML内容 (Get HTML content)
-   * 从URL获取HTML并返回 (Fetch HTML from URL and return)
    * @param requestPayload 请求参数 (Request parameters)
-   * @returns 获取结果 (Fetch result)
+   * @returns HTML内容 (HTML content)
    */
   static async html(requestPayload: RequestPayload) {
+    const { debug = false } = requestPayload;
+    log('node.startingHtmlFetch', debug, {}, COMPONENTS.NODE_FETCH);
+    
     try {
-      const debug = requestPayload.debug || false;
-      log('node.startingHtmlFetch', debug);
-      
+      // 执行请求 (Execute request)
       const response = await this._fetchWithRedirects(requestPayload);
       
-      // 如果已经是错误响应对象，直接返回 (If it's already an error response object, return directly)
-      if (response.isError) {
-        return response;
-      }
-      
-      log('node.readingText', debug);
+      // 读取响应文本 (Read response text)
+      log('node.readingText', debug, {}, COMPONENTS.NODE_FETCH);
       const html = await response.text();
-      log('node.htmlContentLength', debug, { length: html.length });
+      log('node.htmlContentLength', debug, { length: html.length }, COMPONENTS.NODE_FETCH);
       
+      // 返回HTML内容 (Return HTML content)
       return {
-        isError: false,
-        content: [
-          {
-            type: "text",
-            text: html
-          }
-        ]
+        html,
+        url: response.url,
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
       };
     } catch (error) {
-      const debug = requestPayload.debug || false;
-      log('node.htmlFetchError', debug, { error: error instanceof Error ? error.message : String(error) });
+      // 处理错误 (Handle error)
+      log('node.htmlFetchError', debug, { error: error instanceof Error ? error.message : String(error) }, COMPONENTS.NODE_FETCH);
       
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: error instanceof Error ? error.message : String(error)
-          }
-        ]
-      };
+      // 重新抛出错误 (Rethrow error)
+      throw error;
     }
   }
 
   /**
    * 获取JSON内容 (Get JSON content)
-   * 从URL获取JSON并返回 (Fetch JSON from URL and return)
    * @param requestPayload 请求参数 (Request parameters)
-   * @returns 获取结果 (Fetch result)
+   * @returns JSON内容 (JSON content)
    */
   static async json(requestPayload: RequestPayload) {
+    const { debug = false } = requestPayload;
+    log('node.startingJsonFetch', debug, {}, COMPONENTS.NODE_FETCH);
+    
     try {
-      const debug = requestPayload.debug || false;
-      log('node.startingJsonFetch', debug);
+      // 执行请求 (Execute request)
+      const response = await this._fetchWithRedirects(requestPayload);
       
-      // 添加JSON特定的请求头 (Add JSON-specific request headers)
-      const headers = requestPayload.headers || {};
-      if (!headers['Accept']) {
-        headers['Accept'] = 'application/json';
-      }
-      
-      const response = await this._fetchWithRedirects({
-        ...requestPayload,
-        headers
-      });
-      
-      // 如果已经是错误响应对象，直接返回 (If it's already an error response object, return directly)
-      if (response.isError) {
-        return response;
-      }
-      
-      log('node.parsingJson', debug);
+      // 读取响应文本 (Read response text)
       const text = await response.text();
       
+      // 解析JSON (Parse JSON)
+      log('node.parsingJson', debug, {}, COMPONENTS.NODE_FETCH);
+      let json;
       try {
-        const json = JSON.parse(text);
-        log('node.jsonParsed', debug);
-        
-        return {
-          isError: false,
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(json, null, 2)
-            }
-          ]
-        };
+        json = JSON.parse(text);
+        log('node.jsonParsed', debug, {}, COMPONENTS.NODE_FETCH);
       } catch (parseError) {
-        log('node.jsonParseError', debug, { error: String(parseError) });
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Failed to parse JSON: ${(parseError as Error).message}\n\nRaw response:\n${text}`
-            }
-          ]
-        };
+        // 处理JSON解析错误 (Handle JSON parse error)
+        const error = new Error(`Invalid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        (error as any).text = text;
+        (error as any).originalError = parseError;
+        
+        log('node.jsonParseError', debug, { error: String(parseError) }, COMPONENTS.NODE_FETCH);
+        
+        throw error;
       }
-    } catch (error) {
-      const debug = requestPayload.debug || false;
-      log('node.jsonFetchError', debug, { error: error instanceof Error ? error.message : String(error) });
       
+      // 返回JSON内容 (Return JSON content)
       return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: error instanceof Error ? error.message : String(error)
-          }
-        ]
+        json,
+        text,
+        url: response.url,
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
       };
+    } catch (error) {
+      // 处理错误 (Handle error)
+      log('node.jsonFetchError', debug, { error: error instanceof Error ? error.message : String(error) }, COMPONENTS.NODE_FETCH);
+      
+      // 重新抛出错误 (Rethrow error)
+      throw error;
     }
   }
 
   /**
    * 获取纯文本内容 (Get plain text content)
-   * 从URL获取纯文本并返回 (Fetch plain text from URL and return)
    * @param requestPayload 请求参数 (Request parameters)
-   * @returns 获取结果 (Fetch result)
+   * @returns 纯文本内容 (Plain text content)
    */
   static async txt(requestPayload: RequestPayload) {
+    const { debug = false } = requestPayload;
+    log('fetcher.startingTxtFetch', debug, {}, COMPONENTS.NODE_FETCH);
+    
     try {
-      const debug = requestPayload.debug || false;
-      log('fetcher.startingTxtFetch', debug, {});
+      // 执行请求 (Execute request)
+      const response = await this._fetchWithRedirects(requestPayload);
       
-      // 添加文本特定的请求头 (Add text-specific request headers)
-      const headers = requestPayload.headers || {};
-      if (!headers['Accept']) {
-        headers['Accept'] = 'text/plain,*/*';
-      }
-      
-      const response = await this._fetchWithRedirects({
-        ...requestPayload,
-        headers
-      });
-      
-      // 如果已经是错误响应对象，直接返回 (If it's already an error response object, return directly)
-      if (response.isError) {
-        return response;
-      }
-      
-      log('fetcher.readingText', debug, {});
+      // 读取响应文本 (Read response text)
+      log('fetcher.readingText', debug, {}, COMPONENTS.NODE_FETCH);
       const text = await response.text();
-      log('fetcher.textContentLength', debug, { length: text.length });
+      log('fetcher.textContentLength', debug, { length: text.length }, COMPONENTS.NODE_FETCH);
       
+      // 返回纯文本内容 (Return plain text content)
       return {
-        isError: false,
-        content: [
-          {
-            type: "text",
-            text
-          }
-        ]
+        text,
+        url: response.url,
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
       };
     } catch (error) {
-      if (requestPayload.debug) {
-        console.error("Text fetch error:", error);
-      }
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: error instanceof Error ? error.message : String(error)
-          }
-        ]
-      };
+      // 重新抛出错误 (Rethrow error)
+      throw error;
     }
   }
 
   /**
    * 获取Markdown内容 (Get Markdown content)
-   * 从URL获取HTML并转换为Markdown (Fetch HTML from URL and convert to Markdown)
    * @param requestPayload 请求参数 (Request parameters)
-   * @returns 获取结果 (Fetch result)
+   * @returns Markdown内容 (Markdown content)
    */
   static async markdown(requestPayload: RequestPayload) {
+    const { debug = false } = requestPayload;
+    log('fetcher.startingMarkdownFetch', debug, {}, COMPONENTS.NODE_FETCH);
+    
     try {
-      const debug = requestPayload.debug || false;
-      log('fetcher.startingMarkdownFetch', debug, {});
-      
+      // 执行请求 (Execute request)
       const response = await this._fetchWithRedirects(requestPayload);
       
-      // 如果已经是错误响应对象，直接返回 (If it's already an error response object, return directly)
-      if (response.isError) {
-        return response;
-      }
-      
-      log('fetcher.readingText', debug, {});
+      // 读取响应文本 (Read response text)
+      log('fetcher.readingText', debug, {}, COMPONENTS.NODE_FETCH);
       const html = await response.text();
-      log('fetcher.htmlContentLength', debug, { length: html.length });
+      log('fetcher.htmlContentLength', debug, { length: html.length }, COMPONENTS.NODE_FETCH);
       
-      log('fetcher.creatingTurndown', debug, {});
+      // 创建Turndown服务 (Create Turndown service)
+      log('fetcher.creatingTurndown', debug, {}, COMPONENTS.NODE_FETCH);
       const turndownService = new TurndownService();
       
-      log('fetcher.convertingToMarkdown', debug, {});
+      // 将HTML转换为Markdown (Convert HTML to Markdown)
+      log('fetcher.convertingToMarkdown', debug, {}, COMPONENTS.NODE_FETCH);
       const markdown = turndownService.turndown(html);
-      log('fetcher.markdownContentLength', debug, { length: markdown.length });
+      log('fetcher.markdownContentLength', debug, { length: markdown.length }, COMPONENTS.NODE_FETCH);
       
+      // 返回Markdown内容 (Return Markdown content)
       return {
-        isError: false,
-        content: [
-          {
-            type: "text",
-            text: markdown
-          }
-        ]
+        markdown,
+        html,
+        url: response.url,
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
       };
     } catch (error) {
-      if (requestPayload.debug) {
-        console.error("Markdown fetch error:", error);
-      }
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: error instanceof Error ? error.message : String(error)
-          }
-        ]
-      };
+      // 重新抛出错误 (Rethrow error)
+      throw error;
     }
   }
 } 

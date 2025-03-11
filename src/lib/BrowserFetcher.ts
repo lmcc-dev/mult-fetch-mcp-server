@@ -13,29 +13,11 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import os from 'os';
-import { createLogger } from './i18n/logger.js';
 import { t } from './i18n/index.js';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
-
-// 创建浏览器获取器日志记录器 (Create browser fetcher logger)
-const logger = createLogger('BROWSER-FETCH');
-
-/**
- * 日志函数 (Log function)
- * 输出调试信息到标准错误流 (Output debug information to standard error stream)
- * @param key 翻译键或消息 (Translation key or message)
- * @param debug 是否为调试模式 (Whether in debug mode)
- * @param options 翻译选项 (Translation options)
- */
-function log(key: string, debug: boolean = false, options?: any): void {
-  // 只有在明确设置 debug 为 true 时才输出日志 (Only output logs when debug is explicitly set to true)
-  if (!debug) {
-    return;
-  }
-  
-  // 所有日志消息都使用翻译键 (All log messages use translation keys)
-  logger.debug(key, options, debug);
-}
+import { log, COMPONENTS } from './logger.js';
+import { NodeFetcher } from './NodeFetcher.js';
+import { JSDOM } from 'jsdom';
 
 // 添加stealth插件
 // @ts-ignore - 忽略puppeteer-extra的类型错误
@@ -110,16 +92,15 @@ export class BrowserFetcher {
       const heapTotal = Math.round(memoryUsage.heapTotal / 1024 / 1024);
       const rss = Math.round(memoryUsage.rss / 1024 / 1024);
       
-      // 输出内存使用情况 (Output memory usage)
-      log('browser.memoryUsage', debug, { heapUsed, heapTotal, rss });
+      // 记录内存使用情况
+      log('browser.memoryUsage', debug, { heapUsed, heapTotal, rss }, COMPONENTS.BROWSER_FETCH);
       
-      // 如果内存使用过高，关闭浏览器 (If memory usage is too high, close the browser)
+      // 如果内存使用过高，记录警告
       if (heapUsed > 500 || rss > 1000) {
-        log('browser.memoryTooHigh', debug, { heapUsed, heapTotal, rss });
-        this.closeBrowser(debug);
+        log('browser.memoryTooHigh', debug, { heapUsed, heapTotal, rss }, COMPONENTS.BROWSER_FETCH);
       }
     } catch (error) {
-      log('browser.memoryCheckError', debug, { error: String(error) });
+      log('browser.memoryCheckError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
     }
   }
 
@@ -128,10 +109,10 @@ export class BrowserFetcher {
    * @param useSystemProxy 是否使用系统代理 (Whether to use system proxy)
    * @returns 系统代理URL或undefined (System proxy URL or undefined)
    */
-  private static getSystemProxy(useSystemProxy: boolean = true): string | undefined {
+  private static getSystemProxy(useSystemProxy: boolean = true, debug: boolean = false): string | undefined {
     // 如果不使用系统代理，直接返回undefined (If not using system proxy, return undefined directly)
     if (!useSystemProxy) {
-      logger.info('fetcher.systemProxyDisabled');
+      log('fetcher.systemProxyDisabled', debug, {}, COMPONENTS.BROWSER_FETCH);
       return undefined;
     }
     
@@ -142,57 +123,53 @@ export class BrowserFetcher {
     ];
     
     // 输出所有环境变量的值，帮助调试 (Output all environment variable values to help debugging)
-    logger.info('fetcher.checkingProxyEnv');
+    log('fetcher.checkingProxyEnv', debug, {}, COMPONENTS.BROWSER_FETCH);
     for (const varName of proxyVars) {
-      logger.info('fetcher.envVarValue', { 
+      log('fetcher.envVarValue', debug, { 
         name: varName, 
         value: process.env[varName] || t('fetcher.notSet') 
-      });
+      }, COMPONENTS.BROWSER_FETCH);
     }
     
-    // 尝试获取代理设置 (Try to get proxy settings)
+    // 尝试获取代理设置
     const proxyUrl = process.env.HTTP_PROXY || process.env.HTTPS_PROXY || 
                      process.env.http_proxy || process.env.https_proxy || 
                      process.env.ALL_PROXY || process.env.all_proxy;
     
     if (proxyUrl) {
-      logger.info('fetcher.foundSystemProxy', { proxy: proxyUrl });
+      log('fetcher.foundSystemProxy', debug, { proxy: proxyUrl }, COMPONENTS.BROWSER_FETCH);
       return proxyUrl;
     }
     
-    // 如果环境变量中没有找到代理，尝试从系统命令获取
+    // 尝试从系统命令获取代理设置
     try {
-      const platform = os.platform();
       let shellOutput = '';
-      
-      if (platform === 'win32') {
-        // Windows 系统
-        shellOutput = execSync('set | findstr "HTTP_PROXY HTTPS_PROXY http_proxy https_proxy"').toString();
-      } else if (platform === 'darwin' || platform === 'linux') {
-        // macOS 或 Linux 系统
-        shellOutput = execSync('env | grep -i -E "HTTP_PROXY|HTTPS_PROXY|http_proxy|https_proxy"').toString();
+      if (process.platform === 'win32') {
+        shellOutput = execSync('set | findstr proxy', { encoding: 'utf8' });
+      } else {
+        shellOutput = execSync('env | grep -i proxy', { encoding: 'utf8' });
       }
       
-      logger.info('fetcher.systemCommandProxySettings', { output: shellOutput.trim() });
+      log('fetcher.systemCommandProxySettings', debug, { output: shellOutput.trim() }, COMPONENTS.BROWSER_FETCH);
       
       // 解析输出找到代理 URL
       const proxyMatch = shellOutput.match(/(?:HTTP_PROXY|HTTPS_PROXY|http_proxy|https_proxy)=([^\s]+)/i);
       if (proxyMatch && proxyMatch[1]) {
         const systemProxyUrl = proxyMatch[1];
-        logger.info('fetcher.foundProxyFromCommand', { proxy: systemProxyUrl });
+        log('fetcher.foundProxyFromCommand', debug, { proxy: systemProxyUrl }, COMPONENTS.BROWSER_FETCH);
         return systemProxyUrl;
       }
     } catch (error) {
-      logger.error('fetcher.errorGettingProxyFromCommand', { error: error.toString() });
+      log('fetcher.errorGettingProxyFromCommand', debug, { error: error.toString() }, COMPONENTS.BROWSER_FETCH);
     }
     
-    // 检查是否设置了 NO_PROXY (Check if NO_PROXY is set)
+    // 检查是否设置了 NO_PROXY
     const noProxy = process.env.NO_PROXY || process.env.no_proxy;
     if (noProxy) {
-      logger.info('fetcher.foundNoProxy', { noProxy: noProxy });
+      log('fetcher.foundNoProxy', debug, { noProxy: noProxy }, COMPONENTS.BROWSER_FETCH);
     }
     
-    logger.info('fetcher.noSystemProxyFound');
+    log('fetcher.noSystemProxyFound', debug, {}, COMPONENTS.BROWSER_FETCH);
     return undefined;
   }
 
@@ -206,109 +183,108 @@ export class BrowserFetcher {
     debug?: boolean;
     useSystemProxy?: boolean;
   }): Promise<Browser> {
-    // 如果浏览器已经在启动中，等待启动完成
-    if (this.browserStartPromise) {
-      log('browser.waiting', debug);
-      return this.browserStartPromise;
+    // 如果浏览器正在启动，等待启动完成
+    if (this.browserStarting) {
+      log('browser.waiting', debug, {}, COMPONENTS.BROWSER_FETCH);
+      return this.browserStartPromise!;
     }
-
+    
+    // 如果浏览器已经启动，直接返回
+    if (this.browser) {
+      log('browser.starting', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      return this.browser;
+    }
+    
     this.browserStarting = true;
-    log('browser.starting', debug, { debug });
-
-    // 获取代理设置 - 优先使用用户指定的代理，其次使用系统代理
-    const proxyServer = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy) : undefined);
-    
-    // 详细记录代理设置情况
-    if (debug) {
-      if (proxy) {
-        log('browser.usingSpecifiedProxy', debug, { proxy });
-      } else if (useSystemProxy) {
-        log('browser.attemptingToUseSystemProxy', debug);
-      } else {
-        log('browser.notUsingProxy', debug);
-      }
-      
-      log('browser.finalProxyUsed', debug, { proxy: proxyServer || t('fetcher.none') });
-    }
-    
-    // 创建启动Promise
     this.browserStartPromise = (async () => {
       try {
-        // 准备浏览器启动参数
+        // 获取代理设置 - 优先使用用户指定的代理，其次使用系统代理
+        const proxyServer = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy, debug) : undefined);
+        
+        // 详细记录代理设置情况
+        if (proxy) {
+          log('browser.usingSpecifiedProxy', debug, { proxy }, COMPONENTS.BROWSER_FETCH);
+        } else if (useSystemProxy) {
+          log('browser.attemptingToUseSystemProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
+        } else {
+          log('browser.notUsingProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
+        }
+        
+        log('browser.finalProxyUsed', debug, { proxy: proxyServer || t('fetcher.none') }, COMPONENTS.BROWSER_FETCH);
+        
+        // 启动浏览器
         const args = [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
           '--disable-gpu',
-          '--window-size=1920,1080',
-          '--disable-background-networking',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-breakpad',
-          '--disable-component-extensions-with-background-pages',
-          '--disable-extensions',
-          '--disable-features=TranslateUI,BlinkGenPropertyTrees',
-          '--disable-ipc-flooding-protection',
+          '--disable-infobars',
+          '--window-position=0,0',
+          '--ignore-certifcate-errors',
+          '--ignore-certifcate-errors-spki-list',
+          '--disable-features=site-per-process',
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--allow-running-insecure-content',
+          '--disable-blink-features=AutomationControlled',
         ];
         
         // 如果有代理，添加代理参数
         if (proxyServer) {
           args.push(`--proxy-server=${proxyServer}`);
-          log('browser.usingProxy', debug, { proxy: proxyServer });
+          log('browser.usingProxy', debug, { proxy: proxyServer }, COMPONENTS.BROWSER_FETCH);
         }
         
-        // 使用puppeteer-extra和stealth插件
-        // @ts-ignore - 忽略类型错误
+        // 启动浏览器
+        // @ts-ignore - 忽略puppeteer-extra的类型错误
         const browser = await puppeteerExtra.launch({
-          // @ts-ignore - 忽略headless类型错误
-          headless: "new",
-          args: args,
+          headless: 'new',
+          args,
+          ignoreHTTPSErrors: true,
           defaultViewport: {
             width: 1920,
             height: 1080
-          },
-          timeout: 30000, // 减少启动超时时间
-          ignoreHTTPSErrors: true,
+          }
         });
-
-        log('browser.startupSuccess', debug);
+        
         this.browser = browser;
-
-        // 设置浏览器关闭事件处理
+        log('browser.startupSuccess', debug, {}, COMPONENTS.BROWSER_FETCH);
+        
+        // 设置浏览器关闭事件
         browser.on('disconnected', () => {
-          log('browser.closed', debug);
           this.browser = null;
-          this.browserStarting = false;
-          this.browserStartPromise = null;
+          log('browser.closed', debug, {}, COMPONENTS.BROWSER_FETCH);
         });
-
+        
         return browser;
       } catch (error) {
-        log('browser.startingFailed', debug, { error: String(error) });
-        this.browserStarting = false;
-        this.browserStartPromise = null;
+        this.browser = null;
+        log('browser.startingFailed', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
         throw error;
+      } finally {
+        this.browserStarting = false;
       }
     })();
-
+    
     return this.browserStartPromise;
   }
 
   // 关闭浏览器
   public static async closeBrowser(debug: boolean = false): Promise<void> {
-    if (this.browser) {
-      log('browser.closing', debug, { debug });
-      
-      try {
+    log('browser.closing', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+    
+    try {
+      if (this.browser) {
         await this.browser.close();
         this.browser = null;
-        this.browserStartPromise = null;
-        this.browserStarting = false;
-        log('browser.closed', debug, { debug });
-      } catch (error) {
-        log('browser.closingError', debug, { error: String(error) });
+        log('browser.closed', debug, { debug }, COMPONENTS.BROWSER_FETCH);
       }
+    } catch (error) {
+      log('browser.closingError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
     }
   }
 
@@ -338,115 +314,129 @@ export class BrowserFetcher {
 
   // 自动滚动页面到底部
   private static async autoScroll(page: Page, debug: boolean): Promise<void> {
-    log('browser.scrolling', debug, { debug });
-    await page.evaluate(async () => {
-      await new Promise<void>((resolve) => {
-        let totalHeight = 0;
-        const distance = 100;
-        const timer = setInterval(() => {
-          const scrollHeight = document.body.scrollHeight;
-          window.scrollBy(0, distance);
-          totalHeight += distance;
-
-          if (totalHeight >= scrollHeight) {
-            clearInterval(timer);
-            resolve();
-          }
-        }, 100);
+    log('browser.scrolling', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+    
+    try {
+      await page.evaluate(async () => {
+        await new Promise<void>((resolve) => {
+          let totalHeight = 0;
+          const distance = 100;
+          const timer = setInterval(() => {
+            const scrollHeight = document.body.scrollHeight;
+            window.scrollBy(0, distance);
+            totalHeight += distance;
+            
+            if (totalHeight >= scrollHeight) {
+              clearInterval(timer);
+              resolve();
+            }
+          }, 100);
+        });
       });
-    });
-    log('browser.scrollCompleted', debug, { debug });
+      
+      log('browser.scrollCompleted', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+    } catch (error) {
+      // 忽略滚动错误，不影响主要功能
+    }
   }
 
   // 检查是否存在Cloudflare保护并尝试绕过
   private static async handleCloudflareProtection(page: Page, url: string, debug: boolean): Promise<boolean> {
+    log('browser.checkingCloudflare', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+    
     try {
-      log('browser.checkingCloudflare', debug, { debug });
-      
-      // 检查是否存在Cloudflare保护
-      const cloudflareDetected = await page.evaluate(() => {
+      // 检查是否存在Cloudflare挑战页面的特征
+      const isCloudflarePage = await page.evaluate(() => {
         return document.title.includes('Cloudflare') || 
-               document.querySelector('div.cf-browser-verification') !== null ||
-               document.querySelector('div.cf-challenge-running') !== null;
+               document.title.includes('Security Check') ||
+               document.body.textContent?.includes('Checking your browser') ||
+               document.body.textContent?.includes('Please wait') ||
+               document.querySelector('#challenge-form') !== null;
       });
       
-      if (!cloudflareDetected) {
-        return true; // 没有Cloudflare保护
-      }
-      
-      log('browser.cloudflareDetected', debug, { debug });
-      
-      // 尝试绕过Cloudflare保护
-      log('browser.simulatingHuman', debug);
-      await this.simulateHumanBehavior(page, debug);
-      
-      // 等待一段时间
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      
-      // 检查是否仍然在Cloudflare页面
-      const stillOnCloudflare = await page.evaluate(() => {
-        return document.title.includes('Cloudflare') || 
-               document.querySelector('div.cf-browser-verification') !== null ||
-               document.querySelector('div.cf-challenge-running') !== null;
-      });
-      
-      if (stillOnCloudflare) {
-        log('browser.stillOnCloudflare', debug, { debug });
+      if (isCloudflarePage) {
+        log('browser.cloudflareDetected', debug, { debug }, COMPONENTS.BROWSER_FETCH);
         
-        // 尝试刷新页面
-        await page.reload({ waitUntil: 'networkidle2' });
-        
-        // 再次模拟人类行为
-        log('browser.simulatingHuman', debug);
+        // 模拟人类行为以通过Cloudflare检查
+        log('browser.simulatingHuman', debug, {}, COMPONENTS.BROWSER_FETCH);
         await this.simulateHumanBehavior(page, debug);
         
-        // 再次等待
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // 等待页面加载完成
+        await page.waitForNavigation({ 
+          waitUntil: 'networkidle2',
+          timeout: 30000
+        }).catch(() => {});
         
-        // 最终检查
-        const finalCheck = await page.evaluate(() => {
+        // 再次检查是否仍在Cloudflare页面
+        const stillOnCloudflare = await page.evaluate(() => {
           return document.title.includes('Cloudflare') || 
-                 document.querySelector('div.cf-browser-verification') !== null ||
-                 document.querySelector('div.cf-challenge-running') !== null;
+                 document.title.includes('Security Check') ||
+                 document.body.textContent?.includes('Checking your browser') ||
+                 document.querySelector('#challenge-form') !== null;
         });
         
-        if (finalCheck) {
-          log('browser.bypassFailed', debug, { debug });
-          return false;
+        if (stillOnCloudflare) {
+          log('browser.stillOnCloudflare', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+          
+          // 再次尝试模拟人类行为
+          log('browser.simulatingHuman', debug, {}, COMPONENTS.BROWSER_FETCH);
+          await this.simulateHumanBehavior(page, debug);
+          
+          // 再次等待页面加载
+          await page.waitForNavigation({ 
+            waitUntil: 'networkidle2',
+            timeout: 30000
+          }).catch(() => {});
+          
+          // 最终检查
+          const bypassFailed = await page.evaluate(() => {
+            return document.title.includes('Cloudflare') || 
+                   document.title.includes('Security Check') ||
+                   document.body.textContent?.includes('Checking your browser') ||
+                   document.querySelector('#challenge-form') !== null;
+          });
+          
+          if (bypassFailed) {
+            log('browser.bypassFailed', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+            return false;
+          }
         }
+        
+        return true;
       }
       
-      return true;
+      return false;
     } catch (error) {
-      log('browser.cloudflareError', debug, { error: String(error) });
+      log('browser.cloudflareError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
       return false;
     }
   }
   
   // 模拟人类行为以绕过Cloudflare保护
   private static async simulateHumanBehavior(page: Page, debug: boolean): Promise<void> {
+    log('browser.simulatingHuman', debug, {}, COMPONENTS.BROWSER_FETCH);
+    
     try {
-      log('browser.simulatingHuman', debug);
+      // 随机移动鼠标
+      for (let i = 0; i < 5; i++) {
+        const x = Math.floor(Math.random() * 500);
+        const y = Math.floor(Math.random() * 500);
+        await page.mouse.move(x, y);
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 500));
+      }
       
-      // 减少模拟行为的复杂度，提高性能
-      await page.mouse.move(100, 100);
-      await page.mouse.down();
-      await page.mouse.move(200, 200);
-      await page.mouse.up();
+      // 随机点击页面
+      await page.mouse.click(Math.floor(Math.random() * 500), Math.floor(Math.random() * 500));
       
-      // 随机点击页面上的一些元素
+      // 随机滚动
       await page.evaluate(() => {
-        const elements = document.querySelectorAll('button, a, input');
-        if (elements.length > 0) {
-          const randomElement = elements[Math.floor(Math.random() * elements.length)];
-          if (randomElement) {
-            (randomElement as HTMLElement).click();
-          }
-        }
+        window.scrollBy(0, Math.floor(Math.random() * 200));
       });
       
+      // 等待一段时间
+      await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
     } catch (error) {
-      log('browser.simulatingHumanError', debug, { error: String(error) });
+      log('browser.simulatingHumanError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
     }
   }
 
@@ -476,134 +466,143 @@ export class BrowserFetcher {
       scrollToBottom,
       saveCookies,
       closeBrowser,
-      timeout,
-      proxy,
-      useSystemProxy,
-      debug
-    });
+      useSystemProxy
+    }, COMPONENTS.BROWSER_FETCH);
+    
+    // 检查内存使用情况
+    this.checkMemoryUsage(debug);
     
     // 获取代理设置 - 优先使用用户指定的代理，其次使用系统代理
-    const effectiveProxy = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy) : undefined);
+    const effectiveProxy = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy, debug) : undefined);
     
     // 详细记录代理设置情况
-    if (debug) {
-      if (proxy) {
-        log('browser.usingSpecifiedProxy', debug, { proxy });
-      } else if (useSystemProxy) {
-        log('browser.attemptingToUseSystemProxy', debug);
-      } else {
-        log('browser.notUsingProxy', debug);
-      }
-      
-      log('browser.finalProxyUsed', debug, { proxy: effectiveProxy || t('fetcher.none') });
+    if (proxy) {
+      log('browser.usingSpecifiedProxy', debug, { proxy }, COMPONENTS.BROWSER_FETCH);
+    } else if (useSystemProxy) {
+      log('browser.attemptingToUseSystemProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
+    } else {
+      log('browser.notUsingProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
     }
+    
+    log('browser.finalProxyUsed', debug, { proxy: effectiveProxy || t('fetcher.none') }, COMPONENTS.BROWSER_FETCH);
 
     try {
+      // 如果只是要关闭浏览器，不需要获取内容
+      if (url === 'about:blank' && closeBrowser) {
+        await this.closeBrowser(debug);
+        return {
+          content: [{ type: 'text', text: 'Browser closed successfully' }],
+          isError: false
+        };
+      }
+      
       // 获取浏览器实例
-      const browser = await this.getBrowser({
-        proxy,
-        debug,
-        useSystemProxy
-      });
+      const browser = await this.getBrowser({ proxy: effectiveProxy, debug, useSystemProxy });
       
       // 创建新页面
       const page = await browser.newPage();
       
-      try {
-        // 设置用户代理
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        
-        // 设置请求头
-        await page.setExtraHTTPHeaders(headers);
-        
-        // 如果有存储的Cookie，设置Cookie
-        const storedCookies = this.getCookies(url);
-        if (storedCookies && debug) {
-          log('browser.usingStoredCookies', debug, { domain: this.getDomain(url) });
-          await page.setCookie(...JSON.parse(storedCookies));
-        }
-        
-        // 如果提供了代理，设置代理
-        if (effectiveProxy) {
-          log('browser.usingProxy', debug, { proxy: effectiveProxy });
-          // 注意：Puppeteer需要在启动时设置代理，这里只是记录
-        }
-        
-        // 导航到URL
-        log('browser.navigating', debug, { debug });
-        await page.goto(url, {
-          waitUntil: 'networkidle2',
-          timeout: timeout
+      // 设置页面超时
+      page.setDefaultTimeout(timeout);
+      
+      // 设置用户代理
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+      
+      // 设置请求头
+      await page.setExtraHTTPHeaders(headers);
+      
+      // 如果有存储的cookies，使用它们
+      const domain = this.getDomain(url);
+      const storedCookies = this.getCookies(domain);
+      if (storedCookies && saveCookies) {
+        log('browser.usingStoredCookies', debug, { domain: this.getDomain(url) }, COMPONENTS.BROWSER_FETCH);
+        await page.setExtraHTTPHeaders({
+          'Cookie': storedCookies
         });
-        
-        // 处理Cloudflare保护
-        const bypassedCloudflare = await this.handleCloudflareProtection(page, url, debug);
-        if (!bypassedCloudflare) {
-          log('browser.continuingWithoutBypass', debug, { debug });
-        }
-        
-        // 如果指定了等待选择器，则等待
-        if (waitForSelector) {
-          log('browser.waitingForSelector', debug, { selector: waitForSelector, debug });
-          await page.waitForSelector(waitForSelector, { timeout });
-        }
-        
-        // 等待指定的时间
-        if (waitForTimeout > 0) {
-          log('browser.waitingForTimeout', debug, { timeout: waitForTimeout, debug });
-          await new Promise(resolve => setTimeout(resolve, waitForTimeout));
-        }
-        
-        // 如果需要滚动到底部
-        if (scrollToBottom) {
-          log('browser.scrolling', debug, { debug });
-          await this.autoScroll(page, debug);
-        }
-        
-        // 获取页面内容
-        log('browser.gettingContent', debug, { debug });
-        const content = await page.content();
-        
-        // 如果启用了保存Cookie
-        if (saveCookies) {
-          log('browser.savingCookies', debug, { debug });
-          const context = page.browser().defaultBrowserContext();
-          const cookies = await context.cookies();
-          this.saveCookies(url, JSON.stringify(cookies));
-        }
-        
-        // 检查内容大小
-        const contentLength = content.length;
-        log('browser.contentLength', debug, { length: contentLength, debug });
-        
-        // 如果内容太大，截断它
-        const maxContentLength = 10 * 1024 * 1024; // 10MB
-        if (contentLength > maxContentLength) {
-          log('browser.contentTruncated', debug, { debug });
-          const truncatedContent = content.substring(0, maxContentLength);
-          return { 
-            content: [{ 
-              type: "text", 
-              text: truncatedContent + `\n\n[内容已截断，原始大小: ${contentLength} 字节]` 
-            }], 
-            isError: false 
-          };
-        }
-        
-        return { content: [{ type: "text", text: content }], isError: false };
-      } finally {
-        // 关闭页面
-        await page.close();
-        log('browser.pageClosed', debug, { debug });
       }
+      
+      // 如果使用代理，记录日志
+      if (effectiveProxy) {
+        log('browser.usingProxy', debug, { proxy: effectiveProxy }, COMPONENTS.BROWSER_FETCH);
+      }
+      
+      // 导航到URL
+      log('browser.navigating', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      await page.goto(url, { 
+        waitUntil: 'networkidle2',
+        timeout: timeout
+      });
+      
+      // 尝试处理Cloudflare保护
+      const bypassedCloudflare = await this.handleCloudflareProtection(page, url, debug);
+      if (!bypassedCloudflare) {
+        log('browser.continuingWithoutBypass', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      }
+      
+      // 等待选择器
+      log('browser.waitingForSelector', debug, { selector: waitForSelector, debug }, COMPONENTS.BROWSER_FETCH);
+      await page.waitForSelector(waitForSelector, { 
+        timeout: timeout
+      }).catch(() => {});
+      
+      // 等待额外时间
+      log('browser.waitingForTimeout', debug, { timeout: waitForTimeout, debug }, COMPONENTS.BROWSER_FETCH);
+      await new Promise(resolve => setTimeout(resolve, waitForTimeout));
+      
+      // 如果需要滚动到底部
+      if (scrollToBottom) {
+        log('browser.scrolling', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+        await this.autoScroll(page, debug);
+      }
+      
+      // 获取页面内容
+      log('browser.gettingContent', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      const content = await page.content();
+      
+      // 如果需要保存cookies
+      if (saveCookies) {
+        log('browser.savingCookies', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+        const cookies = await page.evaluate(() => document.cookie);
+        if (cookies) {
+          this.saveCookies(url, cookies);
+        }
+      }
+      
+      // 记录内容长度
+      const contentLength = content.length;
+      log('browser.contentLength', debug, { length: contentLength, debug }, COMPONENTS.BROWSER_FETCH);
+      
+      // 如果内容太长，截断它
+      let finalContent = content;
+      if (contentLength > 10 * 1024 * 1024) { // 10MB
+        finalContent = content.substring(0, 10 * 1024 * 1024);
+        log('browser.contentTruncated', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      }
+      
+      // 关闭页面
+      await page.close();
+      log('browser.pageClosed', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      
+      // 如果需要关闭浏览器
+      if (closeBrowser) {
+        await this.closeBrowser(debug);
+      }
+      
+      return {
+        content: [{ type: 'text', text: finalContent }],
+        isError: false
+      };
     } catch (error) {
-      log('browser.fetchError', debug, { error: String(error) });
-      return { 
-        content: [{ 
-          type: "text", 
-          text: `Error fetching ${url}: ${error instanceof Error ? error.message : String(error)}` 
-        }], 
-        isError: true 
+      log('browser.fetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
+      
+      // 如果需要关闭浏览器
+      if (closeBrowser) {
+        await this.closeBrowser(debug);
+      }
+      
+      return {
+        content: [{ type: 'text', text: `Error fetching ${url}: ${error}` }],
+        isError: true
       };
     }
   }
@@ -624,200 +623,56 @@ export class BrowserFetcher {
   }): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> {
     const { 
       url, 
-      headers = {},
-      proxy,
-      timeout = 30000,
-      debug = false, 
-      waitForSelector = 'body', 
-      waitForTimeout = 5000, 
-      scrollToBottom = false,
-      saveCookies = true,
-      closeBrowser = false,
-      useSystemProxy = true
+      debug = false,
+      closeBrowser = false
     } = requestPayload;
     
-    // 如果启用了系统代理且没有指定代理，则使用系统代理
-    const finalProxy = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy) : undefined);
-    
     // 如果只是要关闭浏览器，不需要获取内容
-    if (closeBrowser && url === 'about:blank') {
-      log('browser.closingInstance', debug, { debug });
+    if (url === 'about:blank' && closeBrowser) {
+      log('browser.closingInstance', debug, { debug }, COMPONENTS.BROWSER_FETCH);
       await this.closeBrowser(debug);
       return {
-        content: [{ type: 'text', text: String(t('browser.closed')) }],
+        content: [{ type: 'text', text: 'Browser closed successfully' }],
         isError: false
       };
     }
     
-    // 添加最大重试次数
-    const maxRetries = 3;
+    // 设置最大重试次数
+    const maxRetries = 2;
     
-    // 递归函数，用于重试
     const fetchWithRetry = async (retryCount = 0): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> => {
+      log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries, url }, COMPONENTS.BROWSER_FETCH);
+      
       try {
-        log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries, url });
-        
-        // 检查内存使用情况
-        this.checkMemoryUsage(debug);
-        
-        // 获取浏览器实例
-        const browser = await this.getBrowser({
-          proxy,
-          debug,
-          useSystemProxy
-        });
-        
-        // 创建新页面
-        const page = await browser.newPage();
-        
-        try {
-          // 设置用户代理
-          await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-          
-          // 注入脚本以修改浏览器指纹
-          await page.evaluateOnNewDocument(() => {
-            // 覆盖webdriver属性
-            Object.defineProperty(navigator, 'webdriver', {
-              get: () => false,
-            });
-            
-            // 添加语言
-            Object.defineProperty(navigator, 'languages', {
-              get: () => ['zh-CN', 'zh', 'en-US', 'en'],
-            });
-            
-            // 添加插件
-            Object.defineProperty(navigator, 'plugins', {
-              get: () => {
-                return [
-                  {
-                    0: {
-                      type: 'application/x-google-chrome-pdf',
-                      suffixes: 'pdf',
-                      description: 'Portable Document Format',
-                      enabledPlugin: Plugin,
-                    },
-                    name: 'Chrome PDF Plugin',
-                    filename: 'internal-pdf-viewer',
-                    description: 'Portable Document Format',
-                  },
-                ];
-              },
-            });
-          });
-          
-          // 如果有存储的Cookie，设置Cookie
-          const storedCookies = this.getCookies(url);
-          if (storedCookies && debug) {
-            log('browser.usingStoredCookies', debug, { domain: this.getDomain(url) });
-            await page.setCookie(...JSON.parse(storedCookies));
-          }
-          
-          // 设置请求头
-          await page.setExtraHTTPHeaders(headers);
-          
-          // 如果提供了代理，设置代理
-          if (finalProxy) {
-            log('browser.usingProxy', debug, { proxy: finalProxy });
-            // 注意：Puppeteer需要在启动时设置代理，这里只是记录
-          }
-          
-          // 导航到URL
-          log('browser.navigating', debug, { debug });
-          await page.goto(url, {
-            waitUntil: 'networkidle2',
-            timeout: timeout
-          });
-          
-          // 处理Cloudflare保护
-          const bypassedCloudflare = await this.handleCloudflareProtection(page, url, debug);
-          if (!bypassedCloudflare) {
-            log('browser.unableToBypassCloudflare', debug, { debug });
-          }
-          
-          // 如果指定了等待选择器，则等待
-          if (waitForSelector) {
-            log('browser.waitingForSelector', debug, { selector: waitForSelector, debug });
-            await page.waitForSelector(waitForSelector, { timeout });
-          }
-          
-          // 等待指定的时间
-          if (waitForTimeout > 0) {
-            log('browser.waitingForTimeout', debug, { timeout: waitForTimeout, debug });
-            await new Promise(resolve => setTimeout(resolve, waitForTimeout));
-          }
-          
-          // 如果需要滚动到底部
-          if (scrollToBottom) {
-            log('browser.scrolling', debug, { debug });
-            await this.autoScroll(page, debug);
-          }
-          
-          // 获取页面内容
-          log('browser.gettingContent', debug, { debug });
-          const content = await page.content();
-          
-          // 如果启用了保存Cookie
-          if (saveCookies) {
-            log('browser.savingCookies', debug, { debug });
-            const context = page.browser().defaultBrowserContext();
-            const cookies = await context.cookies();
-            this.saveCookies(url, JSON.stringify(cookies));
-          }
-          
-          // 检查内容大小
-          const contentLength = content.length;
-          log('browser.contentLength', debug, { length: contentLength, debug });
-          
-          // 如果内容太大，截断它
-          const maxContentLength = 10 * 1024 * 1024; // 10MB
-          if (contentLength > maxContentLength) {
-            log('browser.contentTooLarge', debug, { debug });
-            const truncatedContent = content.substring(0, maxContentLength);
-            return { 
-              content: [{ 
-                type: "text", 
-                text: truncatedContent + `\n\n[内容已截断，原始大小: ${contentLength} 字节]` 
-              }], 
-              isError: false 
-            };
-          }
-          
-          return { content: [{ type: "text", text: content }], isError: false };
-        } finally {
-          // 关闭页面
-          await page.close();
-          log('browser.pageClosed', debug, { debug });
-        }
+        return await this.fetch(requestPayload);
       } catch (error) {
-        log('browser.fetchErrorWithAttempt', debug, { error: String(error), attempt: retryCount + 1, maxAttempts: maxRetries + 1 });
-        
-        // 如果还有重试次数，则重试
         if (retryCount < maxRetries) {
-          // 添加指数退避延迟
-          const delayMs = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          log('browser.retryingAfterDelay', debug, { delayMs });
+          // 计算延迟时间，随着重试次数增加而增加
+          const delayMs = 1000 * (retryCount + 1);
+          log('browser.retryingAfterDelay', debug, { delayMs }, COMPONENTS.BROWSER_FETCH);
+          
+          // 等待一段时间后重试
           await new Promise(resolve => setTimeout(resolve, delayMs));
           return fetchWithRetry(retryCount + 1);
         }
         
         // 超过最大重试次数，返回错误
-        return { 
-          content: [{ 
-            type: "text", 
-            text: `Error fetching ${url}: ${error instanceof Error ? error.message : String(error)}` 
-          }], 
-          isError: true 
+        return {
+          content: [{ type: 'text', text: `Error fetching ${url} after ${maxRetries + 1} attempts: ${error}` }],
+          isError: true
         };
       }
     };
     
-    if (closeBrowser) {
-      log('browser.closingInstance', debug, {});
-      await this.closeBrowser(debug);
+    try {
+      return await fetchWithRetry();
+    } finally {
+      // 如果需要关闭浏览器
+      if (closeBrowser) {
+        log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
+        await this.closeBrowser(debug);
+      }
     }
-    
-    return fetchWithRetry();
   }
 
   /**
@@ -836,115 +691,78 @@ export class BrowserFetcher {
   }): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> {
     const { 
       url, 
-      headers = {},
-      proxy,
-      timeout = 30000,
-      debug = false, 
-      waitForSelector = 'body', 
-      waitForTimeout = 5000, 
-      scrollToBottom = false,
-      saveCookies = true,
-      closeBrowser = false,
-      useSystemProxy = true
+      debug = false,
+      closeBrowser = false
     } = requestPayload;
     
-    // 如果启用了系统代理且没有指定代理，则使用系统代理
-    const finalProxy = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy) : undefined);
-    
     // 如果只是要关闭浏览器，不需要获取内容
-    if (closeBrowser && url === 'about:blank') {
-      log('browser.closingInstance', debug, {});
+    if (url === 'about:blank' && closeBrowser) {
+      log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
       await this.closeBrowser(debug);
       return {
-        content: [{ type: 'text', text: String(t('browser.closed')) }],
+        content: [{ type: 'text', text: 'Browser closed successfully' }],
         isError: false
       };
     }
     
-    // 添加最大重试次数
+    // 设置最大重试次数
     const maxRetries = 2;
     
-    // 递归函数，用于重试
     const fetchWithRetry = async (retryCount = 0): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> => {
+      log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries + 1, url }, COMPONENTS.BROWSER_FETCH);
+      
       try {
-        log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries + 1, url });
+        const result = await this.fetch(requestPayload);
         
-        // 检查内存使用情况
-        this.checkMemoryUsage(debug);
-        
-        // 获取HTML内容
-        const htmlResult = await this.html({
-          url,
-          headers,
-          proxy,
-          timeout,
-          debug,
-          waitForSelector,
-          waitForTimeout,
-          scrollToBottom,
-          saveCookies,
-          closeBrowser,
-          useSystemProxy
-        });
-        
-        if (htmlResult.isError) {
-          return htmlResult;
+        // 如果获取成功，尝试解析JSON
+        if (!result.isError) {
+          try {
+            const jsonText = result.content[0].text;
+            // 尝试解析JSON
+            JSON.parse(jsonText);
+            // 如果解析成功，直接返回结果
+            return result;
+          } catch (error) {
+            // JSON解析失败
+            log('browser.failedToParseJSON', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
+            return {
+              content: [{ type: 'text', text: `Error parsing JSON from ${url}: ${error}` }],
+              isError: true
+            };
+          }
         }
         
-        // 尝试解析JSON
-        try {
-          const htmlContent = htmlResult.content[0].text;
-          
-          // 从HTML中提取JSON
-          const jsonMatch = htmlContent.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i) || 
-                           htmlContent.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-          
-          let jsonText = jsonMatch ? jsonMatch[1] : htmlContent;
-          
-          // 尝试清理和解析JSON
-          jsonText = jsonText.trim();
-          const jsonData = JSON.parse(jsonText);
-          
-          return {
-            content: [{ type: "text", text: JSON.stringify(jsonData, null, 2) }],
-            isError: false
-          };
-        } catch (error) {
-          log('browser.failedToParseJSON', debug, { error: String(error) });
-          return {
-            content: [{ type: "text", text: `Failed to parse JSON: ${(error as Error).message}` }],
-            isError: true
-          };
-        }
+        return result;
       } catch (error) {
-        log('browser.fetchErrorWithAttempt', debug, { error: String(error), attempt: retryCount + 1, maxAttempts: maxRetries + 1 });
+        log('browser.fetchErrorWithAttempt', debug, { error: String(error), attempt: retryCount + 1, maxAttempts: maxRetries + 1 }, COMPONENTS.BROWSER_FETCH);
         
-        // 如果还有重试次数，则重试
         if (retryCount < maxRetries) {
-          // 添加指数退避延迟
-          const delayMs = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          log('browser.retryingAfterDelay', debug, { delayMs });
+          // 计算延迟时间，随着重试次数增加而增加
+          const delayMs = 1000 * (retryCount + 1);
+          log('browser.retryingAfterDelay', debug, { delayMs }, COMPONENTS.BROWSER_FETCH);
+          
+          // 等待一段时间后重试
           await new Promise(resolve => setTimeout(resolve, delayMs));
           return fetchWithRetry(retryCount + 1);
         }
         
         // 超过最大重试次数，返回错误
-        return { 
-          content: [{ 
-            type: "text", 
-            text: `Error fetching ${url}: ${error instanceof Error ? error.message : String(error)}` 
-          }], 
-          isError: true 
+        return {
+          content: [{ type: 'text', text: `Error fetching JSON from ${url} after ${maxRetries + 1} attempts: ${error}` }],
+          isError: true
         };
       }
     };
     
-    if (closeBrowser) {
-      log('browser.closingInstance', debug, {});
-      await this.closeBrowser(debug);
+    try {
+      return await fetchWithRetry();
+    } finally {
+      // 如果需要关闭浏览器
+      if (closeBrowser) {
+        log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
+        await this.closeBrowser(debug);
+      }
     }
-    
-    return fetchWithRetry();
   }
 
   /**
@@ -963,97 +781,79 @@ export class BrowserFetcher {
   }): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> {
     const { 
       url, 
-      headers = {},
-      proxy,
-      timeout = 30000,
-      debug = false, 
-      waitForSelector = 'body', 
-      waitForTimeout = 5000, 
-      scrollToBottom = false,
-      saveCookies = true,
-      closeBrowser = false,
-      useSystemProxy = true
+      debug = false,
+      closeBrowser = false
     } = requestPayload;
     
-    // 如果启用了系统代理且没有指定代理，则使用系统代理
-    const finalProxy = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy) : undefined);
-    
     // 如果只是要关闭浏览器，不需要获取内容
-    if (closeBrowser && url === 'about:blank') {
-      log('browser.closingInstance', debug, {});
+    if (url === 'about:blank' && closeBrowser) {
+      log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
       await this.closeBrowser(debug);
       return {
-        content: [{ type: 'text', text: String(t('browser.closed')) }],
+        content: [{ type: 'text', text: 'Browser closed successfully' }],
         isError: false
       };
     }
     
-    // 添加最大重试次数
+    // 设置最大重试次数
     const maxRetries = 2;
     
-    // 递归函数，用于重试
     const fetchWithRetry = async (retryCount = 0): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> => {
+      log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries + 1, url }, COMPONENTS.BROWSER_FETCH);
+      
       try {
-        log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries + 1, url });
+        const result = await this.fetch(requestPayload);
         
-        // 检查内存使用情况
-        this.checkMemoryUsage(debug);
-        
-        // 获取HTML内容
-        const htmlResult = await this.html({
-          url,
-          headers,
-          proxy,
-          timeout,
-          debug,
-          waitForSelector,
-          waitForTimeout,
-          scrollToBottom,
-          saveCookies,
-          closeBrowser,
-          useSystemProxy
-        });
-        
-        if (htmlResult.isError) {
-          return htmlResult;
+        // 如果获取成功，提取纯文本
+        if (!result.isError) {
+          const htmlContent = result.content[0].text;
+          
+          // 使用JSDOM提取纯文本
+          const dom = new JSDOM(htmlContent);
+          const textContent = dom.window.document.body.textContent || '';
+          
+          // 清理文本（移除多余空白）
+          const cleanedText = textContent
+            .replace(/\s+/g, ' ')
+            .trim();
+          
+          return {
+            content: [{ type: 'text', text: cleanedText }],
+            isError: false
+          };
         }
         
-        // 提取纯文本
-        const text = htmlResult.content[0].text;
-        
-        return {
-          content: [{ type: "text", text }],
-          isError: false
-        };
+        return result;
       } catch (error) {
-        log('browser.fetchErrorWithAttempt', debug, { error: String(error), attempt: retryCount + 1, maxAttempts: maxRetries + 1 });
+        log('browser.fetchErrorWithAttempt', debug, { error: String(error), attempt: retryCount + 1, maxAttempts: maxRetries + 1 }, COMPONENTS.BROWSER_FETCH);
         
-        // 如果还有重试次数，则重试
         if (retryCount < maxRetries) {
-          // 添加指数退避延迟
-          const delayMs = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          log('browser.retryingAfterDelay', debug, { delayMs });
+          // 计算延迟时间，随着重试次数增加而增加
+          const delayMs = 1000 * (retryCount + 1);
+          log('browser.retryingAfterDelay', debug, { delayMs }, COMPONENTS.BROWSER_FETCH);
+          
+          // 等待一段时间后重试
           await new Promise(resolve => setTimeout(resolve, delayMs));
           return fetchWithRetry(retryCount + 1);
         }
         
         // 超过最大重试次数，返回错误
-        return { 
-          content: [{ 
-            type: "text", 
-            text: `Error fetching ${url}: ${error instanceof Error ? error.message : String(error)}` 
-          }], 
-          isError: true 
+        return {
+          content: [{ type: 'text', text: `Error fetching text from ${url} after ${maxRetries + 1} attempts: ${error}` }],
+          isError: true
         };
       }
     };
     
-    if (closeBrowser) {
-      log('browser.closingInstance', debug, {});
-      await this.closeBrowser(debug);
+    try {
+      return await fetchWithRetry();
+    } finally {
+      // 如果需要关闭浏览器
+      if (closeBrowser) {
+        log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
+        await this.closeBrowser(debug);
+      }
     }
-    
-    return fetchWithRetry();
   }
 
   /**
@@ -1070,61 +870,46 @@ export class BrowserFetcher {
     closeBrowser?: boolean;
     useSystemProxy?: boolean;
   }): Promise<{ content: Array<{ type: string; text: string }>; isError: boolean }> {
-    const { 
-      url, 
-      headers = {},
-      proxy,
-      timeout = 30000,
-      debug = false, 
-      waitForSelector = 'body', 
-      waitForTimeout = 5000, 
-      scrollToBottom = false,
-      saveCookies = true,
-      closeBrowser = false,
-      useSystemProxy = true
-    } = requestPayload;
+    const { url, debug = false } = requestPayload;
     
-    // 如果启用了系统代理且没有指定代理，则使用系统代理
-    const finalProxy = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy) : undefined);
+    log('browser.startingBrowserFetchForMarkdown', debug, { url }, COMPONENTS.BROWSER_FETCH);
     
     try {
-      log('browser.startingBrowserFetchForMarkdown', debug, { url });
-      
       // 获取HTML内容
-      const result = await this.html({
-        url,
-        headers,
-        proxy,
-        timeout,
-        debug,
-        waitForSelector,
-        waitForTimeout,
-        scrollToBottom,
-        saveCookies,
-        closeBrowser,
-        useSystemProxy
-      });
+      const htmlResult = await this.html(requestPayload);
       
-      if (result.isError) {
-        return result;
+      if (htmlResult.isError) {
+        return htmlResult;
       }
       
       // 将HTML转换为Markdown
       const turndownService = new TurndownService({
         headingStyle: 'atx',
-        codeBlockStyle: 'fenced'
+        codeBlockStyle: 'fenced',
+        bulletListMarker: '-'
       });
       
-      const markdown = turndownService.turndown(result.content[0].text);
+      // 添加表格支持
+      turndownService.addRule('tables', {
+        filter: ['table'],
+        replacement: function(content, node) {
+          const tableContent = content.trim();
+          return '\n\n' + tableContent + '\n\n';
+        }
+      });
+      
+      // 转换HTML为Markdown
+      const markdown = turndownService.turndown(htmlResult.content[0].text);
       
       return {
-        content: [{ type: "text", text: markdown }],
+        content: [{ type: 'text', text: markdown }],
         isError: false
       };
     } catch (error) {
-      log('browser.errorInBrowserFetchForMarkdown', debug, { error: String(error) });
+      log('browser.errorInBrowserFetchForMarkdown', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
+      
       return {
-        content: [{ type: "text", text: (error as Error).message }],
+        content: [{ type: 'text', text: `Error converting HTML to Markdown for ${url}: ${error}` }],
         isError: true
       };
     }

@@ -233,6 +233,24 @@ Debug messages are sent to the standard error stream (stderr) using the followin
 [CLIENT] Fetching URL: https://example.com
 ```
 
+### Debug Log File
+
+When debug mode is enabled, all debug messages are also written to a log file located at:
+
+```
+~/.mult-fetch-mcp-server/debug.log
+```
+
+This log file can be accessed through the MCP resources API:
+
+```typescript
+// Access the debug log file
+const result = await client.readResource({ uri: "file:///logs/debug" });
+console.log(result.contents[0].text);
+```
+
+The log file contains timestamped entries from all components (server, client, fetchers) and can be useful for troubleshooting issues.
+
 ## Parameter Handling
 
 This project handles parameters in the following ways:

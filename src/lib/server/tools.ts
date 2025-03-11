@@ -6,7 +6,7 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { log } from './logger.js';
+import { log, COMPONENTS } from '../logger.js';
 import { fetchWithAutoDetect } from './fetcher.js';
 import { FetchParams } from './types.js';
 import { closeBrowserInstance } from './browser.js';
@@ -284,7 +284,8 @@ export function registerTools(server: Server): void {
     const params = parameters as unknown as FetchParams;
     
     try {
-      log('server.receivedToolRequest', params.debug === true, { name, url: params.url });
+      // 记录工具请求
+      log('server.receivedToolRequest', params.debug === true, { name, url: params.url }, COMPONENTS.TOOLS);
       
       if (name === "fetch_html") {
         const result = await fetchWithAutoDetect(params, 'html');
@@ -334,7 +335,8 @@ export function registerTools(server: Server): void {
 
       throw new Error(`Unknown tool name: ${name}`);
     } catch (error) {
-      log('server.processingToolRequestError', params.debug === true, { name, error: error instanceof Error ? error.message : String(error) });
+      // 记录错误
+      log('server.processingToolRequestError', params.debug === true, { name, error: error instanceof Error ? error.message : String(error) }, COMPONENTS.TOOLS);
       return {
         isError: true,
         content: [

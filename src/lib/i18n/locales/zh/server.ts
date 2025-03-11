@@ -7,6 +7,7 @@
 // 服务器相关消息 (Server related messages)
 export const server = {
   starting: "MCP 服务器启动中...",
+  connecting: "正在连接到 MCP 传输: {{transport}}",
   started: "MCP 服务器已启动",
   stopping: "MCP 服务器停止中...",
   stopped: "MCP 服务器已停止",
@@ -28,5 +29,6 @@ export const server = {
   usingBrowserMode: "使用浏览器模式获取 {{type}}: {{url}}",
   usingAutoDetectMode: "使用自动检测模式获取 {{type}}: {{url}}",
   switchingToBrowserMode: "标准模式失败，切换到浏览器模式: {{url}}",
-  fetchError: "获取 {{type}} 时出错: {{error}}"
+  fetchError: "获取 {{type}} 时出错: {{error}}",
+  connectionError: "连接到传输时出错: {{error}}"
 }; 

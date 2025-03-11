@@ -6,11 +6,7 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ListPromptsRequestSchema, GetPromptRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { log } from './logger.js';
-import { createLogger } from '../i18n/logger.js';
-
-// 创建提示日志记录器 (Create prompts logger)
-const logger = createLogger('MCP-PROMPTS');
+import { log, COMPONENTS } from '../logger.js';
 
 // 定义提示模板 (Define prompt templates)
 const PROMPTS = {
@@ -82,7 +78,7 @@ export function registerPrompts(server: Server): void {
   // 注册提示列表处理程序
   server.setRequestHandler(ListPromptsRequestSchema, async (request) => {
     const debug = request.params?.debug === true;
-    log('prompts.list.request', debug, { params: request.params });
+    log('prompts.list.request', debug, { params: request.params }, COMPONENTS.PROMPTS);
     
     return {
       prompts: Object.values(PROMPTS)
@@ -95,7 +91,7 @@ export function registerPrompts(server: Server): void {
     const args = request.params.arguments || {};
     const debug = typeof args.debug === 'boolean' ? args.debug : false;
     
-    log('prompts.get.request', debug, { promptName, args });
+    log('prompts.get.request', debug, { promptName, args }, COMPONENTS.PROMPTS);
     
     // 检查提示是否存在
     if (!PROMPTS[promptName]) {

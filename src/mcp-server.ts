@@ -5,6 +5,7 @@
  */
 
 import { startServer } from './lib/server/index.js';
+import { log, COMPONENTS } from './lib/logger.js';
 
 /**
  * 主函数 (Main function)
@@ -20,6 +21,6 @@ async function main() {
 
 // 启动服务器
 main().catch(async (error) => {
-  console.error(`服务器启动错误: ${error instanceof Error ? error.message : String(error)}`);
+  log('server.startupError', true, { error: error instanceof Error ? error.message : String(error) }, COMPONENTS.SERVER);
   process.exit(1);
 });

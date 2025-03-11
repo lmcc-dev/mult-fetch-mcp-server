@@ -6,14 +6,10 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ListResourcesRequestSchema, ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { log } from './logger.js';
-import { createLogger } from '../i18n/logger.js';
+import { log, getLogFilePath, COMPONENTS } from '../logger.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-// 创建资源日志记录器 (Create resource logger)
-const logger = createLogger('MCP-RESOURCES');
 
 // 获取项目根目录路径 (Get project root directory path)
 const __filename = fileURLToPath(import.meta.url);
@@ -28,13 +24,16 @@ export function registerResources(server: Server): void {
   // 注册资源列表处理程序
   server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
     const debug = request.params?.debug === true;
-    log('resources.list.request', debug, { params: request.params });
+    log('resources.list.request', debug, { params: request.params }, COMPONENTS.RESOURCES);
     
     // 返回实际可用的资源列表
     return {
       resources: [
         // 项目文档资源 (Project documentation resources)
-        
+        {
+          uri: 'file:///logs/debug',
+          description: 'Debug log file containing all debug messages from the server'
+        }
       ],
       resourceTemplates: [
         // 源代码文件模板 (Source code file template)
@@ -48,7 +47,7 @@ export function registerResources(server: Server): void {
   server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
     const uri = request.params.uri;
     const debug = request.params?.debug === true;
-    log('resources.read.request', debug, { uri });
+    log('resources.read.request', debug, { uri }, COMPONENTS.RESOURCES);
     
     try {
       // 解析URI并读取相应文件
@@ -70,7 +69,7 @@ export function registerResources(server: Server): void {
         ]
       };
     } catch (error) {
-      logger.error('resources.readError', { uri, error: error instanceof Error ? error.message : String(error) });
+      log('resources.readError', debug, { uri, error: error instanceof Error ? error.message : String(error) }, COMPONENTS.RESOURCES);
       throw new Error(`resources.notFound: ${uri}`);
     }
   });
@@ -82,6 +81,11 @@ export function registerResources(server: Server): void {
  * @returns 文件路径或null (File path or null)
  */
 function parseResourceUri(uri: string): string | null {
+  // 处理日志文件URI
+  if (uri === 'file:///logs/debug') {
+    return getLogFilePath();
+  }
+  
   // 处理预定义的URI模式
   if (uri.startsWith('file:///docs/')) {
     const resourceName = uri.substring('file:///docs/'.length);
@@ -115,7 +119,7 @@ async function readFileContent(filePath: string): Promise<string> {
   try {
     return fs.readFileSync(filePath, 'utf-8');
   } catch (error) {
-    logger.error('resources.fileReadError', { filePath, error: error instanceof Error ? error.message : String(error) });
+    log('resources.fileReadError', true, { filePath, error: error instanceof Error ? error.message : String(error) }, COMPONENTS.RESOURCES);
     throw new Error('resources.fileReadError');
   }
 }
@@ -142,6 +146,7 @@ function getMimeType(filePath: string): string {
     case '.css':
       return 'text/css';
     case '.txt':
+    case '.log':
       return 'text/plain';
     default:
       return 'application/octet-stream';

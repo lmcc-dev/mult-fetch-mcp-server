@@ -5,10 +5,7 @@
  */
 
 import { BrowserFetcher } from '../BrowserFetcher.js';
-import { createLogger } from '../i18n/logger.js';
-
-// 创建服务器浏览器日志记录器 (Create server browser logger)
-const logger = createLogger('MCP-SERVER');
+import { log, COMPONENTS } from '../logger.js';
 
 // 全局浏览器实例 (Global browser instance)
 let browserInitialized = false;
@@ -22,7 +19,7 @@ let browserInitialized = false;
 export async function initializeBrowser(debug: boolean = false): Promise<void> {
   if (!browserInitialized) {
     if (debug) {
-      logger.info('server.initializingBrowser');
+      log('server.initializingBrowser', debug, {}, COMPONENTS.SERVER);
     }
     // BrowserFetcher 是静态类，不需要实例化 (BrowserFetcher is a static class, no need to instantiate)
     browserInitialized = true;
@@ -38,7 +35,7 @@ export async function initializeBrowser(debug: boolean = false): Promise<void> {
 export async function closeBrowserInstance(debug: boolean = false): Promise<void> {
   if (browserInitialized) {
     if (debug) {
-      logger.info('server.closingBrowser');
+      log('server.closingBrowser', debug, {}, COMPONENTS.SERVER);
     }
     await BrowserFetcher.closeBrowser(true);
     browserInitialized = false;

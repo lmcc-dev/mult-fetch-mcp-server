@@ -14,9 +14,12 @@
  * node dist/index.js
  */
 
+// 导入日志模块 (Import logger module)
+import { log, COMPONENTS } from './lib/logger.js';
+
 // 导入服务器模块 (Import server module)
 import './mcp-server.js';
 
 // 服务器在 mcp-server.js 中已经启动，这里不需要额外的代码 
 // (The server is already started in mcp-server.js, no additional code is needed here)
-console.error('MCP server entry loaded, server starting...');
+log('server.entry.loaded', true, {}, COMPONENTS.SERVER);

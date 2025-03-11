@@ -21,9 +21,9 @@ const resources = {
 // 初始化 i18next (Initialize i18next)
 i18next.init({
   resources,
-  // 优先使用专门的环境变量，其次是系统语言，最后回退到英语
-  // (Priority: dedicated environment variable, then system language, finally fallback to English)
-  lng: process.env.MCP_LANG || (process.env.LANG?.startsWith('zh') ? 'zh' : 'en'),
+  // 优先使用专门的环境变量，其次默认使用英语
+  // (Priority: dedicated environment variable, then default to English)
+  lng: process.env.MCP_LANG || 'en',
   fallbackLng: 'en',
   interpolation: {
     escapeValue: false // 不转义插值 (Don't escape interpolation)

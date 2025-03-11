@@ -233,6 +233,24 @@ npm run server
 [CLIENT] 正在获取URL: https://example.com
 ```
 
+### 调试日志文件
+
+当启用调试模式时，所有调试消息也会写入到位于以下位置的日志文件：
+
+```
+~/.mult-fetch-mcp-server/debug.log
+```
+
+可以通过 MCP 资源 API 访问此日志文件：
+
+```typescript
+// 访问调试日志文件
+const result = await client.readResource({ uri: "file:///logs/debug" });
+console.log(result.contents[0].text);
+```
+
+日志文件包含来自所有组件（服务器、客户端、获取器）的带时间戳的条目，可用于排查问题。
+
 ## 参数处理
 
 本项目采用以下方式处理参数：
