@@ -50,5 +50,14 @@ export const browser = {
   usingStoredCookies: "Using stored cookies for domain: {{domain}}",
   closingInstance: "Closing browser instance",
   fetchErrorWithAttempt: "Error in browser fetch (attempt {{attempt}}/{{maxAttempts}}): {{error}}",
-  retryingAfterDelay: "Retrying after {{delayMs}}ms delay..."
+  retryingAfterDelay: "Retrying after {{delayMs}}ms delay...",
+  browserStartupSuccess: "Browser started successfully",
+  browserStartupFailed: "Browser startup failed: {{error}}",
+  usingCustomChromePath: "Using custom Chrome path: {{path}}",
+  browserDisconnected: "Browser disconnected",
+  waitingForBrowserStart: "Waiting for browser to start",
+  reusingExistingBrowser: "Reusing existing browser instance",
+  startingBrowser: "Starting browser",
+  browserStarted: "Browser started successfully",
+  browserStartError: "Browser startup error: {{error}}"
 }; 

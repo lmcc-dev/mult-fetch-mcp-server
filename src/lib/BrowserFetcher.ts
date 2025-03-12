@@ -13,6 +13,7 @@ import { t } from './i18n/index.js';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { log, COMPONENTS } from './logger.js';
 import { JSDOM } from 'jsdom';
+import puppeteer from 'puppeteer';
 
 // 添加stealth插件
 // @ts-ignore - 忽略puppeteer-extra的类型错误
@@ -65,6 +66,32 @@ export class BrowserFetcher {
    * 内存检查间隔（毫秒） (Memory check interval in milliseconds)
    */
   private static memoryCheckInterval: number = 60000;
+
+  /**
+   * 常用浏览器的User-Agent列表 (List of common browser User-Agents)
+   * 用于模拟不同浏览器的请求 (Used to simulate requests from different browsers)
+   */
+  private static userAgents = [
+    // Chrome
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    // Firefox
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0',
+    // Safari
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15',
+    // Edge
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59'
+  ];
+
+  /**
+   * 获取随机User-Agent (Get random User-Agent)
+   * @returns 随机的User-Agent字符串 (Random User-Agent string)
+   */
+  private static getRandomUserAgent(): string {
+    const index = Math.floor(Math.random() * this.userAgents.length);
+    return this.userAgents[index];
+  }
 
   /**
    * 检查内存使用情况 (Check memory usage)
@@ -186,102 +213,110 @@ export class BrowserFetcher {
     return undefined;
   }
 
-  // 获取或启动浏览器实例
-  private static async getBrowser({
-    proxy,
-    debug = false,
-    useSystemProxy = true
-  }: {
-    proxy?: string;
-    debug?: boolean;
-    useSystemProxy?: boolean;
-  }): Promise<Browser> {
-    // 如果浏览器正在启动，等待启动完成
-    if (this.browserStarting) {
-      log('browser.waiting', debug, {}, COMPONENTS.BROWSER_FETCH);
-      return this.browserStartPromise!;
-    }
+  /**
+   * 获取浏览器实例 (Get browser instance)
+   * 如果浏览器未启动，则启动浏览器 (Start browser if not started)
+   * @param debug 是否启用调试输出 (Whether to enable debug output)
+   * @returns 浏览器实例 (Browser instance)
+   */
+  private static async getBrowser(debug: boolean = false): Promise<Browser> {
+    // 检查内存使用情况 (Check memory usage)
+    this.checkMemoryUsage(debug);
     
-    // 如果浏览器已经启动，直接返回
+    // 如果浏览器已经存在，直接返回 (If browser already exists, return directly)
     if (this.browser) {
-      log('browser.starting', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      log('browser.reusingExistingBrowser', debug, {}, COMPONENTS.BROWSER_FETCH);
       return this.browser;
     }
     
+    // 如果浏览器正在启动中，等待启动完成 (If browser is starting, wait for startup to complete)
+    if (this.browserStarting && this.browserStartPromise) {
+      log('browser.waitingForBrowserStart', debug, {}, COMPONENTS.BROWSER_FETCH);
+      return this.browserStartPromise;
+    }
+    
+    // 标记浏览器正在启动 (Mark browser as starting)
     this.browserStarting = true;
-    this.browserStartPromise = (async () => {
+    
+    // 创建启动Promise (Create startup Promise)
+    this.browserStartPromise = new Promise(async (resolve, reject) => {
       try {
-        // 获取代理设置 - 优先使用用户指定的代理，其次使用系统代理
-        const proxyServer = proxy || (useSystemProxy ? this.getSystemProxy(useSystemProxy, debug) : undefined);
+        log('browser.startingBrowser', debug, {}, COMPONENTS.BROWSER_FETCH);
         
-        // 详细记录代理设置情况
-        if (proxy) {
-          log('fetcher.usingSpecifiedProxy', debug, { proxy }, COMPONENTS.BROWSER_FETCH);
-        } else if (useSystemProxy) {
-          log('fetcher.attemptingToUseSystemProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
-        } else {
-          log('fetcher.notUsingProxy', debug, {}, COMPONENTS.BROWSER_FETCH);
-        }
-        
-        log('fetcher.finalProxyUsed', debug, { proxy: proxyServer || t('fetcher.none') }, COMPONENTS.BROWSER_FETCH);
-        
-        // 启动浏览器
-        const args = [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--single-process',
-          '--disable-gpu',
-          '--disable-infobars',
-          '--window-position=0,0',
-          '--ignore-certifcate-errors',
-          '--ignore-certifcate-errors-spki-list',
-          '--disable-features=site-per-process',
-          '--disable-web-security',
-          '--disable-features=IsolateOrigins,site-per-process',
-          '--allow-running-insecure-content',
-          '--disable-blink-features=AutomationControlled',
-        ];
-        
-        // 如果有代理，添加代理参数
-        if (proxyServer) {
-          args.push(`--proxy-server=${proxyServer}`);
-          log('browser.usingProxy', debug, { proxy: proxyServer }, COMPONENTS.BROWSER_FETCH);
-        }
-        
-        // 启动浏览器
-        // @ts-ignore - 忽略puppeteer-extra的类型错误
-        const browser = await puppeteerExtra.launch({
+        // 准备浏览器启动参数 (Prepare browser startup parameters)
+        const launchOptions: any = {
           headless: 'new',
-          args,
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--disable-infobars',
+            '--window-position=0,0',
+            '--ignore-certificate-errors',
+            '--ignore-certificate-errors-spki-list',
+            '--disable-extensions',
+            '--disable-default-apps',
+            '--enable-features=NetworkService',
+            '--disable-features=IsolateOrigins,site-per-process',
+            '--disable-web-security',
+            '--disable-site-isolation-trials',
+            '--disable-features=BlockInsecurePrivateNetworkRequests',
+            '--disable-features=IsolateOrigins',
+            '--disable-features=site-per-process',
+            '--disable-blink-features=AutomationControlled',
+            '--user-agent=' + this.getRandomUserAgent()
+          ],
           ignoreHTTPSErrors: true,
           defaultViewport: {
             width: 1920,
             height: 1080
           }
-        });
+        };
         
-        this.browser = browser;
-        log('browser.startupSuccess', debug, {}, COMPONENTS.BROWSER_FETCH);
+        // 检查是否有环境变量指定的Chrome路径 (Check if there is a Chrome path specified by environment variables)
+        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        if (executablePath) {
+          log('browser.usingCustomChromePath', debug, { path: executablePath }, COMPONENTS.BROWSER_FETCH);
+          launchOptions.executablePath = executablePath;
+          launchOptions.channel = undefined;
+        }
         
-        // 设置浏览器关闭事件
-        browser.on('disconnected', () => {
+        // 启动浏览器 (Launch browser)
+        // @ts-ignore - 忽略puppeteer-extra的类型错误
+        this.browser = await puppeteerExtra.launch(launchOptions);
+        
+        log('browser.browserStarted', debug, {}, COMPONENTS.BROWSER_FETCH);
+        
+        // 设置浏览器关闭事件处理 (Set browser close event handling)
+        this.browser.on('disconnected', () => {
+          log('browser.browserDisconnected', debug, {}, COMPONENTS.BROWSER_FETCH);
           this.browser = null;
-          log('browser.closed', debug, {}, COMPONENTS.BROWSER_FETCH);
+          this.browserStarting = false;
+          this.browserStartPromise = null;
         });
         
-        return browser;
-      } catch (error) {
-        this.browser = null;
-        log('browser.startingFailed', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
-        throw error;
-      } finally {
+        // 重置标志 (Reset flags)
         this.browserStarting = false;
+        
+        // 解析Promise (Resolve Promise)
+        resolve(this.browser);
+      } catch (error) {
+        // 记录错误 (Log error)
+        log('browser.browserStartError', true, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
+        
+        // 重置标志 (Reset flags)
+        this.browser = null;
+        this.browserStarting = false;
+        this.browserStartPromise = null;
+        
+        // 拒绝Promise (Reject Promise)
+        reject(error);
       }
-    })();
+    });
     
     return this.browserStartPromise;
   }
@@ -510,7 +545,7 @@ export class BrowserFetcher {
       }
       
       // 获取浏览器实例
-      const browser = await this.getBrowser({ proxy: effectiveProxy, debug, useSystemProxy });
+      const browser = await this.getBrowser(debug);
       
       // 创建新页面
       const page = await browser.newPage();

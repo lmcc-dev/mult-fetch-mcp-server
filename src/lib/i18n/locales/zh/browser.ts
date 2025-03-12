@@ -50,5 +50,14 @@ export const browser = {
   usingStoredCookies: "使用存储的域名Cookie: {{domain}}",
   closingInstance: "关闭浏览器实例",
   fetchErrorWithAttempt: "浏览器获取错误（尝试 {{attempt}}/{{maxAttempts}}）: {{error}}",
-  retryingAfterDelay: "延迟 {{delayMs}}ms 后重试..."
+  retryingAfterDelay: "延迟 {{delayMs}}ms 后重试...",
+  browserStartupSuccess: "浏览器启动成功",
+  browserStartupFailed: "浏览器启动失败: {{error}}",
+  usingCustomChromePath: "使用自定义Chrome路径: {{path}}",
+  browserDisconnected: "浏览器已断开连接",
+  waitingForBrowserStart: "等待浏览器启动",
+  reusingExistingBrowser: "复用现有浏览器实例",
+  startingBrowser: "正在启动浏览器",
+  browserStarted: "浏览器启动成功",
+  browserStartError: "浏览器启动错误: {{error}}"
 }; 
