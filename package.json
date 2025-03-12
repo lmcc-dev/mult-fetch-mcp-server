@@ -1,6 +1,6 @@
 {
   "name": "@lmcc-dev/mult-fetch-mcp-server",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "An MCP protocol-based web content fetching tool that supports multiple modes and formats, can be integrated with AI assistants like Claude",
   "type": "module",
   "main": "dist/index.js",
