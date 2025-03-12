@@ -11,7 +11,7 @@ import { t } from '../i18n/index.js';
 
 // 定义提示模板 (Define prompt templates)
 const PROMPTS = {
-  "fetch-website": {
+  "mult-fetch-mcp:prompt:fetch-website": {
     name: "mult-fetch-mcp:prompt:fetch-website",
     description: t('prompts.fetchWebsite.description'),
     arguments: [
@@ -32,7 +32,7 @@ const PROMPTS = {
       }
     ]
   },
-  "extract-content": {
+  "mult-fetch-mcp:prompt:extract-content": {
     name: "mult-fetch-mcp:prompt:extract-content",
     description: t('prompts.extractContent.description'),
     arguments: [
@@ -53,7 +53,7 @@ const PROMPTS = {
       }
     ]
   },
-  "debug-fetch": {
+  "mult-fetch-mcp:prompt:debug-fetch": {
     name: "mult-fetch-mcp:prompt:debug-fetch",
     description: t('prompts.debugFetch.description'),
     arguments: [
@@ -110,7 +110,7 @@ export function registerPrompts(server: Server): void {
     }
     
     // 根据提示名称和参数生成消息
-    if (promptName === "fetch-website") {
+    if (promptName === "mult-fetch-mcp:prompt:fetch-website") {
       const url = args.url;
       const format = args.format || "html";
       let useBrowser = false;
@@ -161,7 +161,7 @@ export function registerPrompts(server: Server): void {
           }
         ]
       };
-    } else if (promptName === "extract-content") {
+    } else if (promptName === "mult-fetch-mcp:prompt:extract-content") {
       const url = args.url;
       const selector = args.selector || "main";
       const dataType = args.dataType || "text";
@@ -180,7 +180,7 @@ export function registerPrompts(server: Server): void {
           }
         ]
       };
-    } else if (promptName === "debug-fetch") {
+    } else if (promptName === "mult-fetch-mcp:prompt:debug-fetch") {
       const url = args.url;
       const error = args.error;
       
