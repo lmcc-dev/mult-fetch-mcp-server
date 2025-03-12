@@ -395,7 +395,12 @@ export class NodeFetcher {
         (error as any).text = text;
         (error as any).originalError = parseError;
         
-        log('node.jsonParseError', debug, { error: String(parseError) }, COMPONENTS.NODE_FETCH);
+        // 记录更详细的错误信息和原始文本内容 (Log more detailed error information and original text content)
+        log('node.jsonParseError', true, { 
+          error: String(parseError),
+          textPreview: text.length > 100 ? `${text.substring(0, 100)}...` : text,
+          textLength: text.length
+        }, COMPONENTS.NODE_FETCH);
         
         throw error;
       }

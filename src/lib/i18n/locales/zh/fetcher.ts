@@ -40,7 +40,7 @@ export const fetcher = {
   startingJsonFetch: "开始JSON获取",
   parsingJson: "解析JSON",
   jsonParsed: "JSON解析成功",
-  jsonParseError: "JSON解析错误: {{error}}",
+  jsonParseError: "JSON解析错误: {{error}}, 文本预览: {{textPreview}}, 长度: {{textLength}}",
   startingTxtFetch: "开始文本获取",
   textContentLength: "文本内容长度: {{length}} 字节",
   startingMarkdownFetch: "开始Markdown获取",
