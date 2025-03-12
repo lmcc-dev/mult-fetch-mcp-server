@@ -391,14 +391,14 @@ export class NodeFetcher {
         log('node.jsonParsed', debug, {}, COMPONENTS.NODE_FETCH);
       } catch (parseError) {
         // 处理JSON解析错误 (Handle JSON parse error)
-        const error = new Error(`Invalid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        const textPreview = text.length > 100 ? `${text.substring(0, 100)}...` : text;
+        const error = new Error(`Invalid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}. Text preview: "${textPreview}", length: ${text.length}`);
         (error as any).text = text;
         (error as any).originalError = parseError;
         
-        // 记录更详细的错误信息和原始文本内容 (Log more detailed error information and original text content)
-        log('node.jsonParseError', true, { 
+        log('fetcher.jsonParseError', debug, { 
           error: String(parseError),
-          textPreview: text.length > 100 ? `${text.substring(0, 100)}...` : text,
+          textPreview,
           textLength: text.length
         }, COMPONENTS.NODE_FETCH);
         
