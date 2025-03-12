@@ -40,7 +40,7 @@ export const fetcher = {
   startingJsonFetch: "Starting JSON fetch",
   parsingJson: "Parsing JSON",
   jsonParsed: "JSON parsed successfully",
-  jsonParseError: "JSON parse error: {{error}}, Text preview: {{textPreview}}, Length: {{textLength}}",
+  jsonParseError: "JSON parse error: {{error}}. Text preview: \"{{textPreview}}\", length: {{textLength}} bytes",
   startingTxtFetch: "Starting text fetch",
   textContentLength: "Text content length: {{length}} bytes",
   startingMarkdownFetch: "Starting Markdown fetch",
