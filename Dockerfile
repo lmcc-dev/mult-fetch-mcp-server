@@ -19,17 +19,13 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 WORKDIR /app
 
 # Install app dependencies
-COPY package.json package-lock.json* pnpm-lock.yaml* ./
+COPY package.json ./
 
-# Using npm ci with ignore-scripts to avoid unwanted prepare script, then build explicitly
-# If pnpm-lock.yaml exists, consider installing via npm
-RUN npm install --ignore-scripts || true
+# Install dependencies and allow prepare script to run
+RUN npm install
 
 # Copy the rest of the application
 COPY . .
-
-# Build the app
-RUN npm run build
 
 # Expose any ports if necessary, though MCP uses stdio
 
