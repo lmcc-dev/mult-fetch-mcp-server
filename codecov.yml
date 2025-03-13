@@ -1,0 +1,33 @@
+codecov:
+  require_ci_to_pass: yes
+
+coverage:
+  precision: 2
+  round: down
+  range: "50...90"
+  status:
+    project:
+      default:
+        # 基本目标是总体覆盖率不低于 50%
+        target: 50%
+        # 允许总体覆盖率下降 5%
+        threshold: 5%
+    patch:
+      default:
+        # 新代码的覆盖率目标是 70%
+        target: 70%
+        # 允许新代码覆盖率下降 10%
+        threshold: 10%
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: no

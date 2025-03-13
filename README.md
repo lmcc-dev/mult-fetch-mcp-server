@@ -13,10 +13,10 @@
 [![GitHub last commit](https://img.shields.io/github/last-commit/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/commits/main)
 [![GitHub contributors](https://img.shields.io/github/contributors/lmcc-dev/mult-fetch-mcp-server)](https://github.com/lmcc-dev/mult-fetch-mcp-server/graphs/contributors)
 [![smithery badge](https://smithery.ai/badge/@lmcc-dev/mult-fetch-mcp-server)](https://smithery.ai/server/@lmcc-dev/mult-fetch-mcp-server)
+[![codecov](https://codecov.io/gh/lmcc-dev/mult-fetch-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/lmcc-dev/mult-fetch-mcp-server)
 
 
 <!-- Future badges to consider:
-[![codecov](https://codecov.io/gh/lmcc-dev/mult-fetch-mcp-server/branch/main/graph/badge.svg)](https://codecov.io/gh/lmcc-dev/mult-fetch-mcp-server)
 [![CodeFactor](https://www.codefactor.io/repository/github/lmcc-dev/mult-fetch-mcp-server/badge)](https://www.codefactor.io/repository/github/lmcc-dev/mult-fetch-mcp-server)
 [![Maintainability](https://api.codeclimate.com/v1/badges/a99a88d28ad37a79dbf6/maintainability)](https://codeclimate.com/github/lmcc-dev/mult-fetch-mcp-server/maintainability)
 -->
