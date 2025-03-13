@@ -38,3 +38,6 @@ temp/
 
 # 浏览器数据
 .chrome-data/
+
+# 开发笔记
+NOTEPADS/
