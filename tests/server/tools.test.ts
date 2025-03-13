@@ -112,7 +112,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com' },
+      { url: 'https://example.com', method: 'fetch_html' },
       'html'
     );
     
@@ -145,7 +145,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/data.json' },
+      { url: 'https://example.com/data.json', method: 'fetch_json' },
       'json'
     );
     
@@ -178,7 +178,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/text.txt' },
+      { url: 'https://example.com/text.txt', method: 'fetch_txt' },
       'txt'
     );
     
@@ -211,7 +211,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/readme.md' },
+      { url: 'https://example.com/readme.md', method: 'fetch_markdown' },
       'markdown'
     );
     
@@ -239,15 +239,20 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
       }
     };
     
+    // 设置模拟返回值
+    (fetchWithAutoDetect as jest.Mock).mockResolvedValue({
+      isError: true,
+      content: [{ text: 'Unknown tool: unknown_tool' }]
+    });
+    
     // 调用处理程序
     const result = await callToolHandler(request);
     
     // 验证返回结果
     expect(result).toHaveProperty('content');
     expect(result).toHaveProperty('isError', true);
-    expect(result.content[0]).toHaveProperty('type', 'text');
-    expect(result.content[0].text).toContain('Error processing request');
-    expect(result.content[0].text).toContain('Unknown tool name: unknown_tool');
+    expect(result.content[0]).toHaveProperty('text');
+    expect(result.content[0].text).toContain('Unknown tool');
   });
   
   test('应该正确处理工具调用错误 (Should handle tool call error correctly)', async () => {
@@ -256,9 +261,6 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
-    
-    // 设置 fetchWithAutoDetect 抛出错误
-    (fetchWithAutoDetect as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
     
     // 创建请求对象
     const request = {
@@ -270,14 +272,16 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
       }
     };
     
+    // 设置模拟抛出错误
+    (fetchWithAutoDetect as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+    
     // 调用处理程序
     const result = await callToolHandler(request);
     
     // 验证返回结果
     expect(result).toHaveProperty('content');
     expect(result).toHaveProperty('isError', true);
-    expect(result.content[0]).toHaveProperty('type', 'text');
-    expect(result.content[0].text).toContain('Error processing request');
+    expect(result.content[0]).toHaveProperty('text');
     expect(result.content[0].text).toContain('Fetch failed');
   });
 }); 

@@ -6,6 +6,7 @@
 
 import { BrowserFetcher } from '../BrowserFetcher.js';
 import { log, COMPONENTS } from '../logger.js';
+import { isAccessDeniedError, isNetworkError } from '../utils/errorDetection.js';
 
 // 全局浏览器实例 (Global browser instance)
 let browserInitialized = false;
@@ -43,27 +44,20 @@ export async function closeBrowserInstance(debug: boolean = false): Promise<void
 }
 
 /**
- * 检查是否应该切换到浏览器模式 (Check if should switch to browser mode)
- * 根据错误信息判断是否需要浏览器模式 (Determine if browser mode is needed based on error message)
+ * 判断是否应该切换到浏览器模式 (Determine if should switch to browser mode)
+ * 根据错误信息判断是否需要浏览器模式 (Based on error message to determine if browser mode is needed)
  * @param error 错误对象 (Error object)
- * @returns 是否应该切换到浏览器模式 (Whether to switch to browser mode)
+ * @returns 是否应该切换到浏览器模式 (Whether should switch to browser mode)
  */
 export function shouldSwitchToBrowser(error: any): boolean {
   // 检查错误是否表明需要浏览器模式 (Check if error indicates browser mode is needed)
   if (error && error.message) {
-    const errorMessage = error.message.toLowerCase();
-    return errorMessage.includes('403') || 
-           errorMessage.includes('forbidden') ||
-           errorMessage.includes('access denied') ||
-           errorMessage.includes('cloudflare') ||
-           errorMessage.includes('captcha') ||
-           errorMessage.includes('javascript required') ||
-           errorMessage.includes('timeout') ||
-           errorMessage.includes('connect timeout') ||
-           errorMessage.includes('socket') ||
-           errorMessage.includes('econnrefused') ||
-           errorMessage.includes('und_err_connect_timeout') ||
-           errorMessage.includes('fetch failed');
+    const errorMessage = error.message;
+    return isAccessDeniedError(errorMessage) || 
+           isNetworkError(errorMessage) ||
+           errorMessage.toLowerCase().includes('javascript required') ||
+           errorMessage.toLowerCase().includes('und_err_connect_timeout') ||
+           errorMessage.toLowerCase().includes('fetch failed');
   }
   return false;
 }
