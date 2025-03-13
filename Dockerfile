@@ -19,11 +19,11 @@ ENV NODE_ENV=production
 # Create app directory
 WORKDIR /app
 
-# Install app dependencies
-COPY package.json ./
+# Copy package files
+COPY package.json package-lock.json ./
 
-# Install dependencies with explicit build step
-RUN npm install
+# Install dependencies using npm ci for more reliable installs
+RUN npm ci
 
 # Copy the rest of the application
 COPY . .
