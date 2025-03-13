@@ -11,7 +11,7 @@ import { browser } from './browser.js';
 import { node } from './node.js';
 import { tools } from './tools.js';
 import { errors } from './errors.js';
-import resources from './resources.js';
+import { resources } from './resources.js';
 import prompts from './prompts.js';
 
 // 中文翻译资源 (Chinese translation resources)
