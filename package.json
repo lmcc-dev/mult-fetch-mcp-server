@@ -28,6 +28,7 @@
     "test:mcp": "node dist/tests/test-mcp.js",
     "test:mini4k": "node dist/tests/test-mini4k.js",
     "test:direct": "node dist/tests/test-direct-client.js",
+    "test:methods": "node dist/tests/test-mcp-methods.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "client": "node dist/src/client.js",

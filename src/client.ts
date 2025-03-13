@@ -11,6 +11,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { log, COMPONENTS } from './lib/logger.js';
 import { execSync } from 'child_process';
+import { isAccessDeniedError, isNetworkError } from './lib/utils/errorDetection.js';
 
 // 获取当前文件的目录路径 (Get the directory path of the current file)
 const __filename = fileURLToPath(import.meta.url);
@@ -30,43 +31,40 @@ const __dirname = path.dirname(__filename);
  */
 function responseRequiresBrowser(response: any, debug: boolean = false): boolean {
   if (response.isError) {
-    const errorText = response.content[0].text.toLowerCase();
+    const errorText = response.content[0].text;
     
     if (debug) {
-      log('fetcher.fetchError', debug, { url: '', error: response.content[0].text }, COMPONENTS.CLIENT);
+      log('fetcher.fetchError', debug, { url: '', error: errorText }, COMPONENTS.CLIENT);
       
       // 尝试从错误信息中提取HTTP状态码 (Try to extract HTTP status code from error message)
-      const statusCodeMatch = response.content[0].text.match(/(\b[45]\d\d\b)/);
+      const statusCodeMatch = errorText.match(/(\b[45]\d\d\b)/);
       if (statusCodeMatch) {
         log('client.statusCodeDetected', debug, { code: statusCodeMatch[0] }, COMPONENTS.CLIENT);
       }
       
       // 尝试解析更详细的错误原因
-      if (errorText.includes('403') || errorText.includes('forbidden')) {
-        log('errors.forbidden', debug, {}, COMPONENTS.CLIENT);
-      } else if (errorText.includes('cloudflare')) {
-        log('errors.cloudflareProtection', debug, {}, COMPONENTS.CLIENT);
-      } else if (errorText.includes('captcha')) {
-        log('errors.captchaRequired', debug, {}, COMPONENTS.CLIENT);
-      } else if (errorText.includes('timeout')) {
-        log('errors.timeout', debug, { timeout: '' }, COMPONENTS.CLIENT);
-      } else if (errorText.includes('socket') || errorText.includes('econnrefused')) {
-        log('errors.connectionProblem', debug, {}, COMPONENTS.CLIENT);
+      if (isAccessDeniedError(errorText)) {
+        if (errorText.toLowerCase().includes('403') || errorText.toLowerCase().includes('forbidden')) {
+          log('errors.forbidden', debug, {}, COMPONENTS.CLIENT);
+        } else if (errorText.toLowerCase().includes('cloudflare')) {
+          log('errors.cloudflareProtection', debug, {}, COMPONENTS.CLIENT);
+        } else if (errorText.toLowerCase().includes('captcha')) {
+          log('errors.captchaRequired', debug, {}, COMPONENTS.CLIENT);
+        }
+      } else if (isNetworkError(errorText)) {
+        if (errorText.toLowerCase().includes('timeout')) {
+          log('errors.timeout', debug, { timeout: '' }, COMPONENTS.CLIENT);
+        } else if (errorText.toLowerCase().includes('socket') || errorText.toLowerCase().includes('econnrefused')) {
+          log('errors.connectionProblem', debug, {}, COMPONENTS.CLIENT);
+        }
       }
     }
     
-    return errorText.includes('403') || 
-           errorText.includes('forbidden') ||
-           errorText.includes('access denied') ||
-           errorText.includes('cloudflare') ||
-           errorText.includes('captcha') ||
-           errorText.includes('javascript required') ||
-           errorText.includes('timeout') ||
-           errorText.includes('connect timeout') ||
-           errorText.includes('socket') ||
-           errorText.includes('econnrefused') ||
-           errorText.includes('und_err_connect_timeout') ||
-           errorText.includes('fetch failed');
+    return isAccessDeniedError(errorText) || 
+           isNetworkError(errorText) ||
+           errorText.toLowerCase().includes('javascript required') ||
+           errorText.toLowerCase().includes('und_err_connect_timeout') ||
+           errorText.toLowerCase().includes('fetch failed');
   }
   
   return false;
