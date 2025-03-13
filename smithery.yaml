@@ -17,7 +17,12 @@ startCommand:
     (config) => ({
       command: 'node',
       args: ['dist/index.js'],
-      env: Object.assign({}, process.env, { MCP_LANG: config.mcpLang || 'en' })
+      env: Object.assign({}, process.env, { 
+        MCP_LANG: config.mcpLang || 'en',
+        NODE_ENV: 'production',
+        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true',
+        PUPPETEER_EXECUTABLE_PATH: '/usr/bin/google-chrome-stable'
+      })
     })
   exampleConfig:
     mcpLang: en

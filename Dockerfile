@@ -14,6 +14,7 @@ RUN apt-get update \
 # 设置 Puppeteer 环境变量 (Set Puppeteer environment variables)
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+ENV NODE_ENV=production
 
 # Create app directory
 WORKDIR /app
@@ -21,11 +22,15 @@ WORKDIR /app
 # Install app dependencies
 COPY package.json ./
 
-# Install dependencies and allow prepare script to run
+# Install dependencies with explicit build step
 RUN npm install
 
 # Copy the rest of the application
 COPY . .
+
+# Explicitly run build to ensure it completes
+RUN npm run build && \
+    chmod +x dist/index.js
 
 # Expose any ports if necessary, though MCP uses stdio
 
