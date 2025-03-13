@@ -27,7 +27,7 @@ jest.mock('puppeteer-extra', () => {
     use: jest.fn(),
     launch: jest.fn()
   };
-  return {
+        return {
     __esModule: true,
     default: mockPuppeteerExtra
   };
@@ -36,7 +36,7 @@ jest.mock('puppeteer-extra', () => {
 // Mock puppeteer-extra-plugin-stealth
 jest.mock('puppeteer-extra-plugin-stealth', () => {
   const mockStealthPlugin = jest.fn();
-  return {
+        return {
     __esModule: true,
     default: mockStealthPlugin
   };
@@ -285,7 +285,7 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
         url: testUrl,
         debug: true
       };
-
+      
       // 调用方法
       await BrowserFetcher.html(testPayload);
 
@@ -325,7 +325,7 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
         url: testUrl,
         debug: true
       };
-
+      
       // 调用方法
       await BrowserFetcher.html(testPayload);
 
@@ -724,7 +724,7 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
         content: [{ type: 'text', text: '<html><body>Test content</body></html>' }],
         isError: false
       });
-
+      
       // 调用方法
       await BrowserFetcher.html(testPayload);
 
@@ -767,10 +767,10 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
           isError: false
         };
       });
-
+      
       // 调用方法
       const result = await BrowserFetcher.html(testPayload);
-
+      
       // 验证结果
       expect(result).toEqual({
         content: [{ type: 'text', text: testHtml }],
@@ -804,10 +804,10 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
           isError: false
         };
       });
-
+      
       // 调用方法
       const result = await BrowserFetcher.json(testPayload);
-
+      
       // 验证结果
       expect(result).toEqual({
         content: [{ type: 'text', text: JSON.stringify(testJson) }],
@@ -899,7 +899,7 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
           isError: false
         };
       });
-
+      
       // 调用方法
       const result = await BrowserFetcher.markdown(testPayload);
 
@@ -950,10 +950,10 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
           isError: false
         };
       });
-
+      
       // 调用方法
       const result = await BrowserFetcher.html(testPayload);
-
+      
       // 验证结果
       expect(result).toEqual({
         content: [{ type: 'text', text: testHtml }],
@@ -1007,7 +1007,7 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
         callback();
         return null as any;
       });
-
+      
       // 调用方法
       const result = await BrowserFetcher.html(testPayload);
 
@@ -1087,7 +1087,7 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
         content: [{ type: 'text', text: '<html><body>Test content</body></html>' }],
         isError: false
       });
-
+      
       // 调用方法
       const result = await BrowserFetcher.html(testPayload);
       
@@ -1160,7 +1160,7 @@ describe('BrowserFetcher 类测试 (BrowserFetcher Class Tests)', () => {
           isError: false
         };
       });
-
+      
       // 调用方法
       const result = await BrowserFetcher.html(testPayload);
 
