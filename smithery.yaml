@@ -1,26 +1,23 @@
-# Smithery 配置文件
-# 参考: https://smithery.ai/docs/config#smitheryyaml
+# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
 
 startCommand:
   type: stdio
   configSchema:
+    # JSON Schema defining the configuration options for the MCP.
     type: object
     properties:
       mcpLang:
         type: string
-        enum: ["en", "zh"]
-        default: "en"
-        description: "MCP 服务器的语言设置。选项: 'en' 表示英文, 'zh' 表示中文。"
-  commandFunction: |
-    (config) => {
-      return {
-        command: 'node',
-        args: ['dist/index.js'],
-        env: {
-          MCP_LANG: config.mcpLang || 'en',
-          NODE_ENV: 'production'
-        }
-      };
-    }
+        default: en
+        description: "Language setting for the MCP server. Options: 'en' for English or
+          'zh' for Chinese."
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => ({
+      command: 'node',
+      args: ['dist/index.js'],
+      env: Object.assign({}, process.env, { MCP_LANG: config.mcpLang || 'en' })
+    })
   exampleConfig:
-    mcpLang: "en"
+    mcpLang: en
