@@ -4,68 +4,65 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { RESOURCES_KEYS } from '../../keys.js';
+import { RESOURCES_KEYS } from '../../keys/resources.js';
 
-// 资源相关消息 (Resources related messages)
-export const resources = {
-  // 资源列表相关 (Resource list related)
-  [RESOURCES_KEYS.list.request]: "收到资源列表请求: {params}",
-  [RESOURCES_KEYS.list.success]: "资源列表获取成功",
-  [RESOURCES_KEYS.list.error]: "获取资源列表时出错: {error}",
-  
-  // 资源获取相关 (Resource get related)
-  [RESOURCES_KEYS.get.request]: "收到资源读取请求: {uri}",
-  [RESOURCES_KEYS.get.success]: "资源获取成功: {uri}",
-  [RESOURCES_KEYS.get.error]: "读取资源时出错: {uri}, {error}",
-  [RESOURCES_KEYS.get.notFound]: "未找到资源: {uri}",
-  
-  // 资源创建相关 (Resource create related)
-  [RESOURCES_KEYS.create.request]: "收到资源创建请求: {uri}",
-  [RESOURCES_KEYS.create.success]: "资源创建成功: {uri}",
-  [RESOURCES_KEYS.create.error]: "创建资源时出错: {uri}, {error}",
-  [RESOURCES_KEYS.create.duplicate]: "资源已存在: {uri}",
-  
-  // 资源更新相关 (Resource update related)
-  [RESOURCES_KEYS.update.request]: "收到资源更新请求: {uri}",
-  [RESOURCES_KEYS.update.success]: "资源更新成功: {uri}",
-  [RESOURCES_KEYS.update.error]: "更新资源时出错: {uri}, {error}",
-  [RESOURCES_KEYS.update.notFound]: "未找到要更新的资源: {uri}",
-  
-  // 资源删除相关 (Resource delete related)
-  [RESOURCES_KEYS.delete.request]: "收到资源删除请求: {uri}",
-  [RESOURCES_KEYS.delete.success]: "资源删除成功: {uri}",
-  [RESOURCES_KEYS.delete.error]: "删除资源时出错: {uri}, {error}",
-  [RESOURCES_KEYS.delete.notFound]: "未找到要删除的资源: {uri}",
-  
-  // 额外的键（不在 RESOURCES_KEYS 中定义的）
-  fileReadError: "读取文件时出错: {filePath}, {error}",
-  invalidUri: "无效的资源URI",
-  notFound: "资源未找到",
-  
+// 资源相关消息 (Resource related messages)
+export default {
+  // 列表操作 (List operations)
+  [RESOURCES_KEYS.list.request]: "收到资源列表请求",
+  [RESOURCES_KEYS.list.success]: "成功获取资源列表",
+  [RESOURCES_KEYS.list.error]: "获取资源列表出错：{{error}}",
+  [RESOURCES_KEYS.list.notFound]: "未找到任何资源",
+  [RESOURCES_KEYS.list.duplicate]: "列表中发现重复资源",
+
+  // 获取操作 (Get operations)
+  [RESOURCES_KEYS.get.request]: "收到获取资源请求",
+  [RESOURCES_KEYS.get.success]: "成功获取资源",
+  [RESOURCES_KEYS.get.error]: "获取资源出错：{{error}}",
+  [RESOURCES_KEYS.get.notFound]: "未找到请求的资源",
+  [RESOURCES_KEYS.get.duplicate]: "发现重复资源",
+
+  // 读取操作 (Read operations)
+  [RESOURCES_KEYS.read.request]: "收到读取资源请求",
+  [RESOURCES_KEYS.read.success]: "成功读取资源",
+  [RESOURCES_KEYS.read.error]: "读取资源出错：{{error}}",
+  [RESOURCES_KEYS.read.notFound]: "未找到要读取的资源",
+  [RESOURCES_KEYS.readError]: "读取资源出错：{{error}}",
+
+  // 创建操作 (Create operations)
+  [RESOURCES_KEYS.create.request]: "收到创建资源请求",
+  [RESOURCES_KEYS.create.success]: "成功创建资源",
+  [RESOURCES_KEYS.create.error]: "创建资源出错：{{error}}",
+  [RESOURCES_KEYS.create.notFound]: "未找到父资源",
+  [RESOURCES_KEYS.create.duplicate]: "资源已存在",
+
+  // 更新操作 (Update operations)
+  [RESOURCES_KEYS.update.request]: "收到更新资源请求",
+  [RESOURCES_KEYS.update.success]: "成功更新资源",
+  [RESOURCES_KEYS.update.error]: "更新资源出错：{{error}}",
+  [RESOURCES_KEYS.update.notFound]: "未找到要更新的资源",
+  [RESOURCES_KEYS.update.duplicate]: "更新会导致资源重复",
+
+  // 删除操作 (Delete operations)
+  [RESOURCES_KEYS.delete.request]: "收到删除资源请求",
+  [RESOURCES_KEYS.delete.success]: "成功删除资源",
+  [RESOURCES_KEYS.delete.error]: "删除资源出错：{{error}}",
+  [RESOURCES_KEYS.delete.notFound]: "未找到要删除的资源",
+  [RESOURCES_KEYS.delete.duplicate]: "多个资源匹配删除条件",
+
+  // 其他资源相关消息 (Other resource related messages)
+  [RESOURCES_KEYS.fileReadError]: "读取文件出错：{{error}}",
+  [RESOURCES_KEYS.invalidUri]: "无效的 URI：{{uri}}",
+  [RESOURCES_KEYS.notFound]: "未找到资源：{{path}}",
+
   // 资源描述 (Resource descriptions)
-  readme: {
-    description: "项目自述文件，包含项目概述、安装和使用说明"
-  },
-  package: {
-    description: "项目包配置文件，包含依赖和脚本定义"
-  },
-  index: {
-    description: "项目入口文件，包含服务器启动逻辑"
-  },
-  client: {
-    description: "MCP客户端实现，用于与服务器通信"
-  },
-  
-  // 资源模板描述 (Resource template descriptions)
-  sourceFile: {
-    name: "源代码文件",
-    description: "访问项目源代码文件"
-  },
-  docFile: {
-    name: "文档文件",
-    description: "访问项目文档文件"
-  },
-  filename: {
-    description: "文件名，包括扩展名"
-  }
+  [RESOURCES_KEYS.readme.description]: "项目 README 文件",
+  [RESOURCES_KEYS.package.description]: "包配置文件",
+  [RESOURCES_KEYS.index.description]: "主入口文件",
+  [RESOURCES_KEYS.client.description]: "客户端实现文件",
+  [RESOURCES_KEYS.sourceFile.name]: "源代码文件",
+  [RESOURCES_KEYS.sourceFile.description]: "项目源代码文件",
+  [RESOURCES_KEYS.docFile.name]: "文档文件",
+  [RESOURCES_KEYS.docFile.description]: "项目文档文件",
+  [RESOURCES_KEYS.filename.description]: "文件名"
 }; 

@@ -4,40 +4,68 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
+import { NODE_KEYS } from '../../keys/node.js';
+
 // Node获取器相关消息 (Node fetcher related messages)
-export const node = {
-  addingDelay: "Adding random delay...",
-  noProxy: "No proxy will be used",
-  usingProxy: "Using proxy: {{proxy}}",
-  usingHttpsProxy: "Using HTTPS proxy agent",
-  usingHttpProxy: "Using HTTP proxy agent",
-  usingUserAgent: "Using User-Agent: {{userAgent}}",
-  requestDetails: "Request details: URL={{url}}, Method={{method}}, Proxy={{proxy}}",
-  requestOptions: "Request options: {{options}}",
-  startingFetch: "Starting fetch request...",
-  fetchingUrl: "Fetching URL: {{url}}",
-  responseStatus: "Response status: {{status}} {{statusText}}",
-  redirectingTo: "Redirecting to: {{location}}",
-  constructedFullRedirectUrl: "Constructed full redirect URL: {{redirectUrl}}",
-  requestSuccess: "Request successful",
-  errorResponse: "Error response: {{status}} {{statusText}}",
-  errorResponseBody: "Error response body (first 200 chars): {{body}}",
-  errorReadingBody: "Failed to read error response body: {{error}}",
-  fetchError: "Fetch error: {{error}}",
-  requestAborted: "Request aborted after {{duration}}ms",
-  networkError: "Network error ({{code}}), might retry with browser mode",
-  tooManyRedirects: "Too many redirects ({{redirects}})",
-  startingHtmlFetch: "Starting HTML fetch",
-  readingText: "Got response, reading text",
-  htmlContentLength: "HTML content length: {{length}} bytes",
-  htmlFetchError: "HTML fetch error: {{error}}",
-  startingJsonFetch: "Starting JSON fetch",
-  parsingJson: "Got response, parsing JSON",
-  jsonParsed: "JSON parsed successfully",
-  jsonParseError: "JSON parse error: {{error}}",
-  jsonFetchError: "JSON fetch error: {{error}}",
-  startingTxtFetch: "Starting TXT fetch",
-  startingMarkdownFetch: "Starting Markdown fetch",
-  creatingTurndown: "Creating TurndownService instance",
-  convertingToMarkdown: "Converting HTML to Markdown"
+export default {
+  // 延迟和代理相关 (Delay and proxy related)
+  [NODE_KEYS.addingDelay]: 'Adding delay: {{delay}}ms',
+  [NODE_KEYS.noProxy]: 'No proxy',
+  [NODE_KEYS.usingProxy]: 'Using proxy: {{proxy}}',
+  [NODE_KEYS.usingHttpsProxy]: 'Using HTTPS proxy',
+  [NODE_KEYS.usingHttpProxy]: 'Using HTTP proxy',
+  
+  // 系统代理相关 (System proxy related)
+  [NODE_KEYS.checkingProxyEnv]: 'Checking proxy environment variables',
+  [NODE_KEYS.envVarValue]: 'Environment variable {{envVar}} = {{value}}',
+  [NODE_KEYS.foundSystemProxy]: 'Found system proxy: {{proxy}}',
+  [NODE_KEYS.checkingSystemEnvVars]: 'Checking system environment variables, platform: {{platform}}',
+  [NODE_KEYS.windowsEnvVars]: 'Windows environment variables: {{output}}',
+  [NODE_KEYS.foundWindowsEnvProxy]: 'Found Windows environment proxy: {{proxy}}',
+  [NODE_KEYS.errorGettingWindowsEnvVars]: 'Error getting Windows environment variables: {{error}}',
+  [NODE_KEYS.unixEnvVars]: 'Unix environment variables: {{output}}',
+  [NODE_KEYS.foundUnixEnvProxy]: 'Found Unix environment proxy: {{proxy}}',
+  [NODE_KEYS.errorGettingUnixEnvVars]: 'Error getting Unix environment variables: {{error}}',
+  [NODE_KEYS.noSystemProxyFound]: 'No system proxy found',
+  [NODE_KEYS.errorGettingSystemEnvVars]: 'Error getting system environment variables: {{error}}',
+  [NODE_KEYS.foundNoProxy]: 'Found NO_PROXY setting: {{noProxy}}',
+  
+  // 请求相关 (Request related)
+  [NODE_KEYS.usingUserAgent]: "Using User-Agent: {{userAgent}}",
+  [NODE_KEYS.requestDetails]: "Request details: method={{method}}, URL={{url}}",
+  [NODE_KEYS.requestOptions]: "Request options: {{options}}",
+  [NODE_KEYS.startingFetch]: "Starting fetch: {{url}}",
+  [NODE_KEYS.fetchingUrl]: "Fetching URL: {{url}}",
+  
+  // 响应相关 (Response related)
+  [NODE_KEYS.responseStatus]: "Response status: {{status}}",
+  [NODE_KEYS.redirectingTo]: "Redirecting to: {{url}}",
+  [NODE_KEYS.constructedFullRedirectUrl]: "Constructed full redirect URL: {{url}}",
+  [NODE_KEYS.requestSuccess]: "Request successful",
+  
+  // 错误相关 (Error related)
+  [NODE_KEYS.errorResponse]: "Error response: {{status}}",
+  [NODE_KEYS.errorResponseBody]: "Error response body: {{body}}",
+  [NODE_KEYS.errorReadingBody]: "Error reading response body: {{error}}",
+  [NODE_KEYS.fetchError]: "Fetch error: {{error}}",
+  [NODE_KEYS.requestAborted]: "Request aborted",
+  [NODE_KEYS.networkError]: "Network error: {{error}}",
+  [NODE_KEYS.tooManyRedirects]: "Too many redirects",
+  
+  // 内容类型相关 (Content type related)
+  [NODE_KEYS.startingHtmlFetch]: 'Starting HTML fetch',
+  [NODE_KEYS.readingText]: 'Reading text content',
+  [NODE_KEYS.htmlContentLength]: 'HTML content length: {{length}} bytes',
+  [NODE_KEYS.htmlFetchError]: 'Error fetching HTML: {{error}}',
+  [NODE_KEYS.startingJsonFetch]: 'Starting JSON fetch',
+  [NODE_KEYS.parsingJson]: 'Parsing JSON',
+  [NODE_KEYS.jsonParsed]: 'JSON parsed successfully',
+  [NODE_KEYS.jsonParseError]: 'JSON parse error: {{error}}',
+  [NODE_KEYS.jsonFetchError]: 'Error fetching JSON: {{error}}',
+  [NODE_KEYS.startingTxtFetch]: 'Starting plain text fetch',
+  [NODE_KEYS.textContentLength]: 'Text content length: {{length}} bytes',
+  [NODE_KEYS.startingMarkdownFetch]: 'Starting Markdown fetch',
+  [NODE_KEYS.creatingTurndown]: 'Creating Turndown service',
+  [NODE_KEYS.convertingToMarkdown]: 'Converting HTML to Markdown',
+  [NODE_KEYS.markdownContentLength]: 'Markdown content length: {{length}} bytes'
 }; 

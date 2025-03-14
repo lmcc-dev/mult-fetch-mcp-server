@@ -4,38 +4,68 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
+import { CLIENT_KEYS } from '../../keys/client.js';
+
 // 客户端相关消息 (Client related messages)
-export const client = {
-  connecting: "Connecting to MCP server...",
-  connected: "Connected to MCP server",
-  disconnecting: "Disconnecting from MCP server...",
-  disconnected: "Disconnected from MCP server",
-  error: "Client error: {{error}}",
-  callTool: "Calling tool: {{tool}}",
-  callToolSuccess: "Tool call successful: {{tool}}",
-  callToolError: "Tool call failed: {{tool}}, error: {{error}}",
-  statusCodeDetected: "HTTP status code detected: {{code}}",
-  usageInfo: "Usage: node client.js <method> <params_json> [proxy]",
-  exampleUsage: "Example: node client.js fetch_html '{\"url\":\"https://example.com\",\"debug\":true}'",
-  invalidJson: "Invalid JSON parameters",
-  usingCommandLineProxy: "Using command line proxy: {{proxy}}",
-  invalidProxyFormat: "Invalid proxy format: {{proxy}}",
-  usingEnvProxy: "Using environment variable proxy: {{proxy}}",
-  usingShellProxy: "Using shell proxy: {{proxy}}",
-  noShellProxy: "No shell proxy found",
-  systemProxyDisabled: "System proxy detection disabled",
-  usingSystemProxy: "Using system proxy: {{proxy}}",
-  noSystemProxy: "No system proxy found",
-  requestFailed: "Request failed: {{error}}",
-  fatalError: "Fatal error: {{error}}",
-  startingServer: "Starting server at path: {{path}}",
-  fetchingUrl: "Fetching URL: {{url}}",
-  usingMode: "Using {{mode}} mode for URL: {{url}}",
-  fetchFailed: "Fetch failed: {{error}}",
-  fetchSuccess: "Fetch successful, content length: {{length}} bytes",
-  browserModeNeeded: "Browser mode needed for URL: {{url}}",
-  retryingWithBrowser: "Retrying with browser mode for URL: {{url}}",
-  browserModeFetchFailed: "Browser mode fetch failed: {{error}}",
-  browserModeFetchSuccess: "Browser mode fetch successful, content length: {{length}} bytes",
-  serverClosed: "Server closed"
+export default {
+  // 连接相关 (Connection related)
+  [CLIENT_KEYS.connecting]: 'Connecting to MCP server...',
+  [CLIENT_KEYS.connected]: 'Connected to MCP server',
+  [CLIENT_KEYS.connectionFailed]: 'Failed to connect to MCP server: {{error}}',
+  [CLIENT_KEYS.disconnected]: 'Disconnected from MCP server',
+  [CLIENT_KEYS.reconnecting]: 'Reconnecting to MCP server...',
+  
+  // 错误相关 (Error related)
+  [CLIENT_KEYS.clientError]: 'Client error: {{error}}',
+  [CLIENT_KEYS.transportError]: 'Transport error: {{error}}',
+  [CLIENT_KEYS.requestError]: 'Request error: {{error}}',
+  [CLIENT_KEYS.fetchError]: 'Fetch error: {{error}}',
+  
+  // 请求相关 (Request related)
+  [CLIENT_KEYS.requestStarted]: 'Request started: {{id}}',
+  [CLIENT_KEYS.requestCompleted]: 'Request completed: {{id}}',
+  [CLIENT_KEYS.requestCancelled]: 'Request cancelled: {{id}}',
+  
+  // 内容相关 (Content related)
+  [CLIENT_KEYS.fetchingHtml]: 'Fetching HTML from {{url}}',
+  [CLIENT_KEYS.fetchingJson]: 'Fetching JSON from {{url}}',
+  [CLIENT_KEYS.fetchingText]: 'Fetching text from {{url}}',
+  [CLIENT_KEYS.fetchingMarkdown]: 'Fetching Markdown from {{url}}',
+  [CLIENT_KEYS.fetchSuccessful]: 'Fetch successful',
+  [CLIENT_KEYS.contentLength]: 'Content length: {{length}} bytes',
+  
+  // 调试相关 (Debug related)
+  [CLIENT_KEYS.debugMode]: 'Debug mode: {{enabled}}',
+  [CLIENT_KEYS.debugInfo]: 'Debug info: {{info}}',
+  
+  // 原有键 (Original keys)
+  [CLIENT_KEYS.error]: 'Error: {{error}}',
+  [CLIENT_KEYS.callTool]: 'Calling tool: {{name}}',
+  [CLIENT_KEYS.callToolSuccess]: 'Tool call successful: {{name}}',
+  [CLIENT_KEYS.callToolError]: 'Tool call error: {{name}} - {{error}}',
+  [CLIENT_KEYS.statusCodeDetected]: 'Status code detected: {{statusCode}}',
+  [CLIENT_KEYS.usageInfo]: 'Usage info: {{info}}',
+  [CLIENT_KEYS.exampleUsage]: 'Example usage: {{example}}',
+  [CLIENT_KEYS.invalidJson]: 'Invalid JSON: {{error}}',
+  [CLIENT_KEYS.usingCommandLineProxy]: 'Using command line proxy: {{proxy}}',
+  [CLIENT_KEYS.invalidProxyFormat]: 'Invalid proxy format: {{proxy}}',
+  [CLIENT_KEYS.usingEnvProxy]: 'Using environment proxy: {{proxy}}',
+  [CLIENT_KEYS.usingShellProxy]: 'Using shell proxy: {{proxy}}',
+  [CLIENT_KEYS.noShellProxy]: 'No shell proxy found',
+  [CLIENT_KEYS.systemProxyDisabled]: 'System proxy disabled',
+  [CLIENT_KEYS.usingSystemProxy]: 'Using system proxy: {{proxy}}',
+  [CLIENT_KEYS.noSystemProxy]: 'No system proxy found',
+  [CLIENT_KEYS.requestFailed]: 'Request failed: {{error}}',
+  [CLIENT_KEYS.fatalError]: 'Fatal error: {{error}}',
+  [CLIENT_KEYS.startingServer]: 'Starting server...',
+  [CLIENT_KEYS.fetchingUrl]: 'Fetching URL: {{url}}',
+  [CLIENT_KEYS.usingMode]: 'Using {{mode}} mode',
+  [CLIENT_KEYS.fetchFailed]: 'Fetch failed: {{error}}',
+  [CLIENT_KEYS.fetchSuccess]: 'Fetch successful',
+  [CLIENT_KEYS.browserModeNeeded]: 'Browser mode needed for: {{url}}',
+  [CLIENT_KEYS.retryingWithBrowser]: 'Retrying with browser mode',
+  [CLIENT_KEYS.browserModeFetchFailed]: 'Browser mode fetch failed: {{error}}',
+  [CLIENT_KEYS.browserModeFetchSuccess]: 'Browser mode fetch successful',
+  [CLIENT_KEYS.serverClosed]: 'Server closed',
+  [CLIENT_KEYS.proxySet]: 'Proxy set: {{proxy}}'
 }; 

@@ -4,10 +4,10 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { FETCHER_KEYS } from '../../keys.js';
+import { FETCHER_KEYS } from '../../keys/fetcher.js';
 
 // 获取器相关消息 (Fetcher related messages)
-export const fetcher = {
+export default {
   [FETCHER_KEYS.addingDelay]: "Adding random delay",
   [FETCHER_KEYS.delayCompleted]: "Delay completed after {{delay}}ms",
   [FETCHER_KEYS.usingProxy]: "Using proxy: {{proxy}}",

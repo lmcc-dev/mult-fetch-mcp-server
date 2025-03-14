@@ -4,68 +4,65 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { RESOURCES_KEYS } from '../../keys.js';
+import { RESOURCES_KEYS } from '../../keys/resources.js';
 
-// 资源相关消息 (Resources related messages)
-export const resources = {
-  // 资源列表相关 (Resource list related)
-  [RESOURCES_KEYS.list.request]: "Received resource list request: {params}",
-  [RESOURCES_KEYS.list.success]: "Resource list retrieved successfully",
-  [RESOURCES_KEYS.list.error]: "Error retrieving resource list: {error}",
-  
-  // 资源获取相关 (Resource get related)
-  [RESOURCES_KEYS.get.request]: "Received resource read request: {uri}",
-  [RESOURCES_KEYS.get.success]: "Resource retrieved successfully: {uri}",
-  [RESOURCES_KEYS.get.error]: "Error reading resource: {uri}, {error}",
-  [RESOURCES_KEYS.get.notFound]: "Resource not found: {uri}",
-  
-  // 资源创建相关 (Resource create related)
-  [RESOURCES_KEYS.create.request]: "Received resource create request: {uri}",
-  [RESOURCES_KEYS.create.success]: "Resource created successfully: {uri}",
-  [RESOURCES_KEYS.create.error]: "Error creating resource: {uri}, {error}",
-  [RESOURCES_KEYS.create.duplicate]: "Resource already exists: {uri}",
-  
-  // 资源更新相关 (Resource update related)
-  [RESOURCES_KEYS.update.request]: "Received resource update request: {uri}",
-  [RESOURCES_KEYS.update.success]: "Resource updated successfully: {uri}",
-  [RESOURCES_KEYS.update.error]: "Error updating resource: {uri}, {error}",
-  [RESOURCES_KEYS.update.notFound]: "Resource not found for update: {uri}",
-  
-  // 资源删除相关 (Resource delete related)
-  [RESOURCES_KEYS.delete.request]: "Received resource delete request: {uri}",
-  [RESOURCES_KEYS.delete.success]: "Resource deleted successfully: {uri}",
-  [RESOURCES_KEYS.delete.error]: "Error deleting resource: {uri}, {error}",
-  [RESOURCES_KEYS.delete.notFound]: "Resource not found for deletion: {uri}",
-  
-  // 额外的键（不在 RESOURCES_KEYS 中定义的）
-  fileReadError: "Error reading file: {filePath}, {error}",
-  invalidUri: "Invalid resource URI",
-  notFound: "Resource not found",
-  
+// 资源相关消息 (Resource related messages)
+export default {
+  // 列表操作 (List operations)
+  [RESOURCES_KEYS.list.request]: "List resources request received",
+  [RESOURCES_KEYS.list.success]: "Resources listed successfully",
+  [RESOURCES_KEYS.list.error]: "Error listing resources: {{error}}",
+  [RESOURCES_KEYS.list.notFound]: "No resources found",
+  [RESOURCES_KEYS.list.duplicate]: "Duplicate resource found in list",
+
+  // 获取操作 (Get operations)
+  [RESOURCES_KEYS.get.request]: "Get resource request received",
+  [RESOURCES_KEYS.get.success]: "Resource retrieved successfully",
+  [RESOURCES_KEYS.get.error]: "Error retrieving resource: {{error}}",
+  [RESOURCES_KEYS.get.notFound]: "Resource not found",
+  [RESOURCES_KEYS.get.duplicate]: "Duplicate resource found",
+
+  // 读取操作 (Read operations)
+  [RESOURCES_KEYS.read.request]: "Read resource request received",
+  [RESOURCES_KEYS.read.success]: "Resource read successfully",
+  [RESOURCES_KEYS.read.error]: "Error reading resource: {{error}}",
+  [RESOURCES_KEYS.read.notFound]: "Resource to read not found",
+  [RESOURCES_KEYS.readError]: "Error reading resource: {{error}}",
+
+  // 创建操作 (Create operations)
+  [RESOURCES_KEYS.create.request]: "Create resource request received",
+  [RESOURCES_KEYS.create.success]: "Resource created successfully",
+  [RESOURCES_KEYS.create.error]: "Error creating resource: {{error}}",
+  [RESOURCES_KEYS.create.notFound]: "Parent resource not found",
+  [RESOURCES_KEYS.create.duplicate]: "Resource already exists",
+
+  // 更新操作 (Update operations)
+  [RESOURCES_KEYS.update.request]: "Update resource request received",
+  [RESOURCES_KEYS.update.success]: "Resource updated successfully",
+  [RESOURCES_KEYS.update.error]: "Error updating resource: {{error}}",
+  [RESOURCES_KEYS.update.notFound]: "Resource to update not found",
+  [RESOURCES_KEYS.update.duplicate]: "Update would create duplicate resource",
+
+  // 删除操作 (Delete operations)
+  [RESOURCES_KEYS.delete.request]: "Delete resource request received",
+  [RESOURCES_KEYS.delete.success]: "Resource deleted successfully",
+  [RESOURCES_KEYS.delete.error]: "Error deleting resource: {{error}}",
+  [RESOURCES_KEYS.delete.notFound]: "Resource to delete not found",
+  [RESOURCES_KEYS.delete.duplicate]: "Multiple resources match delete criteria",
+
+  // 其他资源相关消息 (Other resource related messages)
+  [RESOURCES_KEYS.fileReadError]: "Error reading file: {{error}}",
+  [RESOURCES_KEYS.invalidUri]: "Invalid URI: {{uri}}",
+  [RESOURCES_KEYS.notFound]: "Resource not found: {{path}}",
+
   // 资源描述 (Resource descriptions)
-  readme: {
-    description: "Project README file, containing project overview, installation and usage instructions"
-  },
-  package: {
-    description: "Project package configuration file, containing dependencies and script definitions"
-  },
-  index: {
-    description: "Project entry file, containing server startup logic"
-  },
-  client: {
-    description: "MCP client implementation, used for communicating with the server"
-  },
-  
-  // 资源模板描述 (Resource template descriptions)
-  sourceFile: {
-    name: "Source Code File",
-    description: "Access project source code files"
-  },
-  docFile: {
-    name: "Documentation File",
-    description: "Access project documentation files"
-  },
-  filename: {
-    description: "Filename, including extension"
-  }
+  [RESOURCES_KEYS.readme.description]: "Project README file",
+  [RESOURCES_KEYS.package.description]: "Package configuration file",
+  [RESOURCES_KEYS.index.description]: "Main entry point file",
+  [RESOURCES_KEYS.client.description]: "Client implementation file",
+  [RESOURCES_KEYS.sourceFile.name]: "Source file",
+  [RESOURCES_KEYS.sourceFile.description]: "Source code file",
+  [RESOURCES_KEYS.docFile.name]: "Documentation file",
+  [RESOURCES_KEYS.docFile.description]: "Documentation file",
+  [RESOURCES_KEYS.filename.description]: "File name"
 }; 
