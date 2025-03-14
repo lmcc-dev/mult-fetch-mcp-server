@@ -129,15 +129,12 @@ describe('i18n Logger模块测试 (i18n Logger Module Tests)', () => {
     expect(logger).toHaveProperty('debug');
   });
   
-  test('info方法在DEBUG=true时输出日志 (info method outputs logs when DEBUG=true)', () => {
-    // 设置DEBUG环境变量为true
-    process.env.DEBUG = 'true';
-    
+  test('info方法在forceLog=true时输出日志 (info method outputs logs when forceLog=true)', () => {
     // 创建日志记录器
     const logger = createLogger('TEST');
     
-    // 调用info方法
-    logger.info('test.info');
+    // 调用info方法，设置forceLog为true
+    logger.info('test.info', {}, true);
     
     // 验证console.error被调用（i18n logger使用console.error输出所有日志）
     expect(console.error).toHaveBeenCalled();

@@ -55,11 +55,11 @@ describe('Logger模块测试 (Logger Module Tests)', () => {
     // 调用log函数，debug设为true
     log('test.message', true, {}, COMPONENTS.SERVER);
     
-    // 验证console.log被调用
-    expect(console.log).toHaveBeenCalled();
+    // 验证console.error被调用
+    expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含正确的组件和消息
-    const callArg = (console.log as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as jest.Mock).mock.calls[0][0];
     expect(callArg).toContain(COMPONENTS.SERVER);
     expect(callArg).toContain('test.message');
   });
@@ -83,11 +83,11 @@ describe('Logger模块测试 (Logger Module Tests)', () => {
     // 调用log函数，传入额外数据，debug设为true
     log('test.extra', true, extraData, COMPONENTS.NODE_FETCH);
     
-    // 验证console.log被调用
-    expect(console.log).toHaveBeenCalled();
+    // 验证console.error被调用
+    expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含正确的组件、消息和额外数据
-    const callArg = (console.log as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as jest.Mock).mock.calls[0][0];
     expect(callArg).toContain(COMPONENTS.NODE_FETCH);
     expect(callArg).toContain('test.extra');
     expect(callArg).toContain(JSON.stringify(extraData));
@@ -99,11 +99,11 @@ describe('Logger模块测试 (Logger Module Tests)', () => {
       // 调用log函数，debug设为true
       log('test.component', true, {}, component);
       
-      // 验证console.log被调用
-      expect(console.log).toHaveBeenCalled();
+      // 验证console.error被调用
+      expect(console.error).toHaveBeenCalled();
       
       // 验证调用参数包含正确的组件
-      const callArg = (console.log as jest.Mock).mock.calls.pop()[0];
+      const callArg = (console.error as jest.Mock).mock.calls.pop()[0];
       expect(callArg).toContain(component);
     });
   });

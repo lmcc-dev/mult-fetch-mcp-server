@@ -4,8 +4,8 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { log, COMPONENTS } from '../logger.js';
 import { fetchWithAutoDetect } from './fetcher.js';
 import { FetchParams } from './types.js';
@@ -324,10 +324,12 @@ function registerToolCallHandler(server: Server) {
       // 处理不同类型的获取请求 (Handle different types of fetch requests)
       if (name === 'fetch_html' || name === 'fetch_json' || name === 'fetch_txt' || name === 'fetch_markdown') {
         const result = await handleFetchRequest(name, args, debug);
+        
         return result;
       } else {
         // 未知工具 (Unknown tool)
         log('tools.unknownTool', debug, { name }, COMPONENTS.SERVER);
+        
         return {
           isError: true,
           content: [
@@ -340,6 +342,7 @@ function registerToolCallHandler(server: Server) {
     } catch (error: any) {
       // 处理错误 (Handle error)
       log('tools.callError', debug, { name, error: error.message }, COMPONENTS.SERVER);
+      
       return {
         isError: true,
         content: [
@@ -368,10 +371,12 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
   // 验证URL参数 (Validate URL parameter)
   if (!args.url) {
     log('tools.missingUrl', debug, {}, COMPONENTS.SERVER);
+    
     return {
       isError: true,
       content: [
         {
+          type: "text",
           text: "URL parameter is required"
         }
       ]
@@ -392,14 +397,45 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
     const type = name.replace('fetch_', '') as 'html' | 'json' | 'txt' | 'markdown';
     
     const result = await fetchWithAutoDetect(params, type);
+    
+    // 确保返回标准结构体 (Ensure returning standard structure)
+    if (result.isError) {
+      // 确保错误内容有正确的类型 (Ensure error content has correct type)
+      if (!result.content[0].type) {
+        result.content[0].type = "text";
+      }
+    } else {
+      // 对于 JSON 类型，验证内容是否为有效的 JSON (For JSON type, validate if content is valid JSON)
+      if (type === 'json') {
+        try {
+          // 尝试解析 JSON (Try to parse JSON)
+          JSON.parse(result.content[0].text);
+        } catch (jsonError: any) {
+          // JSON 解析失败，但仍然返回原始内容 (JSON parsing failed, but still return original content)
+          log('tools.jsonParseWarning', debug, { error: jsonError.message }, COMPONENTS.SERVER);
+          
+          // 不将 isError 设置为 true，保持原始结果
+          // (Don't set isError to true, keep original result)
+        }
+      }
+      
+      // 确保成功内容有正确的类型 (Ensure success content has correct type)
+      if (!result.content[0].type) {
+        result.content[0].type = "text";
+      }
+    }
+    
     return result;
   } catch (error: any) {
     // 处理错误 (Handle error)
     log('tools.fetchError', debug, { url: args.url, error: error.message }, COMPONENTS.SERVER);
+    
+    // 确保返回标准结构体 (Ensure returning standard structure)
     return {
       isError: true,
       content: [
         {
+          type: "text",
           text: `Error fetching ${args.url}: ${error.message}`
         }
       ]

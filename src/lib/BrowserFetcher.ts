@@ -115,7 +115,7 @@ export class BrowserFetcher {
       const rss = Math.round(memoryUsage.rss / 1024 / 1024);
       
       // 记录内存使用情况
-      log('browser.memoryUsage', debug, { heapUsed, heapTotal, rss }, COMPONENTS.BROWSER_FETCH);
+      log('browser.memoryUsage', debug, { usage: heapUsed }, COMPONENTS.BROWSER_FETCH);
       
       // 如果内存使用过高，记录警告
       if (heapUsed > 500 || rss > 1000) {
@@ -563,7 +563,7 @@ export class BrowserFetcher {
       const domain = this.getDomain(url);
       const storedCookies = this.getCookies(domain);
       if (storedCookies && saveCookies) {
-        log('browser.usingStoredCookies', debug, { domain: this.getDomain(url) }, COMPONENTS.BROWSER_FETCH);
+        log('browser.usingStoredCookies', debug, { domain }, COMPONENTS.BROWSER_FETCH);
         await page.setExtraHTTPHeaders({
           'Cookie': storedCookies
         });
@@ -575,7 +575,7 @@ export class BrowserFetcher {
       }
       
       // 导航到URL
-      log('browser.navigating', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      log('browser.navigating', debug, { url }, COMPONENTS.BROWSER_FETCH);
       await page.goto(url, { 
         waitUntil: 'networkidle2',
         timeout: timeout
@@ -584,32 +584,32 @@ export class BrowserFetcher {
       // 尝试处理Cloudflare保护
       const bypassedCloudflare = await this.handleCloudflareProtection(page, url, debug);
       if (!bypassedCloudflare) {
-        log('browser.continuingWithoutBypass', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+        log('browser.continuingWithoutBypass', debug, {}, COMPONENTS.BROWSER_FETCH);
       }
       
       // 等待选择器
-      log('browser.waitingForSelector', debug, { selector: waitForSelector, debug }, COMPONENTS.BROWSER_FETCH);
+      log('browser.waitingForSelector', debug, { selector: waitForSelector }, COMPONENTS.BROWSER_FETCH);
       await page.waitForSelector(waitForSelector, { 
         timeout: timeout
       }).catch(() => {});
       
       // 等待额外时间
-      log('browser.waitingForTimeout', debug, { timeout: waitForTimeout, debug }, COMPONENTS.BROWSER_FETCH);
+      log('browser.waitingForTimeout', debug, { timeout: waitForTimeout }, COMPONENTS.BROWSER_FETCH);
       await new Promise(resolve => setTimeout(resolve, waitForTimeout));
       
       // 如果需要滚动到底部
       if (scrollToBottom) {
-        log('browser.scrolling', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+        log('browser.scrolling', debug, {}, COMPONENTS.BROWSER_FETCH);
         await this.autoScroll(page, debug);
       }
       
       // 获取页面内容
-      log('browser.gettingContent', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      log('browser.gettingContent', debug, {}, COMPONENTS.BROWSER_FETCH);
       const content = await page.content();
       
       // 如果需要保存cookies
       if (saveCookies) {
-        log('browser.savingCookies', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+        log('browser.savingCookies', debug, { domain }, COMPONENTS.BROWSER_FETCH);
         const cookies = await page.evaluate(() => document.cookie);
         if (cookies) {
           this.saveCookies(url, cookies);
@@ -618,18 +618,18 @@ export class BrowserFetcher {
       
       // 记录内容长度
       const contentLength = content.length;
-      log('browser.contentLength', debug, { length: contentLength, debug }, COMPONENTS.BROWSER_FETCH);
+      log('browser.contentLength', debug, { length: contentLength }, COMPONENTS.BROWSER_FETCH);
       
       // 如果内容太长，截断它
       let finalContent = content;
       if (contentLength > 10 * 1024 * 1024) { // 10MB
         finalContent = content.substring(0, 10 * 1024 * 1024);
-        log('browser.contentTruncated', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+        log('browser.contentTruncated', debug, {}, COMPONENTS.BROWSER_FETCH);
       }
       
       // 关闭页面
       await page.close();
-      log('browser.pageClosed', debug, { debug }, COMPONENTS.BROWSER_FETCH);
+      log('browser.pageClosed', debug, {}, COMPONENTS.BROWSER_FETCH);
       
       // 如果需要关闭浏览器
       if (closeBrowser) {
