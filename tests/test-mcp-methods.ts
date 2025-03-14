@@ -92,7 +92,7 @@ async function testMcpMethods() {
     console.log('测试 prompts/get 方法...');
     try {
       const getPromptResult = await client.getPrompt({
-        name: 'fetch-website',
+        name: 'mult-fetch-mcp:prompt:fetch-website',
         arguments: {
           url: 'https://example.com',
           format: 'html',

@@ -64,17 +64,17 @@ export class NodeFetcher {
     }
     
     // 检查环境变量 (Check environment variables)
-    log('fetcher.checkingProxyEnv', true, {}, COMPONENTS.NODE_FETCH);
+    log('node.checkingProxyEnv', true, {}, COMPONENTS.NODE_FETCH);
     const envVars = ['https_proxy', 'HTTPS_PROXY', 'http_proxy', 'HTTP_PROXY'];
     for (const envVar of envVars) {
-      log('fetcher.envVarValue', true, {
+      log('node.envVarValue', true, {
         envVar,
         value: process.env[envVar]
       }, COMPONENTS.NODE_FETCH);
       
       if (process.env[envVar]) {
         const proxyUrl = process.env[envVar] as string;
-        log('fetcher.foundSystemProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
+        log('node.foundSystemProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
         return proxyUrl;
       }
     }
@@ -84,39 +84,39 @@ export class NodeFetcher {
       const platform = process.platform;
       let proxyUrl: string | undefined;
       
-      log('fetcher.checkingSystemEnvVars', true, { platform }, COMPONENTS.NODE_FETCH);
+      log('node.checkingSystemEnvVars', true, { platform }, COMPONENTS.NODE_FETCH);
       
       if (platform === 'win32') {
         // Windows系统 - 使用set命令 (Windows - use set command)
         try {
           // 使用set命令获取代理环境变量 (Use set command to get proxy environment variables)
           const setOutput = execSync('set http_proxy & set https_proxy & set HTTP_PROXY & set HTTPS_PROXY').toString();
-          log('fetcher.windowsEnvVars', true, { output: setOutput.trim() }, COMPONENTS.NODE_FETCH);
+          log('node.windowsEnvVars', true, { output: setOutput.trim() }, COMPONENTS.NODE_FETCH);
           
           // 解析输出找到代理设置 (Parse output to find proxy settings)
           const proxyMatch = setOutput.match(/(?:http_proxy|https_proxy|HTTP_PROXY|HTTPS_PROXY)=(https?:\/\/[^=\r\n]+)/i);
           if (proxyMatch && proxyMatch[1]) {
             proxyUrl = proxyMatch[1].trim();
-            log('fetcher.foundWindowsEnvProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
+            log('node.foundWindowsEnvProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
           }
         } catch (winError) {
-          log('fetcher.errorGettingWindowsEnvVars', true, { error: String(winError) }, COMPONENTS.NODE_FETCH);
+          log('node.errorGettingWindowsEnvVars', true, { error: String(winError) }, COMPONENTS.NODE_FETCH);
         }
       } else {
         // Unix系统 (macOS/Linux) - 使用export或env命令 (Unix systems - use export or env command)
         try {
           // 使用env命令获取所有环境变量 (Use env command to get all environment variables)
           const envOutput = execSync('env').toString();
-          log('fetcher.unixEnvVars', true, { output: envOutput.length > 200 ? envOutput.substring(0, 200) + '...' : envOutput }, COMPONENTS.NODE_FETCH);
+          log('node.unixEnvVars', true, { output: envOutput.length > 200 ? envOutput.substring(0, 200) + '...' : envOutput }, COMPONENTS.NODE_FETCH);
           
           // 解析输出找到代理设置 (Parse output to find proxy settings)
           const proxyMatch = envOutput.match(/(?:http_proxy|https_proxy|HTTP_PROXY|HTTPS_PROXY)=(https?:\/\/[^=\n]+)/i);
           if (proxyMatch && proxyMatch[1]) {
             proxyUrl = proxyMatch[1].trim();
-            log('fetcher.foundUnixEnvProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
+            log('node.foundUnixEnvProxy', true, { proxy: proxyUrl }, COMPONENTS.NODE_FETCH);
           }
         } catch (unixError) {
-          log('fetcher.errorGettingUnixEnvVars', true, { error: String(unixError) }, COMPONENTS.NODE_FETCH);
+          log('node.errorGettingUnixEnvVars', true, { error: String(unixError) }, COMPONENTS.NODE_FETCH);
         }
       }
       
@@ -125,15 +125,15 @@ export class NodeFetcher {
       }
       
       // 如果没有找到代理，记录日志 (If no proxy is found, log a message)
-      log('fetcher.noSystemProxyFound', true, {}, COMPONENTS.NODE_FETCH);
+      log('node.noSystemProxyFound', true, {}, COMPONENTS.NODE_FETCH);
     } catch (error) {
-      log('fetcher.errorGettingSystemEnvVars', true, { error: String(error) }, COMPONENTS.NODE_FETCH);
+      log('node.errorGettingSystemEnvVars', true, { error: String(error) }, COMPONENTS.NODE_FETCH);
     }
     
     // 检查NO_PROXY环境变量 (Check NO_PROXY environment variable)
     const noProxy = process.env.NO_PROXY || process.env.no_proxy;
     if (noProxy) {
-      log('fetcher.foundNoProxy', true, { noProxy }, COMPONENTS.NODE_FETCH);
+      log('node.foundNoProxy', true, { noProxy }, COMPONENTS.NODE_FETCH);
     }
     
     return undefined;
@@ -503,16 +503,16 @@ export class NodeFetcher {
    */
   static async txt(requestPayload: RequestPayload) {
     const { debug = false } = requestPayload;
-    log('fetcher.startingTxtFetch', debug, {}, COMPONENTS.NODE_FETCH);
+    log('node.startingTxtFetch', debug, {}, COMPONENTS.NODE_FETCH);
     
     try {
       // 执行请求 (Execute request)
       const response = await this._fetchWithRedirects(requestPayload);
       
       // 读取响应文本 (Read response text)
-      log('fetcher.readingText', debug, {}, COMPONENTS.NODE_FETCH);
+      log('node.readingText', debug, {}, COMPONENTS.NODE_FETCH);
       const text = await response.text();
-      log('fetcher.textContentLength', debug, { length: text.length }, COMPONENTS.NODE_FETCH);
+      log('node.textContentLength', debug, { length: text.length }, COMPONENTS.NODE_FETCH);
       
       // 返回纯文本内容 (Return plain text content)
       return {
@@ -534,25 +534,25 @@ export class NodeFetcher {
    */
   static async markdown(requestPayload: RequestPayload) {
     const { debug = false } = requestPayload;
-    log('fetcher.startingMarkdownFetch', debug, {}, COMPONENTS.NODE_FETCH);
+    log('node.startingMarkdownFetch', debug, {}, COMPONENTS.NODE_FETCH);
     
     try {
       // 执行请求 (Execute request)
       const response = await this._fetchWithRedirects(requestPayload);
       
       // 读取响应文本 (Read response text)
-      log('fetcher.readingText', debug, {}, COMPONENTS.NODE_FETCH);
+      log('node.readingText', debug, {}, COMPONENTS.NODE_FETCH);
       const html = await response.text();
-      log('fetcher.htmlContentLength', debug, { length: html.length }, COMPONENTS.NODE_FETCH);
+      log('node.htmlContentLength', debug, { length: html.length }, COMPONENTS.NODE_FETCH);
       
       // 创建Turndown服务 (Create Turndown service)
-      log('fetcher.creatingTurndown', debug, {}, COMPONENTS.NODE_FETCH);
+      log('node.creatingTurndown', debug, {}, COMPONENTS.NODE_FETCH);
       const turndownService = new TurndownService();
       
       // 将HTML转换为Markdown (Convert HTML to Markdown)
-      log('fetcher.convertingToMarkdown', debug, {}, COMPONENTS.NODE_FETCH);
+      log('node.convertingToMarkdown', debug, {}, COMPONENTS.NODE_FETCH);
       const markdown = turndownService.turndown(html);
-      log('fetcher.markdownContentLength', debug, { length: markdown.length }, COMPONENTS.NODE_FETCH);
+      log('node.markdownContentLength', debug, { length: markdown.length }, COMPONENTS.NODE_FETCH);
       
       // 返回Markdown内容 (Return Markdown content)
       return {

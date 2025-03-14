@@ -4,8 +4,8 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ListResourcesRequestSchema, ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { log, getLogFilePath, clearLogFile, COMPONENTS } from '../logger.js';
 import fs from 'fs';
 import path from 'path';

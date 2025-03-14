@@ -34,7 +34,7 @@ function responseRequiresBrowser(response: any, debug: boolean = false): boolean
     const errorText = response.content[0].text;
     
     if (debug) {
-      log('fetcher.fetchError', debug, { url: '', error: errorText }, COMPONENTS.CLIENT);
+      log('client.fetchError', debug, { url: '', error: errorText }, COMPONENTS.CLIENT);
       
       // 尝试从错误信息中提取HTTP状态码 (Try to extract HTTP status code from error message)
       const statusCodeMatch = errorText.match(/(\b[45]\d\d\b)/);
@@ -118,68 +118,62 @@ async function smartFetch(params: RequestPayload & { method?: string }) {
       // 在调试模式下打印响应结果的摘要 (Print response result summary in debug mode)
       if (debug) {
         if (result.isError) {
-          log('client.fetchFailed', debug, { error: result.content[0].text.substring(0, 150) + (result.content[0].text.length > 150 ? '...' : '') }, COMPONENTS.CLIENT);
+          log('client.fetchFailed', debug, { url, error: result.content[0].text }, COMPONENTS.CLIENT);
         } else {
-          const contentLength = result.content[0].text.length;
-          log('client.fetchSuccess', debug, { length: contentLength }, COMPONENTS.CLIENT);
+          log('client.fetchSuccess', debug, { url }, COMPONENTS.CLIENT);
         }
       }
       
-      // 如果失败并且响应表明需要浏览器模式，且当前不是浏览器模式 (If failed and response indicates browser mode is needed, and current mode is not browser mode)
-      if (!params.useBrowser && responseRequiresBrowser(result, debug)) {
+      // 检查是否需要切换到浏览器模式 (Check if need to switch to browser mode)
+      if (result.isError && responseRequiresBrowser(result, debug) && !params.useBrowser) {
         log('client.browserModeNeeded', debug, { url }, COMPONENTS.CLIENT);
-        // 切换到浏览器模式重试 (Switch to browser mode and retry)
-        params.useBrowser = true;
-        // 设置关闭浏览器选项，确保资源被释放 (Set close browser option to ensure resources are released)
-        params.closeBrowser = true;
         log('client.retryingWithBrowser', debug, { url }, COMPONENTS.CLIENT);
+        
+        // 切换到浏览器模式重试 (Switch to browser mode and retry)
         const browserResult = await client.callTool({
           name: method,
-          arguments: params
+          arguments: {
+            ...params,
+            useBrowser: true
+          }
         });
         
-        // 在调试模式下打印浏览器模式的响应结果摘要 (Print browser mode response result summary in debug mode)
-        if (debug) {
-          if (browserResult.isError) {
-            log('client.browserModeFetchFailed', debug, { error: browserResult.content[0].text.substring(0, 150) + (browserResult.content[0].text.length > 150 ? '...' : '') }, COMPONENTS.CLIENT);
-          } else {
-            const contentLength = browserResult.content[0].text.length;
-            log('client.browserModeFetchSuccess', debug, { length: contentLength }, COMPONENTS.CLIENT);
-          }
+        if (browserResult.isError) {
+          log('client.browserModeFetchFailed', debug, { url, error: browserResult.content[0].text }, COMPONENTS.CLIENT);
+        } else {
+          log('client.browserModeFetchSuccess', debug, { url }, COMPONENTS.CLIENT);
         }
         
         return browserResult;
       }
       
+      if (result.isError) {
+        log('client.fetchFailed', debug, { url, error: result.content[0].text }, COMPONENTS.CLIENT);
+      } else {
+        log('client.fetchSuccess', debug, { url }, COMPONENTS.CLIENT);
+      }
+      
       return result;
     } else {
-      // 不启用自动检测，直接使用指定模式
+      // 直接使用指定的模式 (Directly use the specified mode)
       log('client.usingMode', debug, { mode: params.useBrowser ? 'browser' : 'standard', url }, COMPONENTS.CLIENT);
-      // 如果使用浏览器模式，设置关闭浏览器选项
-      if (params.useBrowser) {
-        params.closeBrowser = true;
-      }
       const result = await client.callTool({
         name: method,
         arguments: params
       });
       
-      // 在调试模式下打印响应结果的摘要
-      if (debug) {
-        if (result.isError) {
-          log('client.fetchFailed', debug, { error: result.content[0].text.substring(0, 150) + (result.content[0].text.length > 150 ? '...' : '') }, COMPONENTS.CLIENT);
-        } else {
-          const contentLength = result.content[0].text.length;
-          log('client.fetchSuccess', debug, { length: contentLength }, COMPONENTS.CLIENT);
-        }
+      if (result.isError) {
+        log('client.fetchFailed', debug, { url, error: result.content[0].text }, COMPONENTS.CLIENT);
+      } else {
+        log('client.fetchSuccess', debug, { url }, COMPONENTS.CLIENT);
       }
       
       return result;
     }
   } finally {
     // 关闭客户端连接 (Close client connection)
-    await client.close();
     log('client.serverClosed', debug, {}, COMPONENTS.CLIENT);
+    await client.close();
   }
 }
 
@@ -203,11 +197,24 @@ async function main() {
     params = JSON.parse(paramsJson);
   } catch (error) {
     log('client.invalidJson', true, {}, COMPONENTS.CLIENT);
+    
+    // 返回标准错误结构体 (Return standard error structure)
+    const errorResult = {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: `Invalid JSON parameter: ${paramsJson}`
+        }
+      ]
+    };
+    
+    process.stdout.write(JSON.stringify(errorResult, null, 2));
     process.exit(1);
   }
 
   const debug = params.debug === true;
-
+  
   // 检查是否提供了代理参数 (Check if proxy parameter is provided)
   const proxyArg = process.argv[4];
   if (proxyArg) {
@@ -281,11 +288,25 @@ async function main() {
   try {
     // 执行请求 (Execute request)
     const result = await smartFetch({ ...params, method });
+    
     // 使用process.stdout.write输出结果，这是实际的结果输出，不是日志
     // (Use process.stdout.write to output the result, this is the actual result output, not a log)
     process.stdout.write(JSON.stringify(result, null, 2));
   } catch (error: any) {
     log('client.requestFailed', debug, { error: error.message }, COMPONENTS.CLIENT);
+    
+    // 即使在出错的情况下也输出标准结构体 (Output standard structure even in case of error)
+    const errorResult = {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: `Client error: ${error.message}`
+        }
+      ]
+    };
+    
+    process.stdout.write(JSON.stringify(errorResult, null, 2));
     process.exit(1);
   }
 }

@@ -4,8 +4,8 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { log, COMPONENTS } from '../logger.js';
 import { closeBrowserInstance } from './browser.js';
 import { registerTools } from './tools.js';

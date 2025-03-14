@@ -4,9 +4,9 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { registerPrompts } from "../../src/lib/server/prompts.js";
-import { ListPromptsRequestSchema, GetPromptRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 // 模拟i18n模块
 jest.mock('../../src/lib/i18n/index.js', () => ({

@@ -4,8 +4,8 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ListPromptsRequestSchema, GetPromptRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { log, COMPONENTS } from '../logger.js';
 import { t } from '../i18n/index.js';
 
