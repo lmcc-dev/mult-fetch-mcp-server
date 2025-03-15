@@ -8,18 +8,51 @@ import { CLIENT_KEYS } from '../../keys/client.js';
 
 // 客户端相关消息 (Client related messages)
 export default {
-  // 连接相关 (Connection related)  
-  // 错误相关 (Error related)  [CLIENT_KEYS.fetchError]: 'Fetch error: {{error}}',
+  // 连接相关 (Connection related)
+  [CLIENT_KEYS.connecting]: 'Connecting to MCP server...',
+  [CLIENT_KEYS.connected]: 'Connected to MCP server',
+  [CLIENT_KEYS.connectionFailed]: 'Failed to connect to MCP server: {{error}}',
+  [CLIENT_KEYS.disconnected]: 'Disconnected from MCP server',
+  [CLIENT_KEYS.reconnecting]: 'Reconnecting to MCP server...',
   
-  // 请求相关 (Request related)  
-  // 内容相关 (Content related)  
-  // 调试相关 (Debug related)  
-  // 原有键 (Original keys)  [CLIENT_KEYS.statusCodeDetected]: 'Status code detected: {{statusCode}}',
+  // 错误相关 (Error related)
+  [CLIENT_KEYS.clientError]: 'Client error: {{error}}',
+  [CLIENT_KEYS.transportError]: 'Transport error: {{error}}',
+  [CLIENT_KEYS.requestError]: 'Request error: {{error}}',
+  [CLIENT_KEYS.fetchError]: 'Fetch error: {{error}}',
+  
+  // 请求相关 (Request related)
+  [CLIENT_KEYS.requestStarted]: 'Request started: {{id}}',
+  [CLIENT_KEYS.requestCompleted]: 'Request completed: {{id}}',
+  [CLIENT_KEYS.requestCancelled]: 'Request cancelled: {{id}}',
+  
+  // 内容相关 (Content related)
+  [CLIENT_KEYS.fetchingHtml]: 'Fetching HTML from {{url}}',
+  [CLIENT_KEYS.fetchingJson]: 'Fetching JSON from {{url}}',
+  [CLIENT_KEYS.fetchingText]: 'Fetching text from {{url}}',
+  [CLIENT_KEYS.fetchingMarkdown]: 'Fetching Markdown from {{url}}',
+  [CLIENT_KEYS.fetchSuccessful]: 'Fetch successful',
+  [CLIENT_KEYS.contentLength]: 'Content length: {{length}} bytes',
+  
+  // 调试相关 (Debug related)
+  [CLIENT_KEYS.debugMode]: 'Debug mode: {{enabled}}',
+  [CLIENT_KEYS.debugInfo]: 'Debug info: {{info}}',
+  
+  // 原有键 (Original keys)
+  [CLIENT_KEYS.error]: 'Error: {{error}}',
+  [CLIENT_KEYS.callTool]: 'Calling tool: {{name}}',
+  [CLIENT_KEYS.callToolSuccess]: 'Tool call successful: {{name}}',
+  [CLIENT_KEYS.callToolError]: 'Tool call error: {{name}} - {{error}}',
+  [CLIENT_KEYS.statusCodeDetected]: 'Status code detected: {{statusCode}}',
   [CLIENT_KEYS.usageInfo]: 'Usage info: {{info}}',
   [CLIENT_KEYS.exampleUsage]: 'Example usage: {{example}}',
   [CLIENT_KEYS.invalidJson]: 'Invalid JSON: {{error}}',
   [CLIENT_KEYS.usingCommandLineProxy]: 'Using command line proxy: {{proxy}}',
-  [CLIENT_KEYS.invalidProxyFormat]: 'Invalid proxy format: {{proxy}}',  [CLIENT_KEYS.systemProxyDisabled]: 'System proxy disabled',
+  [CLIENT_KEYS.invalidProxyFormat]: 'Invalid proxy format: {{proxy}}',
+  [CLIENT_KEYS.usingEnvProxy]: 'Using environment proxy: {{proxy}}',
+  [CLIENT_KEYS.usingShellProxy]: 'Using shell proxy: {{proxy}}',
+  [CLIENT_KEYS.noShellProxy]: 'No shell proxy found',
+  [CLIENT_KEYS.systemProxyDisabled]: 'System proxy disabled',
   [CLIENT_KEYS.usingSystemProxy]: 'Using system proxy: {{proxy}}',
   [CLIENT_KEYS.noSystemProxy]: 'No system proxy found',
   [CLIENT_KEYS.requestFailed]: 'Request failed: {{error}}',
