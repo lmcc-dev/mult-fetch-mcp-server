@@ -5,12 +5,15 @@
  */
 
 import { BrowserFetcher } from '../../src/lib/BrowserFetcher.js';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+import * as logger from '../../src/lib/logger.js';
+import * as browserModule from '../../src/lib/server/browser.js';
 
 // 模拟依赖
-jest.mock('../../src/lib/BrowserFetcher.js');
-jest.mock('../../src/lib/logger.js', () => {
+vi.mock('../../src/lib/BrowserFetcher.js');
+vi.mock('../../src/lib/logger.js', () => {
   return {
-    log: jest.fn(),
+    log: vi.fn(),
     COMPONENTS: {
       SERVER: 'server'
     }
@@ -18,14 +21,14 @@ jest.mock('../../src/lib/logger.js', () => {
 });
 
 // 获取模拟的 log 函数和 COMPONENTS
-const { log, COMPONENTS } = require('../../src/lib/logger.js');
+const { log, COMPONENTS } = logger;
 
 // 模拟 browser.js 模块
 let browserInitialized = false;
 
-jest.mock('../../src/lib/server/browser.js', () => {
+vi.mock('../../src/lib/server/browser.js', () => {
   return {
-    initializeBrowser: jest.fn(async (debug = false) => {
+    initializeBrowser: vi.fn(async (debug = false) => {
       if (!browserInitialized) {
         if (debug) {
           log('server.initializingBrowser', debug, {}, COMPONENTS.SERVER);
@@ -33,7 +36,7 @@ jest.mock('../../src/lib/server/browser.js', () => {
         browserInitialized = true;
       }
     }),
-    closeBrowserInstance: jest.fn(async (debug = false) => {
+    closeBrowserInstance: vi.fn(async (debug = false) => {
       if (browserInitialized) {
         if (debug) {
           log('server.closingBrowser', debug, {}, COMPONENTS.SERVER);
@@ -42,7 +45,7 @@ jest.mock('../../src/lib/server/browser.js', () => {
         browserInitialized = false;
       }
     }),
-    shouldSwitchToBrowser: jest.fn((error) => {
+    shouldSwitchToBrowser: vi.fn((error) => {
       if (error && error.message) {
         const errorMessage = error.message.toLowerCase();
         return errorMessage.includes('403') || 
@@ -53,34 +56,35 @@ jest.mock('../../src/lib/server/browser.js', () => {
       }
       return false;
     }),
-    shouldUseBrowser: jest.fn((response, url) => {
+    shouldUseBrowser: vi.fn((response, url) => {
       if (response.isError) {
         const errorText = response.content[0].text.toLowerCase();
         return errorText.includes('403') || 
                errorText.includes('forbidden') ||
                errorText.includes('cloudflare') ||
-               errorText.includes('javascript required');
+               errorText.includes('timeout') ||
+               errorText.includes('econnrefused');
       }
       return false;
     })
   };
 });
 
-// 导入被测试的函数
+// 从模块中获取函数
 const { 
   initializeBrowser, 
   closeBrowserInstance, 
   shouldSwitchToBrowser, 
   shouldUseBrowser 
-} = require('../../src/lib/server/browser.js');
+} = browserModule;
 
 describe('浏览器管理函数测试 (Browser Management Functions Tests)', () => {
   beforeEach(() => {
     // 重置所有模拟
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // 设置默认返回值
-    (BrowserFetcher.closeBrowser as jest.Mock).mockResolvedValue(undefined);
+    (BrowserFetcher.closeBrowser as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     
     // 重置 browserInitialized 变量
     browserInitialized = false;
@@ -106,7 +110,7 @@ describe('浏览器管理函数测试 (Browser Management Functions Tests)', () 
     test('应该只初始化一次浏览器 (Should initialize browser only once)', async () => {
       // 调用被测试的函数两次
       await initializeBrowser(true);
-      jest.clearAllMocks(); // 清除第一次调用的记录
+      vi.clearAllMocks(); // 清除第一次调用的记录
       await initializeBrowser(true);
       
       // 验证第二次调用时 log 函数没有被调用

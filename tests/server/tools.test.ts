@@ -8,36 +8,38 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { registerTools } from '../../src/lib/server/tools.js';
 import { fetchWithAutoDetect } from '../../src/lib/server/fetcher.js';
+import { vi, describe, test, expect, beforeEach } from 'vitest';
+import type { Mock } from 'vitest';
 
 // 模拟 fetchWithAutoDetect 函数
-jest.mock('../../src/lib/server/fetcher.js', () => ({
-  fetchWithAutoDetect: jest.fn()
+vi.mock('../../src/lib/server/fetcher.js', () => ({
+  fetchWithAutoDetect: vi.fn()
 }));
 
 // 模拟 logger
-jest.mock('../../src/lib/logger.js', () => ({
-  log: jest.fn(),
+vi.mock('../../src/lib/logger.js', () => ({
+  log: vi.fn(),
   COMPONENTS: {
     TOOLS: 'tools'
   }
 }));
 
 describe('工具注册和调用测试 (Tools Registration and Calling Tests)', () => {
-  let mockServer: jest.Mocked<Server>;
-  let mockSetRequestHandler: jest.Mock;
+  let mockServer: { setRequestHandler: ReturnType<typeof vi.fn> };
+  let mockSetRequestHandler: ReturnType<typeof vi.fn>;
   
   beforeEach(() => {
     // 重置所有模拟
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // 创建模拟的 Server 实例
-    mockSetRequestHandler = jest.fn();
+    mockSetRequestHandler = vi.fn();
     mockServer = {
       setRequestHandler: mockSetRequestHandler
-    } as unknown as jest.Mocked<Server>;
+    } as unknown as { setRequestHandler: ReturnType<typeof vi.fn> };
     
     // 设置 fetchWithAutoDetect 的默认返回值
-    (fetchWithAutoDetect as jest.Mock).mockResolvedValue({
+    (fetchWithAutoDetect as ReturnType<typeof vi.fn>).mockResolvedValue({
       content: [{ type: 'text', text: 'mock content' }],
       isError: false
     });
@@ -45,7 +47,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
   
   test('应该正确注册工具列表处理程序 (Should register list tools handler correctly)', () => {
     // 调用被测试的函数
-    registerTools(mockServer);
+    registerTools(mockServer as unknown as Server);
     
     // 验证 setRequestHandler 被调用了两次（一次用于列表，一次用于调用）
     expect(mockSetRequestHandler).toHaveBeenCalledTimes(2);
@@ -84,7 +86,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
   
   test('应该正确注册工具调用处理程序 (Should register call tool handler correctly)', () => {
     // 调用被测试的函数
-    registerTools(mockServer);
+    registerTools(mockServer as unknown as Server);
     
     // 验证第二次调用是用于注册工具调用处理程序
     expect(mockSetRequestHandler.mock.calls[1][0]).toBe(CallToolRequestSchema);
@@ -92,7 +94,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
   
   test('应该正确处理 fetch_html 工具调用 (Should handle fetch_html tool call correctly)', async () => {
     // 调用被测试的函数
-    registerTools(mockServer);
+    registerTools(mockServer as unknown as Server);
     
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
@@ -125,7 +127,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
   
   test('应该正确处理 fetch_json 工具调用 (Should handle fetch_json tool call correctly)', async () => {
     // 调用被测试的函数
-    registerTools(mockServer);
+    registerTools(mockServer as unknown as Server);
     
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
@@ -158,7 +160,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
   
   test('应该正确处理 fetch_txt 工具调用 (Should handle fetch_txt tool call correctly)', async () => {
     // 调用被测试的函数
-    registerTools(mockServer);
+    registerTools(mockServer as unknown as Server);
     
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
@@ -191,7 +193,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
   
   test('应该正确处理 fetch_markdown 工具调用 (Should handle fetch_markdown tool call correctly)', async () => {
     // 调用被测试的函数
-    registerTools(mockServer);
+    registerTools(mockServer as unknown as Server);
     
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
@@ -224,7 +226,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
   
   test('应该正确处理未知工具调用 (Should handle unknown tool call correctly)', async () => {
     // 调用被测试的函数
-    registerTools(mockServer);
+    registerTools(mockServer as unknown as Server);
     
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
@@ -240,7 +242,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     };
     
     // 设置模拟返回值
-    (fetchWithAutoDetect as jest.Mock).mockResolvedValue({
+    (fetchWithAutoDetect as Mock).mockResolvedValue({
       isError: true,
       content: [{ text: 'Unknown tool: unknown_tool' }]
     });
@@ -257,7 +259,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
   
   test('应该正确处理工具调用错误 (Should handle tool call error correctly)', async () => {
     // 调用被测试的函数
-    registerTools(mockServer);
+    registerTools(mockServer as unknown as Server);
     
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
@@ -273,7 +275,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     };
     
     // 设置模拟抛出错误
-    (fetchWithAutoDetect as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+    (fetchWithAutoDetect as Mock).mockRejectedValue(new Error('Fetch failed'));
     
     // 调用处理程序
     const result = await callToolHandler(request);

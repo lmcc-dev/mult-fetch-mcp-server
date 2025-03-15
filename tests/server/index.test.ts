@@ -4,38 +4,40 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
+
 // 模拟依赖
-jest.mock('@modelcontextprotocol/sdk/server/index.js', () => ({
-  Server: jest.fn().mockImplementation(() => ({
-    connect: jest.fn().mockResolvedValue(undefined),
-    registerTool: jest.fn(),
-    registerResource: jest.fn(),
-    registerPrompt: jest.fn()
+vi.mock('@modelcontextprotocol/sdk/server/index.js', () => ({
+  Server: vi.fn().mockImplementation(() => ({
+    connect: vi.fn().mockResolvedValue(undefined),
+    registerTool: vi.fn(),
+    registerResource: vi.fn(),
+    registerPrompt: vi.fn()
   }))
 }));
 
-jest.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-  StdioServerTransport: jest.fn().mockImplementation(() => ({}))
+vi.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
+  StdioServerTransport: vi.fn().mockImplementation(() => ({}))
 }));
 
-jest.mock('../../src/lib/server/tools.js', () => ({
-  registerTools: jest.fn()
+vi.mock('../../src/lib/server/tools.js', () => ({
+  registerTools: vi.fn()
 }));
 
-jest.mock('../../src/lib/server/resources.js', () => ({
-  registerResources: jest.fn()
+vi.mock('../../src/lib/server/resources.js', () => ({
+  registerResources: vi.fn()
 }));
 
-jest.mock('../../src/lib/server/prompts.js', () => ({
-  registerPrompts: jest.fn()
+vi.mock('../../src/lib/server/prompts.js', () => ({
+  registerPrompts: vi.fn()
 }));
 
-jest.mock('../../src/lib/server/browser.js', () => ({
-  closeBrowserInstance: jest.fn().mockResolvedValue(undefined)
+vi.mock('../../src/lib/server/browser.js', () => ({
+  closeBrowserInstance: vi.fn().mockResolvedValue(undefined)
 }));
 
-jest.mock('../../src/lib/logger.js', () => ({
-  log: jest.fn(),
+vi.mock('../../src/lib/logger.js', () => ({
+  log: vi.fn(),
   COMPONENTS: {
     SERVER: 'SERVER'
   }
@@ -52,17 +54,17 @@ describe('MCP服务器信号处理测试 (MCP Server Signal Handling Tests)', ()
   const originalProcessExit = process.exit;
   
   // 存储信号处理函数
-  let exitHandler: Function;
-  let sigintHandler: Function;
-  let sigtermHandler: Function;
-  let uncaughtExceptionHandler: Function;
+  let exitHandler: Function | null = null;
+  let sigintHandler: Function | null = null;
+  let sigtermHandler: Function | null = null;
+  let uncaughtExceptionHandler: Function | null = null;
   
-  beforeEach(() => {
+  beforeEach(async () => {
     // 重置所有模拟
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // 模拟process.on
-    process.on = jest.fn().mockImplementation((event: string, handler: Function) => {
+    process.on = vi.fn().mockImplementation((event: string, handler: Function) => {
       // 存储处理函数以便测试
       if (event === 'exit') {
         exitHandler = handler;
@@ -74,16 +76,15 @@ describe('MCP服务器信号处理测试 (MCP Server Signal Handling Tests)', ()
         uncaughtExceptionHandler = handler;
       }
       return process;
-    }) as any;
+    });
     
     // 模拟process.exit
-    process.exit = jest.fn() as any;
+    process.exit = vi.fn() as any;
     
     // 导入startServer函数
-    // 注意：我们需要在每个测试中重新导入，以确保process.on的模拟生效
-    jest.isolateModules(() => {
-      require('../../src/lib/server/index.js').startServer();
-    });
+    // 使用动态导入而不是isolateModules
+    const serverModule = await import('../../src/lib/server/index.js');
+    serverModule.startServer();
   });
   
   afterEach(() => {

@@ -8,13 +8,14 @@ import { fetchWithAutoDetect } from '../../src/lib/server/fetcher.js';
 import { BrowserFetcher } from '../../src/lib/BrowserFetcher.js';
 import { NodeFetcher } from '../../src/lib/NodeFetcher.js';
 import { initializeBrowser, closeBrowserInstance, shouldSwitchToBrowser } from '../../src/lib/server/browser.js';
+import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 // 模拟依赖
-jest.mock('../../src/lib/BrowserFetcher.js');
-jest.mock('../../src/lib/NodeFetcher.js');
-jest.mock('../../src/lib/server/browser.js');
-jest.mock('../../src/lib/logger.js', () => ({
-  log: jest.fn(),
+vi.mock('../../src/lib/BrowserFetcher.js');
+vi.mock('../../src/lib/NodeFetcher.js');
+vi.mock('../../src/lib/server/browser.js');
+vi.mock('../../src/lib/logger.js', () => ({
+  log: vi.fn(),
   COMPONENTS: {
     SERVER: 'server'
   }
@@ -23,34 +24,34 @@ jest.mock('../../src/lib/logger.js', () => ({
 describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)', () => {
   beforeEach(() => {
     // 重置所有模拟
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // 设置默认返回值
-    (NodeFetcher.html as jest.Mock).mockResolvedValue({ html: '<html>Test</html>' });
-    (NodeFetcher.json as jest.Mock).mockResolvedValue({ json: { test: 'data' } });
-    (NodeFetcher.txt as jest.Mock).mockResolvedValue({ text: 'Test text' });
-    (NodeFetcher.markdown as jest.Mock).mockResolvedValue({ markdown: '# Test' });
+    (NodeFetcher.html as ReturnType<typeof vi.fn>).mockResolvedValue({ html: '<html>Test</html>' });
+    (NodeFetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({ json: { test: 'data' } });
+    (NodeFetcher.txt as ReturnType<typeof vi.fn>).mockResolvedValue({ text: 'Test text' });
+    (NodeFetcher.markdown as ReturnType<typeof vi.fn>).mockResolvedValue({ markdown: '# Test' });
     
-    (BrowserFetcher.html as jest.Mock).mockResolvedValue({
+    (BrowserFetcher.html as ReturnType<typeof vi.fn>).mockResolvedValue({
       content: [{ type: 'text', text: '<html>Browser Test</html>' }],
       isError: false
     });
-    (BrowserFetcher.json as jest.Mock).mockResolvedValue({
+    (BrowserFetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({
       content: [{ type: 'text', text: '{"test":"browser data"}' }],
       isError: false
     });
-    (BrowserFetcher.txt as jest.Mock).mockResolvedValue({
+    (BrowserFetcher.txt as ReturnType<typeof vi.fn>).mockResolvedValue({
       content: [{ type: 'text', text: 'Browser test text' }],
       isError: false
     });
-    (BrowserFetcher.markdown as jest.Mock).mockResolvedValue({
+    (BrowserFetcher.markdown as ReturnType<typeof vi.fn>).mockResolvedValue({
       content: [{ type: 'text', text: '# Browser Test' }],
       isError: false
     });
     
-    (initializeBrowser as jest.Mock).mockResolvedValue(undefined);
-    (closeBrowserInstance as jest.Mock).mockResolvedValue(undefined);
-    (shouldSwitchToBrowser as jest.Mock).mockReturnValue(false);
+    (initializeBrowser as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (closeBrowserInstance as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (shouldSwitchToBrowser as ReturnType<typeof vi.fn>).mockReturnValue(false);
   });
   
   test('应该使用 NodeFetcher 获取 HTML (Should use NodeFetcher to fetch HTML)', async () => {
@@ -157,10 +158,10 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
     const params = { url: 'https://example.com' };
     
     // 设置 NodeFetcher 抛出错误
-    (NodeFetcher.html as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
+    (NodeFetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Fetch failed'));
     
     // 设置 shouldSwitchToBrowser 返回 true
-    (shouldSwitchToBrowser as jest.Mock).mockReturnValue(true);
+    (shouldSwitchToBrowser as ReturnType<typeof vi.fn>).mockReturnValue(true);
     
     const result = await fetchWithAutoDetect(params, 'html');
     
@@ -179,10 +180,10 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
     
     // 设置 NodeFetcher 抛出错误
     const originalError = new Error('Fetch failed');
-    (NodeFetcher.html as jest.Mock).mockRejectedValue(originalError);
+    (NodeFetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
     
     // 设置 shouldSwitchToBrowser 返回 false
-    (shouldSwitchToBrowser as jest.Mock).mockReturnValue(false);
+    (shouldSwitchToBrowser as ReturnType<typeof vi.fn>).mockReturnValue(false);
     
     await expect(fetchWithAutoDetect(params, 'html')).rejects.toThrow(originalError);
     
@@ -196,7 +197,7 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
     
     // 设置 NodeFetcher 抛出错误
     const originalError = new Error('Fetch failed');
-    (NodeFetcher.html as jest.Mock).mockRejectedValue(originalError);
+    (NodeFetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
     
     await expect(fetchWithAutoDetect(params, 'html')).rejects.toThrow(originalError);
     
@@ -225,7 +226,7 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
     
     // 设置 BrowserFetcher 抛出错误
     const originalError = new Error('Browser fetch failed');
-    (BrowserFetcher.html as jest.Mock).mockRejectedValue(originalError);
+    (BrowserFetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
     
     await expect(fetchWithAutoDetect(params, 'html')).rejects.toThrow(originalError);
     
@@ -236,7 +237,7 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
   
   test('应该处理 JSON 对象和字符串 (Should handle JSON objects and strings)', async () => {
     // 测试 JSON 对象
-    (NodeFetcher.json as jest.Mock).mockResolvedValue({ json: { test: 'data' } });
+    (NodeFetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({ json: { test: 'data' } });
     let result = await fetchWithAutoDetect({ url: 'https://example.com/data.json' }, 'json');
     expect(result).toEqual({
       content: [{ type: 'text', text: JSON.stringify({ test: 'data' }, null, 2) }],
@@ -244,7 +245,7 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
     });
     
     // 测试 JSON 字符串
-    (NodeFetcher.json as jest.Mock).mockResolvedValue({ json: '{"test":"string data"}' });
+    (NodeFetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({ json: '{"test":"string data"}' });
     result = await fetchWithAutoDetect({ url: 'https://example.com/data.json' }, 'json');
     expect(result).toEqual({
       content: [{ type: 'text', text: '{"test":"string data"}' }],

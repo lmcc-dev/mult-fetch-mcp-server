@@ -5,21 +5,21 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeEach, afterAll } from 'vitest';
 
 // 模拟依赖模块
-const mockStartServer = jest.fn();
-jest.mock('../src/lib/server/index.js', () => ({
+const mockStartServer = vi.fn();
+vi.mock('../src/lib/server/index.js', () => ({
   startServer: mockStartServer
 }));
 
 // 模拟 console.error
 const originalConsoleError = console.error;
-console.error = jest.fn() as jest.MockedFunction<typeof console.error>;
+console.error = vi.fn() as ReturnType<typeof vi.fn> & typeof console.error;
 
 // 模拟 process.exit
 const originalProcessExit = process.exit;
-const mockExit = jest.fn();
+const mockExit = vi.fn();
 Object.defineProperty(process, 'exit', { value: mockExit });
 
 // 创建一个模拟的 main 函数
@@ -45,7 +45,7 @@ const main = async () => {
 describe('mcp-server.ts 测试', () => {
   // 在每个测试前重置所有模拟
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
   
   // 在所有测试后恢复原始值
@@ -104,7 +104,7 @@ describe('mcp-server.ts 测试', () => {
       
       // 模拟 setTimeout 立即执行
       const originalSetTimeout = global.setTimeout;
-      global.setTimeout = jest.fn().mockImplementation((callback: Function) => {
+      global.setTimeout = vi.fn().mockImplementation((callback: Function) => {
         // 不立即执行回调，而是手动触发错误
         return 123 as unknown as NodeJS.Timeout;
       }) as unknown as typeof global.setTimeout;

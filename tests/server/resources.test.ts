@@ -8,33 +8,34 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import fs from 'fs';
 import path from 'path';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // 模拟logger模块
-jest.mock('../../src/lib/logger.js', () => ({
-  log: jest.fn(),
-  getLogFilePath: jest.fn().mockReturnValue('/mock/path/to/debug.log'),
-  clearLogFile: jest.fn(),
+vi.mock('../../src/lib/logger.js', () => ({
+  log: vi.fn(),
+  getLogFilePath: vi.fn().mockReturnValue('/mock/path/to/debug.log'),
+  clearLogFile: vi.fn(),
   COMPONENTS: {
     RESOURCES: 'resources'
   }
 }));
 
 // 模拟fs模块
-jest.mock('fs', () => ({
-  readFileSync: jest.fn()
+vi.mock('fs', () => ({
+  readFileSync: vi.fn()
 }));
 
 // 模拟path模块
-jest.mock('path', () => ({
-  dirname: jest.fn(),
-  resolve: jest.fn(),
-  join: jest.fn(),
-  extname: jest.fn()
+vi.mock('path', () => ({
+  dirname: vi.fn(),
+  resolve: vi.fn(),
+  join: vi.fn(),
+  extname: vi.fn()
 }));
 
 // 模拟url模块
-jest.mock('url', () => ({
-  fileURLToPath: jest.fn()
+vi.mock('url', () => ({
+  fileURLToPath: vi.fn()
 }));
 
 // 获取MIME类型函数
@@ -163,7 +164,7 @@ const registerResources = (server: Server) => {
 };
 
 // 模拟resources模块
-jest.mock('../../src/lib/server/resources.js', () => ({
+vi.mock('../../src/lib/server/resources.js', () => ({
   registerResources
 }));
 
@@ -174,11 +175,11 @@ describe('resources模块测试', () => {
 
   beforeEach(() => {
     // 重置所有模拟
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // 创建模拟Server实例
     server = {
-      setRequestHandler: jest.fn((schema, handler) => {
+      setRequestHandler: vi.fn((schema, handler) => {
         if (schema === ListResourcesRequestSchema) {
           listResourcesHandler = handler;
         } else if (schema === ReadResourceRequestSchema) {
@@ -240,8 +241,8 @@ describe('resources模块测试', () => {
   describe('ReadResourceRequestSchema处理程序', () => {
     it('应该处理debug日志资源', async () => {
       // 模拟文件内容
-      (fs.readFileSync as jest.Mock).mockReturnValue('Debug log content');
-      (path.extname as jest.Mock).mockReturnValue('.log');
+      (fs.readFileSync as vi.Mock).mockReturnValue('Debug log content');
+      (path.extname as vi.Mock).mockReturnValue('.log');
       
       const request = {
         params: {
@@ -290,9 +291,9 @@ describe('resources模块测试', () => {
 
     it('应该处理文档资源', async () => {
       // 模拟路径和文件内容
-      (path.join as jest.Mock).mockReturnValue('/mock/path/to/README.md');
-      (fs.readFileSync as jest.Mock).mockReturnValue('# README content');
-      (path.extname as jest.Mock).mockReturnValue('.md');
+      (path.join as vi.Mock).mockReturnValue('/mock/path/to/README.md');
+      (fs.readFileSync as vi.Mock).mockReturnValue('# README content');
+      (path.extname as vi.Mock).mockReturnValue('.md');
       
       const request = {
         params: {
@@ -319,9 +320,9 @@ describe('resources模块测试', () => {
 
     it('应该处理源代码资源', async () => {
       // 模拟路径和文件内容
-      (path.join as jest.Mock).mockReturnValue('/mock/path/to/index.ts');
-      (fs.readFileSync as jest.Mock).mockReturnValue('// Source code');
-      (path.extname as jest.Mock).mockReturnValue('.ts');
+      (path.join as vi.Mock).mockReturnValue('/mock/path/to/index.ts');
+      (fs.readFileSync as vi.Mock).mockReturnValue('// Source code');
+      (path.extname as vi.Mock).mockReturnValue('.ts');
       
       const request = {
         params: {
@@ -358,9 +359,9 @@ describe('resources模块测试', () => {
 
     it('应该处理文件读取错误', async () => {
       // 模拟路径
-      (path.join as jest.Mock).mockReturnValue('/mock/path/to/file.txt');
+      (path.join as vi.Mock).mockReturnValue('/mock/path/to/file.txt');
       // 模拟文件读取错误
-      (fs.readFileSync as jest.Mock).mockImplementation(() => {
+      (fs.readFileSync as vi.Mock).mockImplementation(() => {
         throw new Error('File not found');
       });
       
@@ -385,8 +386,8 @@ describe('resources模块测试', () => {
 
     it('应该处理debug参数', async () => {
       // 模拟文件内容
-      (fs.readFileSync as jest.Mock).mockReturnValue('Debug log content');
-      (path.extname as jest.Mock).mockReturnValue('.log');
+      (fs.readFileSync as vi.Mock).mockReturnValue('Debug log content');
+      (path.extname as vi.Mock).mockReturnValue('.log');
       
       const request = {
         params: {
@@ -424,8 +425,8 @@ describe('resources模块测试', () => {
       
       for (const test of testExtensions) {
         // 模拟文件路径和内容
-        (path.extname as jest.Mock).mockReturnValue(test.ext);
-        (fs.readFileSync as jest.Mock).mockReturnValue('File content');
+        (path.extname as vi.Mock).mockReturnValue(test.ext);
+        (fs.readFileSync as vi.Mock).mockReturnValue('File content');
         
         const request = {
           params: {
