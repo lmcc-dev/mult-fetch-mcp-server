@@ -71,16 +71,17 @@ export class ErrorHandler {
   public static classifyError(error: unknown): ErrorType {
     const errorMessage = this.getErrorMessage(error);
     
+    // 先检查超时错误 (Check timeout errors first)
+    if (errorMessage.toLowerCase().includes('timeout')) {
+      return ErrorType.TIMEOUT;
+    }
+    
     if (isNetworkError(errorMessage)) {
       return ErrorType.NETWORK;
     }
     
     if (isAccessDeniedError(errorMessage)) {
       return ErrorType.ACCESS_DENIED;
-    }
-    
-    if (errorMessage.toLowerCase().includes('timeout')) {
-      return ErrorType.TIMEOUT;
     }
     
     if (errorMessage.toLowerCase().includes('parse') || 
