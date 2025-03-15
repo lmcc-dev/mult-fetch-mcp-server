@@ -38,7 +38,7 @@ jobs:
           ${{ runner.os }}-pnpm-store-
     - run: pnpm install
     - run: pnpm run build --if-present
-    - run: pnpm test
+    - run: pnpm test:coverage
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
       with:
