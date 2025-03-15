@@ -60,6 +60,12 @@ function responseRequiresBrowser(response: any, debug: boolean = false): boolean
       }
     }
     
+    // 检查是否包含 HTTP 403 Forbidden 错误，这是最常见的需要切换到浏览器模式的情况
+    if (errorText.includes('403') || 
+        errorText.toLowerCase().includes('forbidden')) {
+      return true;
+    }
+    
     return isAccessDeniedError(errorText) || 
            isNetworkError(errorText) ||
            errorText.toLowerCase().includes('javascript required') ||
@@ -110,9 +116,16 @@ async function smartFetch(params: RequestPayload & { method?: string }) {
     if (params.autoDetectMode !== false) {
       // 首先尝试使用标准模式 (First try using standard mode)
       log('client.usingMode', debug, { mode: params.useBrowser ? 'browser' : 'standard', url }, COMPONENTS.CLIENT);
+      
+      // 确保服务端也启用了自动检测模式
+      const paramsWithAutoDetect = {
+        ...params,
+        autoDetectMode: true
+      };
+      
       const result = await client.callTool({
         name: method,
-        arguments: params
+        arguments: paramsWithAutoDetect
       });
       
       // 在调试模式下打印响应结果的摘要 (Print response result summary in debug mode)
@@ -130,12 +143,16 @@ async function smartFetch(params: RequestPayload & { method?: string }) {
         log('client.retryingWithBrowser', debug, { url }, COMPONENTS.CLIENT);
         
         // 切换到浏览器模式重试 (Switch to browser mode and retry)
+        const browserParams = {
+          ...params,
+          useBrowser: true,
+          debug: true,  // 确保在浏览器模式下启用调试
+          autoDetectMode: true  // 确保自动检测模式也被传递
+        };
+        
         const browserResult = await client.callTool({
           name: method,
-          arguments: {
-            ...params,
-            useBrowser: true
-          }
+          arguments: browserParams
         });
         
         if (browserResult.isError) {
@@ -157,9 +174,16 @@ async function smartFetch(params: RequestPayload & { method?: string }) {
     } else {
       // 直接使用指定的模式 (Directly use the specified mode)
       log('client.usingMode', debug, { mode: params.useBrowser ? 'browser' : 'standard', url }, COMPONENTS.CLIENT);
+      
+      // 确保明确设置 autoDetectMode 为 false
+      const paramsWithoutAutoDetect = {
+        ...params,
+        autoDetectMode: false
+      };
+      
       const result = await client.callTool({
         name: method,
-        arguments: params
+        arguments: paramsWithoutAutoDetect
       });
       
       if (result.isError) {

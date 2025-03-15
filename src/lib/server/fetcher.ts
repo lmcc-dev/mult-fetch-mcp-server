@@ -45,6 +45,8 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
           return await Fetcher.txt(params);
         case 'markdown':
           return await Fetcher.markdown(params);
+        default:
+          throw new Error(`Unsupported content type: ${type}`);
       }
     } else {
       // 使用标准模式
@@ -54,23 +56,93 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
       
       try {
         // 根据类型选择合适的标准获取方法 (Choose appropriate standard fetching method based on type)
+        let result;
         switch (type) {
           case 'html': {
-            return await Fetcher.html(params);
+            result = await Fetcher.html(params);
+            break;
           }
           case 'json': {
-            return await Fetcher.json(params);
+            result = await Fetcher.json(params);
+            break;
           }
           case 'txt': {
-            return await Fetcher.txt(params);
+            result = await Fetcher.txt(params);
+            break;
           }
           case 'markdown': {
-            return await Fetcher.markdown(params);
+            result = await Fetcher.markdown(params);
+            break;
+          }
+          default:
+            throw new Error(`Unsupported content type: ${type}`);
+        }
+        
+        // 检查结果是否为错误，并且是否包含403或forbidden关键词
+        if (result.isError && autoDetectMode) {
+          const errorText = result.content && result.content[0] && result.content[0].text 
+            ? String(result.content[0].text) 
+            : '';
+            
+          const is403Error = errorText.includes('403') || 
+                            errorText.toLowerCase().includes('forbidden');
+                            
+          if (is403Error || shouldSwitchToBrowser(errorText)) {
+            if (debug) {
+              log('server.switchingToBrowserMode', debug, { 
+                url: params.url, 
+                error: errorText,
+                reason: is403Error ? '403 Forbidden' : 'Other error requiring browser'
+              }, COMPONENTS.SERVER);
+            }
+            
+            // 确保浏览器已初始化
+            await initializeBrowser(debug);
+            
+            // 设置浏览器模式参数
+            const browserParams = {
+              ...params,
+              useBrowser: true,
+              debug: debug
+            };
+            
+            // 根据类型选择合适的浏览器获取方法
+            let browserResult;
+            switch (type) {
+              case 'html':
+                browserResult = await Fetcher.html(browserParams);
+                break;
+              case 'json':
+                browserResult = await Fetcher.json(browserParams);
+                break;
+              case 'txt':
+                browserResult = await Fetcher.txt(browserParams);
+                break;
+              case 'markdown':
+                browserResult = await Fetcher.markdown(browserParams);
+                break;
+              default:
+                throw new Error(`Unsupported content type: ${type}`);
+            }
+            
+            return browserResult;
           }
         }
+        
+        return result;
       } catch (error) {
         // 如果标准模式失败且启用了自动检测
-        if (autoDetectMode && shouldSwitchToBrowser(error)) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        // 检查是否应该切换到浏览器模式
+        // 特别处理 HTTP 403 Forbidden 错误，这是最常见的需要切换到浏览器模式的情况
+        const shouldSwitch = autoDetectMode && (
+          shouldSwitchToBrowser(error) || 
+          errorMessage.includes('403') || 
+          errorMessage.toLowerCase().includes('forbidden')
+        );
+        
+        if (shouldSwitch) {
           if (debug) {
             log('server.switchingToBrowserMode', debug, { url: params.url }, COMPONENTS.SERVER);
           }
@@ -86,16 +158,25 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
           };
           
           // 根据类型选择合适的浏览器获取方法
+          let browserResult;
           switch (type) {
             case 'html':
-              return await Fetcher.html(browserParams);
+              browserResult = await Fetcher.html(browserParams);
+              break;
             case 'json':
-              return await Fetcher.json(browserParams);
+              browserResult = await Fetcher.json(browserParams);
+              break;
             case 'txt':
-              return await Fetcher.txt(browserParams);
+              browserResult = await Fetcher.txt(browserParams);
+              break;
             case 'markdown':
-              return await Fetcher.markdown(browserParams);
+              browserResult = await Fetcher.markdown(browserParams);
+              break;
+            default:
+              throw new Error(`Unsupported content type: ${type}`);
           }
+          
+          return browserResult;
         }
         
         // 如果不需要切换到浏览器模式，则抛出原始错误

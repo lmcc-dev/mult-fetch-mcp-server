@@ -51,15 +51,44 @@ export async function closeBrowserInstance(debug: boolean = false): Promise<void
  */
 export function shouldSwitchToBrowser(error: any): boolean {
   // 检查错误是否表明需要浏览器模式 (Check if error indicates browser mode is needed)
-  if (error && error.message) {
-    const errorMessage = error.message;
-    return isAccessDeniedError(errorMessage) || 
-           isNetworkError(errorMessage) ||
-           errorMessage.toLowerCase().includes('javascript required') ||
-           errorMessage.toLowerCase().includes('und_err_connect_timeout') ||
-           errorMessage.toLowerCase().includes('fetch failed');
+  if (!error) return false;
+  
+  // 提取错误消息，无论错误对象的形式如何
+  let errorMessage: string;
+  
+  if (typeof error === 'string') {
+    errorMessage = error;
+  } else if (error instanceof Error) {
+    errorMessage = error.message;
+  } else if (error && typeof error === 'object') {
+    if ('message' in error && typeof error.message === 'string') {
+      errorMessage = error.message;
+    } else if ('content' in error && Array.isArray(error.content) && error.content.length > 0) {
+      // 处理 MCP 响应格式
+      const content = error.content[0];
+      errorMessage = content && typeof content === 'object' && 'text' in content ? String(content.text) : String(error);
+    } else {
+      try {
+        errorMessage = JSON.stringify(error);
+      } catch {
+        errorMessage = String(error);
+      }
+    }
+  } else {
+    errorMessage = String(error);
   }
-  return false;
+  
+  // 检查是否包含 HTTP 403 Forbidden 错误，这是最常见的需要切换到浏览器模式的情况
+  if (errorMessage.includes('403') || 
+      errorMessage.toLowerCase().includes('forbidden')) {
+    return true;
+  }
+  
+  return isAccessDeniedError(errorMessage) || 
+         isNetworkError(errorMessage) ||
+         errorMessage.toLowerCase().includes('javascript required') ||
+         errorMessage.toLowerCase().includes('und_err_connect_timeout') ||
+         errorMessage.toLowerCase().includes('fetch failed');
 }
 
 /**
