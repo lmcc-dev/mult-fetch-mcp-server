@@ -7,7 +7,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { registerPrompts } from "../../src/lib/server/prompts.js";
 import { ListPromptsRequestSchema, GetPromptRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { vi, describe, test, expect, beforeEach } from 'vitest';
+import { vi, describe, test, it, expect, beforeEach } from 'vitest';
 import * as logger from '../../src/lib/logger.js';
 
 // 模拟i18n模块
