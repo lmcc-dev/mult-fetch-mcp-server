@@ -39,5 +39,14 @@ export default {
   [ERROR_KEYS.connectionProblem]: '检测到连接问题',
   
   // 通用错误 (Generic errors)
-  [ERROR_KEYS.unknownError]: '未知错误: {{message}}'
+  [ERROR_KEYS.unknownError]: '未知错误: {{message}}',
+  
+  // 错误类型键 (Error type keys)
+  [ERROR_KEYS.network_error]: '网络错误: {{error}}',
+  [ERROR_KEYS.access_denied_error]: '访问被拒绝: {{error}}',
+  [ERROR_KEYS.timeout_error]: '超时错误: {{error}}',
+  [ERROR_KEYS.parse_error]: '解析错误: {{error}}',
+  [ERROR_KEYS.validation_error]: '验证错误: {{error}}',
+  [ERROR_KEYS.browser_error]: '浏览器错误: {{error}}',
+  [ERROR_KEYS.unknown_error]: '未知错误: {{error}}'
 }; 
