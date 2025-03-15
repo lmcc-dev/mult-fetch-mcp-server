@@ -121,4 +121,4 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
     content: [{ type: 'text', text: `Unsupported content type: ${type}` }],
     isError: true
   };
-}
+}// 修复注释
