@@ -23,6 +23,7 @@ export const FETCHER_KEYS = (() => {
     notUsingProxy: keyGen('notUsingProxy'),
     finalProxyUsed: keyGen('finalProxyUsed'),
     noProxy: keyGen('noProxy'),
+    foundNoProxy: keyGen('foundNoProxy'),
     usingHttpsProxy: keyGen('usingHttpsProxy'),
     usingHttpProxy: keyGen('usingHttpProxy'),
     systemProxyDisabled: keyGen('systemProxyDisabled'),
@@ -54,6 +55,9 @@ export const FETCHER_KEYS = (() => {
     // 内容类型相关 (Content type related)
     startingHtmlFetch: keyGen('startingHtmlFetch'),
     fetchingHtml: keyGen('fetchingHtml'),
+    fetchingJson: keyGen('fetchingJson'),
+    fetchingTxt: keyGen('fetchingTxt'),
+    fetchingMarkdown: keyGen('fetchingMarkdown'),
     readingText: keyGen('readingText'),
     htmlContentLength: keyGen('htmlContentLength'),
     startingJsonFetch: keyGen('startingJsonFetch'),

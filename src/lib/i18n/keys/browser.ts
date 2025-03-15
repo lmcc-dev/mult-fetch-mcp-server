@@ -25,6 +25,7 @@ export const BROWSER_KEYS = (() => {
         waitingForSelector: keyGen('waitingForSelector'),
         waitingForTimeout: keyGen('waitingForTimeout'),
         scrollingToBottom: keyGen('scrollingToBottom'),
+        scrollError: keyGen('scrollError'),
         gettingContent: keyGen('gettingContent'),
         contentLength: keyGen('contentLength'),
 

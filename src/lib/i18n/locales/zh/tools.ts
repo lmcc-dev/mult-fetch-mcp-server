@@ -21,6 +21,7 @@ export default {
   [TOOLS_KEYS.fetchJsonError]: '获取JSON失败: {{error}}',
   [TOOLS_KEYS.fetchTxtError]: '获取文本失败: {{error}}',
   [TOOLS_KEYS.fetchMarkdownError]: '获取Markdown失败: {{error}}',
+  [TOOLS_KEYS.jsonParseWarning]: '警告: JSON解析错误: {{error}}',
   
   // 成功消息 (Success messages)
   [TOOLS_KEYS.fetchHtmlSuccess]: '成功从 {{url}} 获取HTML',

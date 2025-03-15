@@ -46,6 +46,15 @@ export const ERROR_KEYS = (() => {
     connectionProblem: keyGen('connectionProblem'),
     
     // 通用错误 (Generic errors)
-    unknownError: keyGen('unknownError')
+    unknownError: keyGen('unknownError'),
+    
+    // 错误类型键 (Error type keys)
+    network_error: keyGen('network_error'),
+    access_denied_error: keyGen('access_denied_error'),
+    timeout_error: keyGen('timeout_error'),
+    parse_error: keyGen('parse_error'),
+    validation_error: keyGen('validation_error'),
+    browser_error: keyGen('browser_error'),
+    unknown_error: keyGen('unknown_error')
   } as const;
 })(); 

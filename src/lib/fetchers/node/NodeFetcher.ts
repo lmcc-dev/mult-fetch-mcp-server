@@ -8,6 +8,7 @@ import TurndownService from "turndown";
 import { RequestPayload, FetchResponse, IFetcher } from "../common/types.js";
 import { log, COMPONENTS } from '../../logger.js';
 import { HttpClient } from './HttpClient.js';
+import { ErrorHandler, ErrorType } from '../../utils/ErrorHandler.js';
 
 /**
  * Node模式获取器类 (Node mode fetcher class)
@@ -38,12 +39,17 @@ export class NodeFetcher implements IFetcher {
         isError: false
       };
     } catch (error) {
-      // 处理错误 (Handle error)
-      log('node.htmlFetchError', debug, { error: error instanceof Error ? error.message : String(error) }, COMPONENTS.NODE_FETCH);
+      // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
+      const errorMessage = ErrorHandler.handleError(
+        error, 
+        COMPONENTS.NODE_FETCH, 
+        debug, 
+        { url: requestPayload.url, method: 'html' }
+      );
       
       // 返回错误信息 (Return error message)
       return {
-        content: [{ type: 'text', text: `Error fetching HTML: ${error}` }],
+        content: [{ type: 'text', text: `Error fetching HTML: ${errorMessage}` }],
         isError: true
       };
     }
@@ -97,12 +103,17 @@ export class NodeFetcher implements IFetcher {
         };
       }
     } catch (error) {
-      // 处理错误 (Handle error)
-      log('node.jsonFetchError', debug, { error: error instanceof Error ? error.message : String(error) }, COMPONENTS.NODE_FETCH);
+      // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
+      const errorMessage = ErrorHandler.handleError(
+        error, 
+        COMPONENTS.NODE_FETCH, 
+        debug, 
+        { url: requestPayload.url, method: 'json' }
+      );
       
       // 返回错误信息 (Return error message)
       return {
-        content: [{ type: 'text', text: `Error fetching JSON: ${error}` }],
+        content: [{ type: 'text', text: `Error fetching JSON: ${errorMessage}` }],
         isError: true
       };
     }
@@ -132,12 +143,17 @@ export class NodeFetcher implements IFetcher {
         isError: false
       };
     } catch (error) {
-      // 处理错误 (Handle error)
-      log('node.txtFetchError', debug, { error: error instanceof Error ? error.message : String(error) }, COMPONENTS.NODE_FETCH);
+      // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
+      const errorMessage = ErrorHandler.handleError(
+        error, 
+        COMPONENTS.NODE_FETCH, 
+        debug, 
+        { url: requestPayload.url, method: 'txt' }
+      );
       
       // 返回错误信息 (Return error message)
       return {
-        content: [{ type: 'text', text: `Error fetching text: ${error}` }],
+        content: [{ type: 'text', text: `Error fetching text: ${errorMessage}` }],
         isError: true
       };
     }
@@ -189,12 +205,17 @@ export class NodeFetcher implements IFetcher {
         isError: false
       };
     } catch (error) {
-      // 处理错误 (Handle error)
-      log('node.markdownFetchError', debug, { error: error instanceof Error ? error.message : String(error) }, COMPONENTS.NODE_FETCH);
+      // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
+      const errorMessage = ErrorHandler.handleError(
+        error, 
+        COMPONENTS.NODE_FETCH, 
+        debug, 
+        { url: requestPayload.url, method: 'markdown' }
+      );
       
       // 返回错误信息 (Return error message)
       return {
-        content: [{ type: 'text', text: `Error fetching Markdown: ${error}` }],
+        content: [{ type: 'text', text: `Error fetching Markdown: ${errorMessage}` }],
         isError: true
       };
     }

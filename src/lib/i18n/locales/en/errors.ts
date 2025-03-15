@@ -39,5 +39,14 @@ export default {
   [ERROR_KEYS.connectionProblem]: 'Connection problem detected',
   
   // 通用错误 (Generic errors)
-  [ERROR_KEYS.unknownError]: 'Unknown error: {{message}}'
+  [ERROR_KEYS.unknownError]: 'Unknown error: {{message}}',
+  
+  // 错误类型键 (Error type keys)
+  [ERROR_KEYS.network_error]: 'Network error: {{error}}',
+  [ERROR_KEYS.access_denied_error]: 'Access denied: {{error}}',
+  [ERROR_KEYS.timeout_error]: 'Timeout error: {{error}}',
+  [ERROR_KEYS.parse_error]: 'Parse error: {{error}}',
+  [ERROR_KEYS.validation_error]: 'Validation error: {{error}}',
+  [ERROR_KEYS.browser_error]: 'Browser error: {{error}}',
+  [ERROR_KEYS.unknown_error]: 'Unknown error: {{error}}'
 }; 

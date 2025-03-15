@@ -21,6 +21,7 @@ export default {
   [BROWSER_KEYS.waitingForSelector]: "Waiting for selector: {{selector}}",
   [BROWSER_KEYS.waitingForTimeout]: "Waiting for timeout: {{timeout}}ms",
   [BROWSER_KEYS.scrollingToBottom]: "Auto-scrolling page...",
+  [BROWSER_KEYS.scrollError]: "Error while scrolling: {{error}}",
   [BROWSER_KEYS.gettingContent]: "Getting page content...",
   [BROWSER_KEYS.contentLength]: "Content length: {{length}} bytes",
   

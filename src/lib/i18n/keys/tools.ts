@@ -26,6 +26,7 @@ export const TOOLS_KEYS = (() => {
     fetchJsonError: keyGen('fetchJsonError'),
     fetchTxtError: keyGen('fetchTxtError'),
     fetchMarkdownError: keyGen('fetchMarkdownError'),
+    jsonParseWarning: keyGen('jsonParseWarning'),
     
     // 成功消息 (Success messages)
     fetchHtmlSuccess: keyGen('fetchHtmlSuccess'),

@@ -21,6 +21,7 @@ export default {
   [TOOLS_KEYS.fetchJsonError]: 'Error fetching JSON: {{error}}',
   [TOOLS_KEYS.fetchTxtError]: 'Error fetching text: {{error}}',
   [TOOLS_KEYS.fetchMarkdownError]: 'Error fetching Markdown: {{error}}',
+  [TOOLS_KEYS.jsonParseWarning]: 'Warning: JSON parse error: {{error}}',
   
   // 成功消息 (Success messages)
   [TOOLS_KEYS.fetchHtmlSuccess]: 'Successfully fetched HTML from {{url}}',

@@ -43,7 +43,7 @@ export default {
   [CLIENT_KEYS.callTool]: 'Calling tool: {{name}}',
   [CLIENT_KEYS.callToolSuccess]: 'Tool call successful: {{name}}',
   [CLIENT_KEYS.callToolError]: 'Tool call error: {{name}} - {{error}}',
-  [CLIENT_KEYS.statusCodeDetected]: 'Status code detected: {{statusCode}}',
+  [CLIENT_KEYS.statusCodeDetected]: 'Status code detected: {{code}}',
   [CLIENT_KEYS.usageInfo]: 'Usage info: {{info}}',
   [CLIENT_KEYS.exampleUsage]: 'Example usage: {{example}}',
   [CLIENT_KEYS.invalidJson]: 'Invalid JSON: {{error}}',

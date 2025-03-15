@@ -30,6 +30,8 @@
     "test:direct": "node dist/tests/test-direct-client.js",
     "test:methods": "node dist/tests/test-mcp-methods.js",
     "test:i18n": "pnpm run build && node dist/tests/test-i18n.js",
+    "test:i18n:unused": "pnpm run build && node dist/tests/i18n-unused-keys.js",
+    "test:i18n:missing": "pnpm run build && node --loader ts-node/esm tests/i18n-missing-keys.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -69,6 +71,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/glob": "^8.1.0",
     "@types/jsdom": "^21.1.7",
     "@types/node": "^22.10.2",
     "@types/node-fetch": "^2.6.12",
@@ -76,6 +79,7 @@
     "@types/turndown": "^5.0.5",
     "@vitest/coverage-v8": "^3.0.8",
     "codecov": "^3.8.2",
+    "glob": "^11.0.1",
     "shx": "^0.3.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2",
