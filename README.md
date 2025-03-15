@@ -175,13 +175,13 @@ After configuration, restart Claude desktop, and you can use the following tools
 ## Build
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## Run Server
 
 ```bash
-npm run server
+pnpm run server
 # or
 node dist/index.js
 # if globally installed, you can run directly
@@ -193,9 +193,9 @@ npx @lmcc-dev/mult-fetch-mcp-server
 ## Run Client
 
 ```bash
-npm run client <method> <params_json>
+pnpm run client <method> <params_json>
 # example
-npm run client fetch_html '{"url": "https://example.com", "debug": true}'
+pnpm run client fetch_html '{"url": "https://example.com", "debug": true}'
 ```
 
 ## Run Tests

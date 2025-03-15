@@ -15,21 +15,23 @@ RUN apt-get update \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
+# 安装 pnpm (Install pnpm)
+RUN npm install -g pnpm
+
 # Create app directory
 WORKDIR /app
 
 # Install app dependencies
-COPY package.json package-lock.json* pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml ./
 
-# Using npm ci with ignore-scripts to avoid unwanted prepare script, then build explicitly
-# If pnpm-lock.yaml exists, consider installing via npm
-RUN npm install --ignore-scripts || true
+# 使用 pnpm 安装依赖 (Install dependencies with pnpm)
+RUN pnpm install --frozen-lockfile
 
 # Copy the rest of the application
 COPY . .
 
 # Build the app
-RUN npm run build
+RUN pnpm run build
 
 # Expose any ports if necessary, though MCP uses stdio
 

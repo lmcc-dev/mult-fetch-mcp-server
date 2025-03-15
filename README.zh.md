@@ -172,13 +172,13 @@ npx @lmcc-dev/mult-fetch-mcp-server
 ## 构建
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## 运行服务器
 
 ```bash
-npm run server
+pnpm run server
 # 或者
 node dist/index.js
 # 如果全局安装，可以直接运行
@@ -190,9 +190,9 @@ npx mult-fetch-mcp-server
 ## 运行客户端
 
 ```bash
-npm run client <method> <params_json>
+pnpm run client <method> <params_json>
 # 例如
-npm run client fetch_html '{"url": "https://example.com", "debug": true}'
+pnpm run client fetch_html '{"url": "https://example.com", "debug": true}'
 ```
 
 ## 运行测试
