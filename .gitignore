@@ -5,6 +5,10 @@ yarn-debug.log
 yarn-error.log
 yarn.lock
 
+# pnpm 相关
+.pnpm-store/
+.pnpm-debug.log
+
 # 编译输出
 dist/
 build/
@@ -38,5 +42,5 @@ temp/
 # 浏览器数据
 .chrome-data/
 
-# 开发笔记
+# 开发笔记和文档
 NOTEPADS/

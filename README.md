@@ -91,16 +91,16 @@ npx -y @smithery/cli install @lmcc-dev/mult-fetch-mcp-server --client claude
 ### Local Installation
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### Global Installation
 
 ```bash
-npm install -g @lmcc-dev/mult-fetch-mcp-server
+pnpm add -g @lmcc-dev/mult-fetch-mcp-server
 ```
 
-Or use npx to run directly (no installation required):
+Or run directly with npx (no installation required):
 
 ```bash
 npx @lmcc-dev/mult-fetch-mcp-server

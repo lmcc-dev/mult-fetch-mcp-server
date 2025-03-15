@@ -77,22 +77,30 @@ fetch-mcp/
 
 ## 安装
 
+### 通过 Smithery 安装
+
+要通过 [Smithery](https://smithery.ai/server/@lmcc-dev/mult-fetch-mcp-server) 自动为 Claude 桌面版安装 Mult Fetch MCP Server：
+
+```bash
+npx -y @smithery/cli install @lmcc-dev/mult-fetch-mcp-server --client claude
+```
+
 ### 本地安装
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 全局安装
 
 ```bash
-npm install -g mult-fetch-mcp-server
+pnpm add -g @lmcc-dev/mult-fetch-mcp-server
 ```
 
 或者直接使用 npx 运行（无需安装）：
 
 ```bash
-npx mult-fetch-mcp-server
+npx @lmcc-dev/mult-fetch-mcp-server
 ```
 
 ## 与 Claude 集成

@@ -3,17 +3,25 @@ image: node:18
 stages:
   - test
 
+variables:
+  PNPM_STORE_DIR: .pnpm-store
+
 cache:
   paths:
+    - .pnpm-store/
     - node_modules/
+
+before_script:
+  - npm install -g pnpm
+  - pnpm config set store-dir $PNPM_STORE_DIR
 
 test:
   stage: test
   script:
-    - npm ci
-    - npm run build --if-present
-    - npm test
-    - npm run codecov
+    - pnpm install
+    - pnpm run build --if-present
+    - pnpm test
+    - pnpm run codecov
   artifacts:
     paths:
       - coverage/
