@@ -79,19 +79,22 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
           await initializeBrowser(debug);
           
           // 设置浏览器模式参数
-          params.useBrowser = true;
-          params.debug = debug;
+          const browserParams = {
+            ...params,
+            useBrowser: true,
+            debug: debug
+          };
           
           // 根据类型选择合适的浏览器获取方法
           switch (type) {
             case 'html':
-              return await Fetcher.html(params);
+              return await Fetcher.html(browserParams);
             case 'json':
-              return await Fetcher.json(params);
+              return await Fetcher.json(browserParams);
             case 'txt':
-              return await Fetcher.txt(params);
+              return await Fetcher.txt(browserParams);
             case 'markdown':
-              return await Fetcher.markdown(params);
+              return await Fetcher.markdown(browserParams);
           }
         }
         
