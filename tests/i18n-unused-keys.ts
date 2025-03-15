@@ -25,6 +25,8 @@ interface TestConfig {
   srcDir: string;
   excludeDirs: string[];
   fileExtensions: string[];
+  preserveErrorKeys: boolean; // 是否保留错误相关的键 (Whether to preserve error-related keys)
+  reportOnly: boolean; // 是否只生成报告而不执行删除 (Whether to only generate report without deletion)
 }
 
 // 默认测试配置 (Default test configuration)
@@ -34,7 +36,9 @@ const defaultConfig: TestConfig = {
   verbose: false,
   srcDir: path.join(__dirname, '../src'),
   excludeDirs: ['node_modules', 'dist', 'build', 'coverage'],
-  fileExtensions: ['.ts', '.tsx', '.js', '.jsx']
+  fileExtensions: ['.ts', '.tsx', '.js', '.jsx'],
+  preserveErrorKeys: true, // 默认保留错误相关的键 (Preserve error-related keys by default)
+  reportOnly: false // 默认不只生成报告 (Don't only generate report by default)
 };
 
 // 解析命令行参数 (Parse command line arguments)
@@ -72,6 +76,12 @@ function parseCommandLineArgs(): TestConfig {
           config.fileExtensions = args[++i].split(',');
         }
         break;
+      case '--no-preserve-error-keys':
+        config.preserveErrorKeys = false;
+        break;
+      case '--report-only':
+        config.reportOnly = true;
+        break;
       case '--help':
         printHelp();
         process.exit(0);
@@ -96,6 +106,8 @@ function printHelp() {
   --src-dir <path>           指定源代码目录 (Specify source code directory)
   --exclude-dirs <dirs>      指定排除的目录，用逗号分隔 (Specify excluded directories, separated by commas)
   --file-extensions <exts>   指定文件扩展名，用逗号分隔 (Specify file extensions, separated by commas)
+  --no-preserve-error-keys   不保留错误相关的键 (Don't preserve error-related keys)
+  --report-only              只生成报告，不执行删除 (Only generate report, don't delete)
   --help                     显示帮助信息 (Show help information)
   `);
 }
@@ -246,6 +258,24 @@ function isKeyUsedInFile(filePath: string, key: string): boolean {
       return true;
     }
     
+    // 检查动态生成的键名 (Check dynamically generated key names)
+    const parts = key.split('.');
+    if (parts.length > 1) {
+      const namespace = parts[0];
+      const subKey = parts.slice(1).join('.');
+      
+      // 检查使用模板字符串的情况 (Check usage with template strings)
+      if (content.includes(`\`${namespace}.`) || content.includes(`\`\${`) && content.includes(`}.${subKey}\``)) {
+        return true;
+      }
+      
+      // 检查使用字符串拼接的情况 (Check usage with string concatenation)
+      if (content.includes(`'${namespace}.' +`) || content.includes(`"${namespace}." +`) ||
+          content.includes(`+ '.${subKey}'`) || content.includes(`+ ".${subKey}"`)) {
+        return true;
+      }
+    }
+    
     return false;
   } catch (error) {
     console.error(`读取文件 ${filePath} 时出错 (Error reading file ${filePath}):`, error);
@@ -261,6 +291,14 @@ function isKeyUsedInFile(filePath: string, key: string): boolean {
  * @returns 是否使用了键 (Whether the key is used)
  */
 function isKeyUsed(key: string, files: string[], config: TestConfig): boolean {
+  // 如果配置为保留错误相关的键，并且键以 errors. 开头，则认为它是使用的
+  if (config.preserveErrorKeys && key.startsWith('errors.')) {
+    if (config.verbose) {
+      console.log(`保留错误相关的键: ${key} (Preserving error-related key: ${key})`);
+    }
+    return true;
+  }
+  
   for (const file of files) {
     if (isKeyUsedInFile(file, key)) {
       if (config.verbose) {
@@ -378,6 +416,11 @@ async function main() {
   try {
     // 解析命令行参数 (Parse command line arguments)
     const config = parseCommandLineArgs();
+    
+    // 检查是否只生成报告 (Check if only generating report)
+    if (config.reportOnly) {
+      console.log('只生成报告，不执行删除 (Only generating report, not deleting)');
+    }
     
     // 检查未使用的键 (Check unused keys)
     const result = await checkUnusedKeys(config);
