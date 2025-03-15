@@ -44,3 +44,6 @@ temp/
 
 # 开发笔记和文档
 NOTEPADS/
+
+# 国际化报告文件
+i18n-missing-keys-report.json

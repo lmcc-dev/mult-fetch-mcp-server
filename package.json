@@ -31,6 +31,7 @@
     "test:methods": "node dist/tests/test-mcp-methods.js",
     "test:i18n": "pnpm run build && node dist/tests/test-i18n.js",
     "test:i18n:unused": "pnpm run build && node dist/tests/i18n-unused-keys.js",
+    "test:i18n:missing": "pnpm run build && node --loader ts-node/esm tests/i18n-missing-keys.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

@@ -20,6 +20,7 @@ export default {
   [BROWSER_KEYS.waitingForSelector]: "等待选择器: {{selector}}",
   [BROWSER_KEYS.waitingForTimeout]: "等待超时: {{timeout}}ms",
   [BROWSER_KEYS.scrollingToBottom]: "自动滚动页面...",
+  [BROWSER_KEYS.scrollError]: "滚动时出错: {{error}}",
   [BROWSER_KEYS.gettingContent]: "获取页面内容...",
   [BROWSER_KEYS.contentLength]: "内容长度: {{length}} 字节",
   
