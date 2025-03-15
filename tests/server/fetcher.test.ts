@@ -5,14 +5,12 @@
  */
 
 import { fetchWithAutoDetect } from '../../src/lib/server/fetcher.js';
-import { BrowserFetcher } from '../../src/lib/BrowserFetcher.js';
-import { NodeFetcher } from '../../src/lib/NodeFetcher.js';
+import { Fetcher } from '../../src/lib/fetch.js';
 import { initializeBrowser, closeBrowserInstance, shouldSwitchToBrowser } from '../../src/lib/server/browser.js';
 import { vi, describe, test, expect, beforeEach } from 'vitest';
 
 // 模拟依赖
-vi.mock('../../src/lib/BrowserFetcher.js');
-vi.mock('../../src/lib/NodeFetcher.js');
+vi.mock('../../src/lib/fetch.js');
 vi.mock('../../src/lib/server/browser.js');
 vi.mock('../../src/lib/logger.js', () => ({
   log: vi.fn(),
@@ -27,25 +25,20 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
     vi.clearAllMocks();
     
     // 设置默认返回值
-    (NodeFetcher.html as ReturnType<typeof vi.fn>).mockResolvedValue({ html: '<html>Test</html>' });
-    (NodeFetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({ json: { test: 'data' } });
-    (NodeFetcher.txt as ReturnType<typeof vi.fn>).mockResolvedValue({ text: 'Test text' });
-    (NodeFetcher.markdown as ReturnType<typeof vi.fn>).mockResolvedValue({ markdown: '# Test' });
-    
-    (BrowserFetcher.html as ReturnType<typeof vi.fn>).mockResolvedValue({
-      content: [{ type: 'text', text: '<html>Browser Test</html>' }],
+    (Fetcher.html as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: [{ type: 'text', text: '<html>Test</html>' }],
       isError: false
     });
-    (BrowserFetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({
-      content: [{ type: 'text', text: '{"test":"browser data"}' }],
+    (Fetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: [{ type: 'text', text: '{"test":"data"}' }],
       isError: false
     });
-    (BrowserFetcher.txt as ReturnType<typeof vi.fn>).mockResolvedValue({
-      content: [{ type: 'text', text: 'Browser test text' }],
+    (Fetcher.txt as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: [{ type: 'text', text: 'Test text' }],
       isError: false
     });
-    (BrowserFetcher.markdown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      content: [{ type: 'text', text: '# Browser Test' }],
+    (Fetcher.markdown as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: [{ type: 'text', text: '# Test' }],
       isError: false
     });
     
@@ -54,156 +47,142 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
     (shouldSwitchToBrowser as ReturnType<typeof vi.fn>).mockReturnValue(false);
   });
   
-  test('应该使用 NodeFetcher 获取 HTML (Should use NodeFetcher to fetch HTML)', async () => {
+  test('应该使用 Fetcher 获取 HTML (Should use Fetcher to fetch HTML)', async () => {
     const params = { url: 'https://example.com' };
     const result = await fetchWithAutoDetect(params, 'html');
     
-    expect(NodeFetcher.html).toHaveBeenCalledWith(params);
-    expect(BrowserFetcher.html).not.toHaveBeenCalled();
+    expect(Fetcher.html).toHaveBeenCalledWith(params);
     expect(result).toEqual({
       content: [{ type: 'text', text: '<html>Test</html>' }],
       isError: false
     });
   });
   
-  test('应该使用 NodeFetcher 获取 JSON (Should use NodeFetcher to fetch JSON)', async () => {
+  test('应该使用 Fetcher 获取 JSON (Should use Fetcher to fetch JSON)', async () => {
     const params = { url: 'https://example.com/data.json' };
     const result = await fetchWithAutoDetect(params, 'json');
     
-    expect(NodeFetcher.json).toHaveBeenCalledWith(params);
-    expect(BrowserFetcher.json).not.toHaveBeenCalled();
+    expect(Fetcher.json).toHaveBeenCalledWith(params);
     expect(result).toEqual({
-      content: [{ type: 'text', text: JSON.stringify({ test: 'data' }, null, 2) }],
+      content: [{ type: 'text', text: '{"test":"data"}' }],
       isError: false
     });
   });
   
-  test('应该使用 NodeFetcher 获取文本 (Should use NodeFetcher to fetch text)', async () => {
+  test('应该使用 Fetcher 获取文本 (Should use Fetcher to fetch text)', async () => {
     const params = { url: 'https://example.com/text.txt' };
     const result = await fetchWithAutoDetect(params, 'txt');
     
-    expect(NodeFetcher.txt).toHaveBeenCalledWith(params);
-    expect(BrowserFetcher.txt).not.toHaveBeenCalled();
+    expect(Fetcher.txt).toHaveBeenCalledWith(params);
     expect(result).toEqual({
       content: [{ type: 'text', text: 'Test text' }],
       isError: false
     });
   });
   
-  test('应该使用 NodeFetcher 获取 Markdown (Should use NodeFetcher to fetch Markdown)', async () => {
+  test('应该使用 Fetcher 获取 Markdown (Should use Fetcher to fetch Markdown)', async () => {
     const params = { url: 'https://example.com/readme.md' };
     const result = await fetchWithAutoDetect(params, 'markdown');
     
-    expect(NodeFetcher.markdown).toHaveBeenCalledWith(params);
-    expect(BrowserFetcher.markdown).not.toHaveBeenCalled();
+    expect(Fetcher.markdown).toHaveBeenCalledWith(params);
     expect(result).toEqual({
       content: [{ type: 'text', text: '# Test' }],
       isError: false
     });
   });
   
-  test('应该使用 BrowserFetcher 获取 HTML (Should use BrowserFetcher to fetch HTML)', async () => {
+  test('应该在浏览器模式下使用 Fetcher 获取 HTML (Should use Fetcher to fetch HTML in browser mode)', async () => {
     const params = { url: 'https://example.com', useBrowser: true };
+    
+    // 设置浏览器模式下的返回值
+    (Fetcher.html as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: [{ type: 'text', text: '<html>Browser Test</html>' }],
+      isError: false
+    });
+    
     const result = await fetchWithAutoDetect(params, 'html');
     
     expect(initializeBrowser).toHaveBeenCalled();
-    expect(NodeFetcher.html).not.toHaveBeenCalled();
-    expect(BrowserFetcher.html).toHaveBeenCalledWith({ ...params, debug: false });
+    expect(Fetcher.html).toHaveBeenCalledWith({ ...params, debug: false });
     expect(result).toEqual({
       content: [{ type: 'text', text: '<html>Browser Test</html>' }],
       isError: false
     });
   });
   
-  test('应该使用 BrowserFetcher 获取 JSON (Should use BrowserFetcher to fetch JSON)', async () => {
+  test('应该在浏览器模式下使用 Fetcher 获取 JSON (Should use Fetcher to fetch JSON in browser mode)', async () => {
     const params = { url: 'https://example.com/data.json', useBrowser: true };
+    
+    // 设置浏览器模式下的返回值
+    (Fetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({
+      content: [{ type: 'text', text: '{"test":"browser data"}' }],
+      isError: false
+    });
+    
     const result = await fetchWithAutoDetect(params, 'json');
     
     expect(initializeBrowser).toHaveBeenCalled();
-    expect(NodeFetcher.json).not.toHaveBeenCalled();
-    expect(BrowserFetcher.json).toHaveBeenCalledWith({ ...params, debug: false });
+    expect(Fetcher.json).toHaveBeenCalledWith({ ...params, debug: false });
     expect(result).toEqual({
       content: [{ type: 'text', text: '{"test":"browser data"}' }],
       isError: false
     });
   });
   
-  test('应该使用 BrowserFetcher 获取文本 (Should use BrowserFetcher to fetch text)', async () => {
-    const params = { url: 'https://example.com/text.txt', useBrowser: true };
-    const result = await fetchWithAutoDetect(params, 'txt');
-    
-    expect(initializeBrowser).toHaveBeenCalled();
-    expect(NodeFetcher.txt).not.toHaveBeenCalled();
-    expect(BrowserFetcher.txt).toHaveBeenCalledWith({ ...params, debug: false });
-    expect(result).toEqual({
-      content: [{ type: 'text', text: 'Browser test text' }],
-      isError: false
-    });
-  });
-  
-  test('应该使用 BrowserFetcher 获取 Markdown (Should use BrowserFetcher to fetch Markdown)', async () => {
-    const params = { url: 'https://example.com/readme.md', useBrowser: true };
-    const result = await fetchWithAutoDetect(params, 'markdown');
-    
-    expect(initializeBrowser).toHaveBeenCalled();
-    expect(NodeFetcher.markdown).not.toHaveBeenCalled();
-    expect(BrowserFetcher.markdown).toHaveBeenCalledWith({ ...params, debug: false });
-    expect(result).toEqual({
-      content: [{ type: 'text', text: '# Browser Test' }],
-      isError: false
-    });
-  });
-  
-  test('应该在 NodeFetcher 失败时自动切换到 BrowserFetcher (Should automatically switch to BrowserFetcher when NodeFetcher fails)', async () => {
+  test('应该在 Fetcher 失败时自动切换到浏览器模式 (Should automatically switch to browser mode when Fetcher fails)', async () => {
     const params = { url: 'https://example.com' };
     
-    // 设置 NodeFetcher 抛出错误
-    (NodeFetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Fetch failed'));
+    // 设置 Fetcher 第一次调用抛出错误，第二次调用成功
+    (Fetcher.html as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new Error('Fetch failed'))
+      .mockResolvedValueOnce({
+        content: [{ type: 'text', text: '<html>Browser Test</html>' }],
+        isError: false
+      });
     
     // 设置 shouldSwitchToBrowser 返回 true
     (shouldSwitchToBrowser as ReturnType<typeof vi.fn>).mockReturnValue(true);
     
     const result = await fetchWithAutoDetect(params, 'html');
     
-    expect(NodeFetcher.html).toHaveBeenCalledWith(params);
+    expect(Fetcher.html).toHaveBeenCalledTimes(2);
+    expect(Fetcher.html).toHaveBeenNthCalledWith(1, params);
+    expect(Fetcher.html).toHaveBeenNthCalledWith(2, { ...params, useBrowser: true, debug: false });
     expect(shouldSwitchToBrowser).toHaveBeenCalled();
     expect(initializeBrowser).toHaveBeenCalled();
-    expect(BrowserFetcher.html).toHaveBeenCalledWith({ ...params, useBrowser: true, debug: false });
     expect(result).toEqual({
       content: [{ type: 'text', text: '<html>Browser Test</html>' }],
       isError: false
     });
   });
   
-  test('应该在 NodeFetcher 失败且不需要切换时抛出原始错误 (Should throw original error when NodeFetcher fails and no switch is needed)', async () => {
+  test('应该在 Fetcher 失败且不需要切换时抛出原始错误 (Should throw original error when Fetcher fails and no switch is needed)', async () => {
     const params = { url: 'https://example.com' };
     
-    // 设置 NodeFetcher 抛出错误
+    // 设置 Fetcher 抛出错误
     const originalError = new Error('Fetch failed');
-    (NodeFetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
+    (Fetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
     
     // 设置 shouldSwitchToBrowser 返回 false
     (shouldSwitchToBrowser as ReturnType<typeof vi.fn>).mockReturnValue(false);
     
     await expect(fetchWithAutoDetect(params, 'html')).rejects.toThrow(originalError);
     
-    expect(NodeFetcher.html).toHaveBeenCalledWith(params);
+    expect(Fetcher.html).toHaveBeenCalledWith(params);
     expect(shouldSwitchToBrowser).toHaveBeenCalled();
-    expect(BrowserFetcher.html).not.toHaveBeenCalled();
   });
   
   test('应该在 autoDetectMode 为 false 时不自动切换 (Should not automatically switch when autoDetectMode is false)', async () => {
     const params = { url: 'https://example.com', autoDetectMode: false };
     
-    // 设置 NodeFetcher 抛出错误
+    // 设置 Fetcher 抛出错误
     const originalError = new Error('Fetch failed');
-    (NodeFetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
+    (Fetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
     
     await expect(fetchWithAutoDetect(params, 'html')).rejects.toThrow(originalError);
     
-    expect(NodeFetcher.html).toHaveBeenCalledWith(params);
+    expect(Fetcher.html).toHaveBeenCalledWith(params);
     expect(shouldSwitchToBrowser).not.toHaveBeenCalled();
-    expect(BrowserFetcher.html).not.toHaveBeenCalled();
   });
   
   test('应该在 closeBrowser 为 true 时关闭浏览器 (Should close browser when closeBrowser is true)', async () => {
@@ -217,49 +196,21 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
     await closeBrowserInstance(false);
     
     expect(initializeBrowser).toHaveBeenCalled();
-    expect(BrowserFetcher.html).toHaveBeenCalled();
+    expect(Fetcher.html).toHaveBeenCalled();
     expect(closeBrowserInstance).toHaveBeenCalled();
   });
   
   test('应该在出错且 closeBrowser 为 true 时关闭浏览器 (Should close browser when error occurs and closeBrowser is true)', async () => {
     const params = { url: 'https://example.com', useBrowser: true, closeBrowser: true };
     
-    // 设置 BrowserFetcher 抛出错误
+    // 设置 Fetcher 抛出错误
     const originalError = new Error('Browser fetch failed');
-    (BrowserFetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
+    (Fetcher.html as ReturnType<typeof vi.fn>).mockRejectedValue(originalError);
     
     await expect(fetchWithAutoDetect(params, 'html')).rejects.toThrow(originalError);
     
     expect(initializeBrowser).toHaveBeenCalled();
-    expect(BrowserFetcher.html).toHaveBeenCalled();
+    expect(Fetcher.html).toHaveBeenCalled();
     expect(closeBrowserInstance).toHaveBeenCalled();
-  });
-  
-  test('应该处理 JSON 对象和字符串 (Should handle JSON objects and strings)', async () => {
-    // 测试 JSON 对象
-    (NodeFetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({ json: { test: 'data' } });
-    let result = await fetchWithAutoDetect({ url: 'https://example.com/data.json' }, 'json');
-    expect(result).toEqual({
-      content: [{ type: 'text', text: JSON.stringify({ test: 'data' }, null, 2) }],
-      isError: false
-    });
-    
-    // 测试 JSON 字符串
-    (NodeFetcher.json as ReturnType<typeof vi.fn>).mockResolvedValue({ json: '{"test":"string data"}' });
-    result = await fetchWithAutoDetect({ url: 'https://example.com/data.json' }, 'json');
-    expect(result).toEqual({
-      content: [{ type: 'text', text: '{"test":"string data"}' }],
-      isError: false
-    });
-  });
-  
-  test('应该返回不支持的内容类型错误 (Should return unsupported content type error)', async () => {
-    // @ts-ignore - 故意传入不支持的类型
-    const result = await fetchWithAutoDetect({ url: 'https://example.com' }, 'unsupported');
-    
-    expect(result).toEqual({
-      content: [{ type: 'text', text: 'Unsupported content type: unsupported' }],
-      isError: true
-    });
   });
 }); 

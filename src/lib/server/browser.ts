@@ -4,7 +4,7 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { BrowserFetcher } from '../BrowserFetcher.js';
+import { BrowserInstance } from '../fetchers/browser/BrowserInstance.js';
 import { log, COMPONENTS } from '../logger.js';
 import { isAccessDeniedError, isNetworkError } from '../utils/errorDetection.js';
 
@@ -38,7 +38,7 @@ export async function closeBrowserInstance(debug: boolean = false): Promise<void
     if (debug) {
       log('server.closingBrowser', debug, {}, COMPONENTS.SERVER);
     }
-    await BrowserFetcher.closeBrowser(true);
+    await BrowserInstance.closeBrowser(debug);
     browserInitialized = false;
   }
 }

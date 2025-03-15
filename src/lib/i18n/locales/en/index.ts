@@ -7,6 +7,7 @@
 import server from './server.js';
 import client from './client.js';
 import fetcher from './fetcher.js';
+import factory from './factory.js';
 import browser from './browser.js';
 import node from './node.js';
 import tools from './tools.js';
@@ -19,6 +20,7 @@ export const enTranslation = {
   server,
   client,
   fetcher,
+  factory,
   browser,
   node,
   tools,

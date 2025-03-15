@@ -18,6 +18,7 @@ import toolsZh from './i18n/locales/zh/tools.js';
 import browserZh from './i18n/locales/zh/browser.js';
 import nodeZh from './i18n/locales/zh/node.js';
 import fetcherZh from './i18n/locales/zh/fetcher.js';
+import factoryZh from './i18n/locales/zh/factory.js';
 import errorsZh from './i18n/locales/zh/errors.js';
 import resourcesZh from './i18n/locales/zh/resources.js';
 import promptsZh from './i18n/locales/zh/prompts.js';
@@ -30,6 +31,7 @@ const translationMap: Record<string, any> = {
   browser: browserZh,
   node: nodeZh,
   fetcher: fetcherZh,
+  factory: factoryZh,
   errors: errorsZh,
   resources: resourcesZh,
   prompts: promptsZh
@@ -43,7 +45,8 @@ export const COMPONENTS = {
   CLIENT: 'CLIENT',
   RESOURCES: 'MCP-RESOURCES',
   PROMPTS: 'MCP-PROMPTS',
-  TOOLS: 'MCP-TOOLS'
+  TOOLS: 'MCP-TOOLS',
+  FETCHER_FACTORY: 'FETCHER-FACTORY'
 };
 
 // 日志文件路径 (Log file path)

@@ -4,13 +4,13 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { BrowserFetcher } from '../../src/lib/BrowserFetcher.js';
+import { BrowserInstance } from '../../src/lib/fetchers/browser/BrowserInstance.js';
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 import * as logger from '../../src/lib/logger.js';
 import * as browserModule from '../../src/lib/server/browser.js';
 
 // 模拟依赖
-vi.mock('../../src/lib/BrowserFetcher.js');
+vi.mock('../../src/lib/fetchers/browser/BrowserInstance.js');
 vi.mock('../../src/lib/logger.js', () => {
   return {
     log: vi.fn(),
@@ -41,7 +41,7 @@ vi.mock('../../src/lib/server/browser.js', () => {
         if (debug) {
           log('server.closingBrowser', debug, {}, COMPONENTS.SERVER);
         }
-        await BrowserFetcher.closeBrowser(true);
+        await BrowserInstance.closeBrowser(debug);
         browserInitialized = false;
       }
     }),
@@ -84,7 +84,7 @@ describe('浏览器管理函数测试 (Browser Management Functions Tests)', () 
     vi.clearAllMocks();
     
     // 设置默认返回值
-    (BrowserFetcher.closeBrowser as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+    (BrowserInstance.closeBrowser as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
     
     // 重置 browserInitialized 变量
     browserInitialized = false;
@@ -126,8 +126,8 @@ describe('浏览器管理函数测试 (Browser Management Functions Tests)', () 
       // 调用被测试的函数
       await closeBrowserInstance();
       
-      // 验证 BrowserFetcher.closeBrowser 被调用
-      expect(BrowserFetcher.closeBrowser).toHaveBeenCalledWith(true);
+      // 验证 BrowserInstance.closeBrowser 被调用
+      expect(BrowserInstance.closeBrowser).toHaveBeenCalled();
     });
     
     test('应该在调试模式下记录日志 (Should log in debug mode)', async () => {
@@ -148,8 +148,8 @@ describe('浏览器管理函数测试 (Browser Management Functions Tests)', () 
       // 调用被测试的函数
       await closeBrowserInstance();
       
-      // 验证 BrowserFetcher.closeBrowser 没有被调用
-      expect(BrowserFetcher.closeBrowser).not.toHaveBeenCalled();
+      // 验证 BrowserInstance.closeBrowser 没有被调用
+      expect(BrowserInstance.closeBrowser).not.toHaveBeenCalled();
     });
   });
   

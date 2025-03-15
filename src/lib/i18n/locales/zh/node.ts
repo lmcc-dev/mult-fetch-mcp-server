@@ -49,7 +49,7 @@ export default {
   // 错误相关 (Error related)
   [NODE_KEYS.fetchError]: "获取错误: {{error}}",
   [NODE_KEYS.requestAborted]: "请求中止",
-  [NODE_KEYS.networkError]: "网络错误: {{error}}",
+  [NODE_KEYS.networkError]: "网络错误: {{code}}",
   [NODE_KEYS.tooManyRedirects]: "重定向次数过多",
   
   // HTML 获取相关 (HTML fetch related)

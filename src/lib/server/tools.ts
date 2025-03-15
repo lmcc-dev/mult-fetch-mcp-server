@@ -325,18 +325,20 @@ function registerToolCallHandler(server: Server) {
       if (name === 'fetch_html' || name === 'fetch_json' || name === 'fetch_txt' || name === 'fetch_markdown') {
         const result = await handleFetchRequest(name, args, debug);
         
+        // 直接返回符合 MCP SDK 要求的格式
         return result;
       } else {
         // 未知工具 (Unknown tool)
         log('tools.unknownTool', debug, { name }, COMPONENTS.SERVER);
         
         return {
-          isError: true,
           content: [
             {
+              type: "text",
               text: `Unknown tool: ${name}`
             }
-          ]
+          ],
+          isError: true
         };
       }
     } catch (error: any) {
@@ -344,12 +346,13 @@ function registerToolCallHandler(server: Server) {
       log('tools.callError', debug, { name, error: error.message }, COMPONENTS.SERVER);
       
       return {
-        isError: true,
         content: [
           {
+            type: "text",
             text: error.message
           }
-        ]
+        ],
+        isError: true
       };
     } finally {
       // 如果请求参数中指定了关闭浏览器，则关闭浏览器 (If request parameters specify to close browser, close browser)
@@ -373,13 +376,13 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
     log('tools.missingUrl', debug, {}, COMPONENTS.SERVER);
     
     return {
-      isError: true,
       content: [
         {
           type: "text",
           text: "URL parameter is required"
         }
-      ]
+      ],
+      isError: true
     };
   }
   
@@ -425,20 +428,24 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
       }
     }
     
-    return result;
+    // 将FetchResponse转换为符合MCP SDK要求的格式
+    return {
+      content: result.content,
+      isError: result.isError
+    };
   } catch (error: any) {
     // 处理错误 (Handle error)
     log('tools.fetchError', debug, { url: args.url, error: error.message }, COMPONENTS.SERVER);
     
     // 确保返回标准结构体 (Ensure returning standard structure)
     return {
-      isError: true,
       content: [
         {
           type: "text",
           text: `Error fetching ${args.url}: ${error.message}`
         }
-      ]
+      ],
+      isError: true
     };
   }
 }

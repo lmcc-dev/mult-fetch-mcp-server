@@ -7,6 +7,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { execSync } from 'child_process';
+import { vi, describe, test, expect, beforeEach, afterAll } from 'vitest';
 
 // 保存原始值以便在测试后恢复
 const originalArgv = process.argv;
@@ -14,8 +15,8 @@ const originalExit = process.exit;
 const originalStdoutWrite = process.stdout.write;
 
 // 模拟 logger 模块
-const mockLog = jest.fn();
-jest.mock('../src/lib/logger.js', () => ({
+const mockLog = vi.fn();
+vi.mock('../src/lib/logger.js', () => ({
   log: mockLog,
   COMPONENTS: {
     CLIENT: 'CLIENT',
@@ -26,24 +27,24 @@ jest.mock('../src/lib/logger.js', () => ({
 }));
 
 // 模拟依赖模块
-jest.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-  Client: jest.fn().mockImplementation(() => ({
-    connect: jest.fn().mockResolvedValue(undefined),
-    callTool: jest.fn(),
-    close: jest.fn().mockResolvedValue(undefined)
+vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
+  Client: vi.fn().mockImplementation(() => ({
+    connect: vi.fn().mockResolvedValue(undefined),
+    callTool: vi.fn(),
+    close: vi.fn().mockResolvedValue(undefined)
   }))
 }));
 
-jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-  StdioClientTransport: jest.fn().mockImplementation(() => ({}))
+vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
+  StdioClientTransport: vi.fn().mockImplementation(() => ({}))
 }));
 
-jest.mock('child_process', () => ({
-  execSync: jest.fn()
+vi.mock('child_process', () => ({
+  execSync: vi.fn()
 }));
 
 // 模拟 process.exit
-jest.spyOn(process, 'exit').mockImplementation((code?: number) => {
+vi.spyOn(process, 'exit').mockImplementation((code?: number) => {
   console.log(`[模拟] process.exit(${code})`);
   return undefined as never;
 });
@@ -56,7 +57,7 @@ interface ResponseType {
 
 // 创建模拟的客户端模块
 const mockClientModule = {
-  responseRequiresBrowser: jest.fn((response: ResponseType, debug: boolean = false): boolean => {
+  responseRequiresBrowser: vi.fn((response: ResponseType, debug: boolean = false): boolean => {
     if (response.isError) {
       const errorText = response.content[0].text.toLowerCase();
       
@@ -78,7 +79,7 @@ const mockClientModule = {
     return false;
   }),
   
-  smartFetch: jest.fn(async (params: any): Promise<ResponseType> => {
+  smartFetch: vi.fn(async (params: any): Promise<ResponseType> => {
     const mockClient = new Client({
       name: "fetch-mcp-client",
       version: "1.0.0"
@@ -107,7 +108,7 @@ const mockClientModule = {
     }
   }),
   
-  main: jest.fn(() => {
+  main: vi.fn(() => {
     // 检查命令行参数
     if (process.argv.length < 4) {
       mockLog('client.usageInfo', true, {}, 'CLIENT');
@@ -133,13 +134,13 @@ const mockClientModule = {
 };
 
 // 模拟 client.ts 模块
-jest.mock('../src/client.js', () => mockClientModule, { virtual: true });
+vi.mock('../src/client.ts', () => mockClientModule);
 
 describe('client.ts 测试', () => {
   // 在每个测试前重置模拟
   beforeEach(() => {
-    jest.resetModules();
-    jest.clearAllMocks();
+    vi.resetModules();
+    vi.clearAllMocks();
   });
   
   // 在所有测试后恢复原始值
@@ -150,45 +151,23 @@ describe('client.ts 测试', () => {
   
   describe('responseRequiresBrowser 函数测试', () => {
     test('应该在响应包含 403 错误时返回 true', () => {
-      // 模拟依赖
-      jest.doMock('../src/lib/logger.js', () => ({
-        log: jest.fn(),
-        COMPONENTS: {
-          CLIENT: 'CLIENT'
-        }
-      }));
-      
-      // 导入被测试的模块
-      const { responseRequiresBrowser } = require('../src/client.js');
-      
       const response = {
         isError: true,
         content: [{ text: '403 Forbidden' }]
       };
       
-      const result = responseRequiresBrowser(response, true);
+      const result = mockClientModule.responseRequiresBrowser(response, true);
       
       expect(result).toBe(true);
     });
     
     test('应该在响应不是错误时返回 false', () => {
-      // 模拟依赖
-      jest.doMock('../src/lib/logger.js', () => ({
-        log: jest.fn(),
-        COMPONENTS: {
-          CLIENT: 'CLIENT'
-        }
-      }));
-      
-      // 导入被测试的模块
-      const { responseRequiresBrowser } = require('../src/client.js');
-      
       const response = {
         isError: false,
         content: [{ text: 'Success' }]
       };
       
-      const result = responseRequiresBrowser(response);
+      const result = mockClientModule.responseRequiresBrowser(response);
       
       expect(result).toBe(false);
     });
@@ -203,11 +182,11 @@ describe('client.ts 测试', () => {
       };
       
       // 设置 callTool 的返回值
-      const mockCallTool = jest.fn().mockResolvedValue(mockResult);
-      (Client as jest.Mock).mockImplementation(() => ({
-        connect: jest.fn().mockResolvedValue(undefined),
+      const mockCallTool = vi.fn().mockResolvedValue(mockResult);
+      (Client as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+        connect: vi.fn().mockResolvedValue(undefined),
         callTool: mockCallTool,
-        close: jest.fn().mockResolvedValue(undefined)
+        close: vi.fn().mockResolvedValue(undefined)
       }));
       
       // 调用函数
@@ -233,10 +212,10 @@ describe('client.ts 测试', () => {
     
     test('应该在任何情况下都关闭客户端连接', async () => {
       // 模拟 callTool 抛出错误
-      const mockClose = jest.fn().mockResolvedValue(undefined);
-      (Client as jest.Mock).mockImplementation(() => ({
-        connect: jest.fn().mockResolvedValue(undefined),
-        callTool: jest.fn().mockRejectedValue(new Error('Test error')),
+      const mockClose = vi.fn().mockResolvedValue(undefined);
+      (Client as ReturnType<typeof vi.fn>).mockImplementation(() => ({
+        connect: vi.fn().mockResolvedValue(undefined),
+        callTool: vi.fn().mockRejectedValue(new Error('Test error')),
         close: mockClose
       }));
       
@@ -253,54 +232,28 @@ describe('client.ts 测试', () => {
   
   describe('main 函数测试', () => {
     test('应该在参数不足时显示使用信息并退出', () => {
-      // 保存原始的 process.argv
-      const testArgv = process.argv;
+      // 设置命令行参数
+      process.argv = ['node', 'client.js'];
       
-      try {
-        // 设置参数不足
-        process.argv = ['node', 'client.js'];
-        
-        // 重置 mockLog 函数
-        mockLog.mockClear();
-        
-        // 调用 main 函数
-        mockClientModule.main();
-        
-        // 验证 log 函数被调用
-        expect(mockLog).toHaveBeenCalledWith('client.usageInfo', true, {}, 'CLIENT');
-        expect(mockLog).toHaveBeenCalledWith('client.exampleUsage', true, {}, 'CLIENT');
-        
-        // 验证 process.exit 被调用
-        expect(process.exit).toHaveBeenCalledWith(1);
-      } finally {
-        // 恢复原始的 process.argv
-        process.argv = testArgv;
-      }
+      // 调用函数
+      mockClientModule.main();
+      
+      // 验证日志和退出
+      expect(mockLog).toHaveBeenCalledWith('client.usageInfo', true, {}, 'CLIENT');
+      expect(mockLog).toHaveBeenCalledWith('client.exampleUsage', true, {}, 'CLIENT');
+      expect(process.exit).toHaveBeenCalledWith(1);
     });
     
     test('应该在 JSON 解析失败时显示错误并退出', () => {
-      // 保存原始的 process.argv
-      const testArgv = process.argv;
+      // 设置命令行参数
+      process.argv = ['node', 'client.js', 'fetch_html', 'invalid-json'];
       
-      try {
-        // 设置无效的 JSON
-        process.argv = ['node', 'client.js', 'fetch_html', 'invalid-json'];
-        
-        // 重置 mockLog 函数
-        mockLog.mockClear();
-        
-        // 调用 main 函数
-        mockClientModule.main();
-        
-        // 验证 log 函数被调用
-        expect(mockLog).toHaveBeenCalledWith('client.invalidJson', true, {}, 'CLIENT');
-        
-        // 验证 process.exit 被调用
-        expect(process.exit).toHaveBeenCalledWith(1);
-      } finally {
-        // 恢复原始的 process.argv
-        process.argv = testArgv;
-      }
+      // 调用函数
+      mockClientModule.main();
+      
+      // 验证日志和退出
+      expect(mockLog).toHaveBeenCalledWith('client.invalidJson', true, {}, 'CLIENT');
+      expect(process.exit).toHaveBeenCalledWith(1);
     });
   });
 }); 

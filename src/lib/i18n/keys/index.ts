@@ -8,6 +8,7 @@ export * from './base.js';
 export * from './browser.js';
 export * from './client.js';
 export * from './errors.js';
+export * from './factory.js';
 export * from './fetcher.js';
 export * from './node.js';
 export * from './prompts.js';

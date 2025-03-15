@@ -4,8 +4,7 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { BrowserFetcher } from '../BrowserFetcher.js';
-import { NodeFetcher } from '../NodeFetcher.js';
+import { Fetcher } from '../fetch.js';
 import { FetchParams } from './types.js';
 import { log, COMPONENTS } from '../logger.js';
 import { initializeBrowser, closeBrowserInstance, shouldSwitchToBrowser } from './browser.js';
@@ -39,13 +38,13 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
       // 根据类型选择合适的浏览器获取方法 (Choose appropriate browser fetching method based on type)
       switch (type) {
         case 'html':
-          return await BrowserFetcher.html(params);
+          return await Fetcher.html(params);
         case 'json':
-          return await BrowserFetcher.json(params);
+          return await Fetcher.json(params);
         case 'txt':
-          return await BrowserFetcher.txt(params);
+          return await Fetcher.txt(params);
         case 'markdown':
-          return await BrowserFetcher.markdown(params);
+          return await Fetcher.markdown(params);
       }
     } else {
       // 使用标准模式
@@ -57,36 +56,16 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
         // 根据类型选择合适的标准获取方法 (Choose appropriate standard fetching method based on type)
         switch (type) {
           case 'html': {
-            const result = await NodeFetcher.html(params);
-            // 转换为统一格式 (Convert to unified format)
-            return {
-              content: [{ type: 'text', text: result.html }],
-              isError: false
-            };
+            return await Fetcher.html(params);
           }
           case 'json': {
-            const result = await NodeFetcher.json(params);
-            // 转换为统一格式 (Convert to unified format)
-            return {
-              content: [{ type: 'text', text: typeof result.json === 'string' ? result.json : JSON.stringify(result.json, null, 2) }],
-              isError: false
-            };
+            return await Fetcher.json(params);
           }
           case 'txt': {
-            const result = await NodeFetcher.txt(params);
-            // 转换为统一格式 (Convert to unified format)
-            return {
-              content: [{ type: 'text', text: result.text }],
-              isError: false
-            };
+            return await Fetcher.txt(params);
           }
           case 'markdown': {
-            const result = await NodeFetcher.markdown(params);
-            // 转换为统一格式 (Convert to unified format)
-            return {
-              content: [{ type: 'text', text: result.markdown }],
-              isError: false
-            };
+            return await Fetcher.markdown(params);
           }
         }
       } catch (error) {
@@ -106,13 +85,13 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
           // 根据类型选择合适的浏览器获取方法
           switch (type) {
             case 'html':
-              return await BrowserFetcher.html(params);
+              return await Fetcher.html(params);
             case 'json':
-              return await BrowserFetcher.json(params);
+              return await Fetcher.json(params);
             case 'txt':
-              return await BrowserFetcher.txt(params);
+              return await Fetcher.txt(params);
             case 'markdown':
-              return await BrowserFetcher.markdown(params);
+              return await Fetcher.markdown(params);
           }
         }
         

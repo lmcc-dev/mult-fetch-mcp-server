@@ -49,7 +49,7 @@ export default {
   [NODE_KEYS.errorReadingBody]: "Error reading response body: {{error}}",
   [NODE_KEYS.fetchError]: "Fetch error: {{error}}",
   [NODE_KEYS.requestAborted]: "Request aborted",
-  [NODE_KEYS.networkError]: "Network error: {{error}}",
+  [NODE_KEYS.networkError]: "Network error: {{code}}",
   [NODE_KEYS.tooManyRedirects]: "Too many redirects",
   
   // 内容类型相关 (Content type related)

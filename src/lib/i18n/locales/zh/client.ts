@@ -43,7 +43,7 @@ export default {
   [CLIENT_KEYS.callTool]: '调用工具: {{name}}',
   [CLIENT_KEYS.callToolSuccess]: '工具调用成功: {{name}}',
   [CLIENT_KEYS.callToolError]: '工具调用错误: {{name}} - {{error}}',
-  [CLIENT_KEYS.statusCodeDetected]: '检测到状态码: {{statusCode}}',
+  [CLIENT_KEYS.statusCodeDetected]: '检测到状态码: {{code}}',
   [CLIENT_KEYS.usageInfo]: '使用信息: {{info}}',
   [CLIENT_KEYS.exampleUsage]: '使用示例: {{example}}',
   [CLIENT_KEYS.invalidJson]: '无效的 JSON: {{error}}',

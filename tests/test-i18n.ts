@@ -152,6 +152,18 @@ function getAllKeysFromModules(): string[] {
  * @returns 翻译值 (Translation value)
  */
 function getTranslationValue(key: string, translations: any): string | undefined {
+  // 检查是否是命名空间格式的键 (Check if the key is in namespace format)
+  const parts = key.split('.');
+  if (parts.length > 1) {
+    const namespace = parts[0];
+    const subKey = parts.slice(1).join('.');
+    
+    // 检查命名空间是否存在 (Check if the namespace exists)
+    if (translations[namespace] && translations[namespace][subKey] !== undefined) {
+      return translations[namespace][subKey];
+    }
+  }
+  
   // 直接在翻译资源中查找键 (Look up the key directly in translation resources)
   for (const moduleName in translations) {
     const module = translations[moduleName];
