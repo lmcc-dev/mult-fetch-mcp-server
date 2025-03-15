@@ -5,6 +5,7 @@
  */
 
 import { RequestPayload } from '../src/lib/types.js';
+import { describe, test, expect } from 'vitest';
 
 describe('类型定义测试 (Type Definitions Tests)', () => {
   test('RequestPayload类型可以正确创建 (RequestPayload type can be correctly created)', () => {

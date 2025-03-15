@@ -5,9 +5,10 @@
  */
 
 import { log, COMPONENTS } from '../src/lib/logger.js';
+import { vi } from 'vitest';
 
 // 模拟i18n模块
-jest.mock('../src/lib/i18n/index.js', () => ({
+vi.mock('../src/lib/i18n/index.js', () => ({
   t: (key: string, options?: any) => {
     // 简单地返回原始key，用于测试
     return options ? `${key} ${JSON.stringify(options)}` : key;
@@ -15,7 +16,7 @@ jest.mock('../src/lib/i18n/index.js', () => ({
 }));
 
 // 模拟i18n/logger模块
-jest.mock('../src/lib/i18n/logger.js', () => ({
+vi.mock('../src/lib/i18n/logger.js', () => ({
   createLogger: (prefix: string) => ({
     debug: (key: string, params?: any, forceDebug?: boolean) => {
       if (forceDebug === true) {
@@ -41,8 +42,8 @@ describe('Logger模块测试 (Logger Module Tests)', () => {
   // 在每个测试前设置mock
   beforeEach(() => {
     // Mock console.log和console.error
-    console.log = jest.fn();
-    console.error = jest.fn();
+    console.log = vi.fn();
+    console.error = vi.fn();
   });
 
   // 在每个测试后恢复原始函数
@@ -59,7 +60,7 @@ describe('Logger模块测试 (Logger Module Tests)', () => {
     expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含正确的组件和消息
-    const callArg = (console.error as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg).toContain(COMPONENTS.SERVER);
     expect(callArg).toContain('test.message');
   });
@@ -72,7 +73,7 @@ describe('Logger模块测试 (Logger Module Tests)', () => {
     expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含正确的组件和消息
-    const callArg = (console.error as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg).toContain(COMPONENTS.SERVER);
     expect(callArg).toContain('test.error');
   });
@@ -87,7 +88,7 @@ describe('Logger模块测试 (Logger Module Tests)', () => {
     expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含正确的组件、消息和额外数据
-    const callArg = (console.error as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg).toContain(COMPONENTS.NODE_FETCH);
     expect(callArg).toContain('test.extra');
     expect(callArg).toContain(JSON.stringify(extraData));
@@ -103,7 +104,7 @@ describe('Logger模块测试 (Logger Module Tests)', () => {
       expect(console.error).toHaveBeenCalled();
       
       // 验证调用参数包含正确的组件
-      const callArg = (console.error as jest.Mock).mock.calls.pop()[0];
+      const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls.pop()[0];
       expect(callArg).toContain(component);
     });
   });

@@ -7,6 +7,7 @@
 import i18next, { t, changeLanguage, getCurrentLanguage } from '../src/lib/i18n/index.js';
 import { createLogger } from '../src/lib/i18n/logger.js';
 import { FETCHER_KEYS } from '../src/lib/i18n/keys.js';
+import { vi } from 'vitest';
 
 describe('i18n模块测试 (i18n Module Tests)', () => {
   // 保存原始环境变量
@@ -106,8 +107,8 @@ describe('i18n Logger模块测试 (i18n Logger Module Tests)', () => {
   
   // 在每个测试前设置mock
   beforeEach(() => {
-    console.log = jest.fn();
-    console.error = jest.fn();
+    console.log = vi.fn();
+    console.error = vi.fn();
     process.env.DEBUG = 'false';
   });
   
@@ -140,7 +141,7 @@ describe('i18n Logger模块测试 (i18n Logger Module Tests)', () => {
     expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含前缀和消息
-    const callArg = (console.error as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg).toContain('[TEST]');
   });
   
@@ -166,7 +167,7 @@ describe('i18n Logger模块测试 (i18n Logger Module Tests)', () => {
     expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含前缀和消息
-    const callArg = (console.error as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg).toContain('[TEST]');
   });
   
@@ -181,7 +182,7 @@ describe('i18n Logger模块测试 (i18n Logger Module Tests)', () => {
     expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含前缀和消息
-    const callArg = (console.error as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg).toContain('[TEST]');
     expect(callArg).toContain('test.error');
   });
@@ -197,7 +198,7 @@ describe('i18n Logger模块测试 (i18n Logger Module Tests)', () => {
     expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含前缀和消息
-    const callArg = (console.error as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg).toContain('[TEST]');
     expect(callArg).toContain('test.warn');
   });
@@ -213,7 +214,7 @@ describe('i18n Logger模块测试 (i18n Logger Module Tests)', () => {
     expect(console.error).toHaveBeenCalled();
     
     // 验证调用参数包含前缀和消息
-    const callArg = (console.error as jest.Mock).mock.calls[0][0];
+    const callArg = (console.error as ReturnType<typeof vi.fn>).mock.calls[0][0];
     expect(callArg).toContain('[TEST]');
     expect(callArg).toContain('test.debug');
   });
