@@ -25,6 +25,9 @@ interface TestConfig {
   srcDir: string;
   excludeDirs: string[];
   fileExtensions: string[];
+  preserveErrorKeys: boolean; // 是否保留错误相关的键 (Whether to preserve error-related keys)
+  reportOnly: boolean; // 是否只生成报告而不执行删除 (Whether to only generate report without deletion)
+  strictMode: boolean; // 严格模式，只有在确定键未使用时才报告 (Strict mode, only report when sure the key is unused)
 }
 
 // 默认测试配置 (Default test configuration)
@@ -34,7 +37,10 @@ const defaultConfig: TestConfig = {
   verbose: false,
   srcDir: path.join(__dirname, '../src'),
   excludeDirs: ['node_modules', 'dist', 'build', 'coverage'],
-  fileExtensions: ['.ts', '.tsx', '.js', '.jsx']
+  fileExtensions: ['.ts', '.tsx', '.js', '.jsx'],
+  preserveErrorKeys: true, // 默认保留错误相关的键 (Preserve error-related keys by default)
+  reportOnly: false, // 默认不只生成报告 (Don't only generate report by default)
+  strictMode: true // 默认使用严格模式 (Use strict mode by default)
 };
 
 // 解析命令行参数 (Parse command line arguments)
@@ -72,6 +78,15 @@ function parseCommandLineArgs(): TestConfig {
           config.fileExtensions = args[++i].split(',');
         }
         break;
+      case '--no-preserve-error-keys':
+        config.preserveErrorKeys = false;
+        break;
+      case '--report-only':
+        config.reportOnly = true;
+        break;
+      case '--no-strict-mode':
+        config.strictMode = false;
+        break;
       case '--help':
         printHelp();
         process.exit(0);
@@ -96,6 +111,9 @@ function printHelp() {
   --src-dir <path>           指定源代码目录 (Specify source code directory)
   --exclude-dirs <dirs>      指定排除的目录，用逗号分隔 (Specify excluded directories, separated by commas)
   --file-extensions <exts>   指定文件扩展名，用逗号分隔 (Specify file extensions, separated by commas)
+  --no-preserve-error-keys   不保留错误相关的键 (Don't preserve error-related keys)
+  --report-only              只生成报告，不执行删除 (Only generate report, don't delete)
+  --no-strict-mode           不使用严格模式，可能会误报 (Don't use strict mode, may have false positives)
   --help                     显示帮助信息 (Show help information)
   `);
 }
@@ -213,6 +231,12 @@ async function getAllSourceFiles(config: TestConfig): Promise<string[]> {
     // 开始递归查找 (Start recursive search)
     findFilesRecursively(srcDir);
     
+    // 也包括测试目录 (Also include test directory)
+    const testDir = path.join(__dirname, '..');
+    if (testDir !== srcDir) {
+      findFilesRecursively(testDir);
+    }
+    
     console.log(`找到 ${allFiles.length} 个源代码文件 (Found ${allFiles.length} source code files)`);
     return allFiles;
   } catch (error) {
@@ -246,6 +270,32 @@ function isKeyUsedInFile(filePath: string, key: string): boolean {
       return true;
     }
     
+    // 检查动态生成的键名 (Check dynamically generated key names)
+    const parts = key.split('.');
+    if (parts.length > 1) {
+      const namespace = parts[0];
+      const subKey = parts.slice(1).join('.');
+      
+      // 检查使用模板字符串的情况 (Check usage with template strings)
+      if (content.includes(`\`${namespace}.`) || 
+          (content.includes(`\`\${`) && content.includes(`}.${subKey}\``))) {
+        return true;
+      }
+      
+      // 检查使用字符串拼接的情况 (Check usage with string concatenation)
+      if (content.includes(`'${namespace}.' +`) || content.includes(`"${namespace}." +`) ||
+          content.includes(`+ '.${subKey}'`) || content.includes(`+ ".${subKey}"`)) {
+        return true;
+      }
+      
+      // 检查使用变量拼接的情况 (Check usage with variable concatenation)
+      if (content.includes(`${namespace}.` + subKey) || 
+          content.includes(`${namespace}["${subKey}"]`) || 
+          content.includes(`${namespace}['${subKey}']`)) {
+        return true;
+      }
+    }
+    
     return false;
   } catch (error) {
     console.error(`读取文件 ${filePath} 时出错 (Error reading file ${filePath}):`, error);
@@ -261,6 +311,42 @@ function isKeyUsedInFile(filePath: string, key: string): boolean {
  * @returns 是否使用了键 (Whether the key is used)
  */
 function isKeyUsed(key: string, files: string[], config: TestConfig): boolean {
+  // 如果配置为保留错误相关的键，并且键以 errors. 开头，则认为它是使用的
+  if (config.preserveErrorKeys && key.startsWith('errors.')) {
+    if (config.verbose) {
+      console.log(`保留错误相关的键: ${key} (Preserving error-related key: ${key})`);
+    }
+    return true;
+  }
+  
+  // 在严格模式下，保留所有可能动态生成的键
+  if (config.strictMode) {
+    // 保留所有可能通过动态方式使用的键
+    const parts = key.split('.');
+    if (parts.length > 1) {
+      const namespace = parts[0];
+      
+      // 检查是否有文件包含这个命名空间的动态键生成
+      for (const file of files) {
+        const content = fs.readFileSync(file, 'utf-8');
+        
+        // 检查各种动态键生成模式
+        if (content.includes(`${namespace}.`) && 
+            (content.includes('variable') || 
+             content.includes('dynamic') || 
+             content.includes('concat') || 
+             content.includes('join') || 
+             content.includes('template'))) {
+          if (config.verbose) {
+            console.log(`可能动态使用的键: ${key} 在文件 ${file} 中 (Potentially dynamically used key: ${key} in file ${file})`);
+          }
+          return true;
+        }
+      }
+    }
+  }
+  
+  // 检查每个文件中是否使用了键
   for (const file of files) {
     if (isKeyUsedInFile(file, key)) {
       if (config.verbose) {
@@ -312,9 +398,12 @@ async function checkUnusedKeys(config: TestConfig) {
     
     // 检查每个键是否被使用 (Check if each key is used)
     const unusedKeys: string[] = [];
+    const usedKeys: string[] = [];
     
     for (const key of allKeys) {
-      if (!isKeyUsed(key, files, config)) {
+      if (isKeyUsed(key, files, config)) {
+        usedKeys.push(key);
+      } else {
         unusedKeys.push(key);
       }
     }
@@ -322,6 +411,7 @@ async function checkUnusedKeys(config: TestConfig) {
     // 输出结果 (Output results)
     if (unusedKeys.length > 0) {
       console.log(`\n❌ 发现 ${unusedKeys.length} 个未使用的键 (Found ${unusedKeys.length} unused keys)`);
+      console.log(`✅ 发现 ${usedKeys.length} 个使用的键 (Found ${usedKeys.length} used keys)`);
       
       if (config.verbose) {
         for (const key of unusedKeys) {
@@ -343,6 +433,7 @@ async function checkUnusedKeys(config: TestConfig) {
       const report = {
         timestamp: new Date().toISOString(),
         totalKeys: allKeys.length,
+        totalUsedKeys: usedKeys.length,
         totalFiles: files.length,
         unusedKeys: unusedKeys.map(key => ({
           key,
@@ -378,6 +469,11 @@ async function main() {
   try {
     // 解析命令行参数 (Parse command line arguments)
     const config = parseCommandLineArgs();
+    
+    // 检查是否只生成报告 (Check if only generating report)
+    if (config.reportOnly) {
+      console.log('只生成报告，不执行删除 (Only generating report, not deleting)');
+    }
     
     // 检查未使用的键 (Check unused keys)
     const result = await checkUnusedKeys(config);
