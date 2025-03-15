@@ -5,7 +5,7 @@
  */
 
 import { log, COMPONENTS } from '../src/lib/logger.js';
-import { vi } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 // 模拟i18n模块
 vi.mock('../src/lib/i18n/index.js', () => ({

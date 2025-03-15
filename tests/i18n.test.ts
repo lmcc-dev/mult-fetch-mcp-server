@@ -7,7 +7,7 @@
 import i18next, { t, changeLanguage, getCurrentLanguage } from '../src/lib/i18n/index.js';
 import { createLogger } from '../src/lib/i18n/logger.js';
 import { FETCHER_KEYS } from '../src/lib/i18n/keys.js';
-import { vi } from 'vitest';
+import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest';
 
 describe('i18n模块测试 (i18n Module Tests)', () => {
   // 保存原始环境变量
