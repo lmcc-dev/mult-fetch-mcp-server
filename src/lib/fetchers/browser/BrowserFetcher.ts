@@ -12,12 +12,14 @@ import { RequestPayload, FetchResponse, IFetcher } from '../common/types.js';
 import { BrowserInstance } from './BrowserInstance.js';
 import { PageOperations, CookieManager } from './PageOperations.js';
 import { getRandomUserAgent, getSystemProxy } from '../common/utils.js';
+import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
+import { BaseFetcher } from '../common/BaseFetcher.js';
 
 /**
  * 浏览器模式获取器类 (Browser mode fetcher class)
  * 使用Puppeteer实现浏览器模式的网页获取 (Implements webpage fetching in browser mode using Puppeteer)
  */
-export class BrowserFetcher implements IFetcher {
+export class BrowserFetcher extends BaseFetcher implements IFetcher {
   /**
    * 使用Puppeteer获取网页内容 (Get webpage content using Puppeteer)
    * 浏览器模式获取的底层实现方法 (Low-level implementation method for browser mode fetching)
@@ -186,7 +188,7 @@ export class BrowserFetcher implements IFetcher {
 
   /**
    * 使用Puppeteer获取HTML内容 (Get HTML content using Puppeteer)
-   * 通过浏览器模式获取网页HTML (Fetch webpage HTML in browser mode)
+   * 通过浏览器模式获取HTML页面 (Fetch HTML page in browser mode)
    * @param requestPayload 请求参数 (Request parameters)
    * @returns 获取结果 (Fetch result)
    */
@@ -194,54 +196,52 @@ export class BrowserFetcher implements IFetcher {
     const { 
       url, 
       debug = false,
-      closeBrowser = false
+      closeBrowser = false,
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
     } = requestPayload;
     
-    // 如果只是要关闭浏览器，不需要获取内容
-    if (url === 'about:blank' && closeBrowser) {
-      log('browser.closingInstance', debug, { debug }, COMPONENTS.BROWSER_FETCH);
-      await BrowserInstance.closeBrowser(debug);
-      return {
-        content: [{ type: 'text', text: 'Browser closed successfully' }],
-        isError: false
-      };
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
     }
     
-    // 设置最大重试次数
-    const maxRetries = 2;
-    
-    const fetchWithRetry = async (retryCount = 0): Promise<FetchResponse> => {
-      log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries, url }, COMPONENTS.BROWSER_FETCH);
-      
-      try {
-        return await BrowserFetcher.fetch(requestPayload);
-      } catch (error) {
-        if (retryCount < maxRetries) {
-          // 计算延迟时间，随着重试次数增加而增加
-          const delayMs = 1000 * (retryCount + 1);
-          log('browser.retryingAfterDelay', debug, { delayMs }, COMPONENTS.BROWSER_FETCH);
-          
-          // 等待一段时间后重试
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-          return fetchWithRetry(retryCount + 1);
-        }
-        
-        // 超过最大重试次数，返回错误
-        return {
-          content: [{ type: 'text', text: `Error fetching ${url} after ${maxRetries + 1} attempts: ${error}` }],
-          isError: true
-        };
-      }
-    };
+    log('browser.startingHtmlFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
     
     try {
-      return await fetchWithRetry();
-    } finally {
-      // 如果需要关闭浏览器
-      if (closeBrowser) {
-        log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
-        await BrowserInstance.closeBrowser(debug);
+      // 使用通用的fetch方法获取内容 (Use common fetch method to get content)
+      const result = await BrowserFetcher.fetch(requestPayload);
+      
+      // 如果出错，直接返回错误 (If error, return error directly)
+      if (result.isError) {
+        return result;
       }
+      
+      // 获取HTML内容 (Get HTML content)
+      const html = result.content[0].text;
+      
+      // 检查内容大小并处理 (Check content size and process)
+      const chunkingResult = this.handleContentChunking(
+        html, 
+        contentSizeLimit, 
+        enableContentSplitting, 
+        debug, 
+        COMPONENTS.BROWSER_FETCH
+      );
+      
+      if (chunkingResult) {
+        return chunkingResult;
+      }
+      
+      // 返回HTML内容 (Return HTML content)
+      return result;
+    } catch (error) {
+      // 处理错误 (Handle error)
+      log('browser.htmlFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
+      
+      return this.createErrorResponse(`Error fetching HTML: ${error}`);
     }
   }
 
@@ -255,76 +255,62 @@ export class BrowserFetcher implements IFetcher {
     const { 
       url, 
       debug = false,
-      closeBrowser = false
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
     } = requestPayload;
     
-    // 如果只是要关闭浏览器，不需要获取内容
-    if (url === 'about:blank' && closeBrowser) {
-      log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
-      await BrowserInstance.closeBrowser(debug);
-      return {
-        content: [{ type: 'text', text: 'Browser closed successfully' }],
-        isError: false
-      };
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
     }
     
-    // 设置最大重试次数
-    const maxRetries = 2;
-    
-    const fetchWithRetry = async (retryCount = 0): Promise<FetchResponse> => {
-      log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries + 1, url }, COMPONENTS.BROWSER_FETCH);
-      
-      try {
-        const result = await BrowserFetcher.fetch(requestPayload);
-        
-        // 如果获取成功，尝试解析JSON
-        if (!result.isError) {
-          try {
-            const jsonText = result.content[0].text;
-            // 尝试解析JSON
-            JSON.parse(jsonText);
-            // 如果解析成功，直接返回结果
-            return result;
-          } catch (error) {
-            // JSON解析失败
-            log('browser.failedToParseJSON', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
-            return {
-              content: [{ type: 'text', text: `Error parsing JSON from ${url}: ${error}` }],
-              isError: true
-            };
-          }
-        }
-        
-        return result;
-      } catch (error) {
-        log('browser.fetchErrorWithAttempt', debug, { error: String(error), attempt: retryCount + 1, maxAttempts: maxRetries + 1 }, COMPONENTS.BROWSER_FETCH);
-        
-        if (retryCount < maxRetries) {
-          // 计算延迟时间，随着重试次数增加而增加
-          const delayMs = 1000 * (retryCount + 1);
-          log('browser.retryingAfterDelay', debug, { delayMs }, COMPONENTS.BROWSER_FETCH);
-          
-          // 等待一段时间后重试
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-          return fetchWithRetry(retryCount + 1);
-        }
-        
-        // 超过最大重试次数，返回错误
-        return {
-          content: [{ type: 'text', text: `Error fetching JSON from ${url} after ${maxRetries + 1} attempts: ${error}` }],
-          isError: true
-        };
-      }
-    };
+    log('browser.startingJsonFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
     
     try {
-      return await fetchWithRetry();
-    } finally {
-      // 如果需要关闭浏览器
-      if (closeBrowser) {
-        log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
-        await BrowserInstance.closeBrowser(debug);
+      // 使用通用的fetch方法获取内容 (Use common fetch method to get content)
+      const result = await BrowserFetcher.fetch(requestPayload);
+      
+      // 如果出错，直接返回错误 (If error, return error directly)
+      if (result.isError) {
+        return result;
       }
+      
+      // 获取文本内容 (Get text content)
+      const text = result.content[0].text;
+      
+      // 尝试解析JSON (Try to parse JSON)
+      try {
+        JSON.parse(text);
+        log('browser.jsonParsed', debug, {}, COMPONENTS.BROWSER_FETCH);
+        
+        // 检查内容大小并处理 (Check content size and process)
+        const chunkingResult = this.handleContentChunking(
+          text, 
+          contentSizeLimit, 
+          enableContentSplitting, 
+          debug, 
+          COMPONENTS.BROWSER_FETCH
+        );
+        
+        if (chunkingResult) {
+          return chunkingResult;
+        }
+        
+        // 返回JSON内容 (Return JSON content)
+        return result;
+      } catch (parseError) {
+        // 处理JSON解析错误 (Handle JSON parse error)
+        log('browser.jsonParseError', debug, { error: String(parseError) }, COMPONENTS.BROWSER_FETCH);
+        
+        return this.createErrorResponse(`Error parsing JSON: ${parseError}`);
+      }
+    } catch (error) {
+      // 处理错误 (Handle error)
+      log('browser.jsonFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
+      
+      return this.createErrorResponse(`Error fetching JSON: ${error}`);
     }
   }
 
@@ -338,100 +324,97 @@ export class BrowserFetcher implements IFetcher {
     const { 
       url, 
       debug = false,
-      closeBrowser = false
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
     } = requestPayload;
     
-    // 如果只是要关闭浏览器，不需要获取内容
-    if (url === 'about:blank' && closeBrowser) {
-      log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
-      await BrowserInstance.closeBrowser(debug);
-      return {
-        content: [{ type: 'text', text: 'Browser closed successfully' }],
-        isError: false
-      };
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
     }
     
-    // 设置最大重试次数
-    const maxRetries = 2;
-    
-    const fetchWithRetry = async (retryCount = 0): Promise<FetchResponse> => {
-      log('browser.fetchingWithRetry', debug, { attempt: retryCount + 1, maxAttempts: maxRetries + 1, url }, COMPONENTS.BROWSER_FETCH);
-      
-      try {
-        const result = await BrowserFetcher.fetch(requestPayload);
-        
-        // 如果获取成功，提取纯文本
-        if (!result.isError) {
-          const htmlContent = result.content[0].text;
-          
-          // 使用JSDOM提取纯文本
-          const dom = new JSDOM(htmlContent);
-          const textContent = dom.window.document.body.textContent || '';
-          
-          // 清理文本（移除多余空白）
-          const cleanedText = textContent
-            .replace(/\s+/g, ' ')
-            .trim();
-          
-          return {
-            content: [{ type: 'text', text: cleanedText }],
-            isError: false
-          };
-        }
-        
-        return result;
-      } catch (error) {
-        log('browser.fetchErrorWithAttempt', debug, { error: String(error), attempt: retryCount + 1, maxAttempts: maxRetries + 1 }, COMPONENTS.BROWSER_FETCH);
-        
-        if (retryCount < maxRetries) {
-          // 计算延迟时间，随着重试次数增加而增加
-          const delayMs = 1000 * (retryCount + 1);
-          log('browser.retryingAfterDelay', debug, { delayMs }, COMPONENTS.BROWSER_FETCH);
-          
-          // 等待一段时间后重试
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-          return fetchWithRetry(retryCount + 1);
-        }
-        
-        // 超过最大重试次数，返回错误
-        return {
-          content: [{ type: 'text', text: `Error fetching text from ${url} after ${maxRetries + 1} attempts: ${error}` }],
-          isError: true
-        };
-      }
-    };
+    log('browser.startingTxtFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
     
     try {
-      return await fetchWithRetry();
-    } finally {
-      // 如果需要关闭浏览器
-      if (closeBrowser) {
-        log('browser.closingInstance', debug, {}, COMPONENTS.BROWSER_FETCH);
-        await BrowserInstance.closeBrowser(debug);
+      // 使用通用的fetch方法获取内容 (Use common fetch method to get content)
+      const result = await BrowserFetcher.fetch(requestPayload);
+      
+      // 如果出错，直接返回错误 (If error, return error directly)
+      if (result.isError) {
+        return result;
       }
+      
+      // 获取HTML内容 (Get HTML content)
+      const html = result.content[0].text;
+      
+      // 使用JSDOM提取纯文本 (Extract plain text using JSDOM)
+      log('browser.extractingText', debug, {}, COMPONENTS.BROWSER_FETCH);
+      const dom = new JSDOM(html);
+      const text = dom.window.document.body.textContent || '';
+      log('browser.textExtracted', debug, { length: text.length }, COMPONENTS.BROWSER_FETCH);
+      
+      // 检查内容大小并处理 (Check content size and process)
+      const chunkingResult = this.handleContentChunking(
+        text, 
+        contentSizeLimit, 
+        enableContentSplitting, 
+        debug, 
+        COMPONENTS.BROWSER_FETCH
+      );
+      
+      if (chunkingResult) {
+        return chunkingResult;
+      }
+      
+      // 返回纯文本内容 (Return plain text content)
+      return this.createSuccessResponse(text);
+    } catch (error) {
+      // 处理错误 (Handle error)
+      log('browser.txtFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
+      
+      return this.createErrorResponse(`Error fetching text: ${error}`);
     }
   }
 
   /**
    * 使用Puppeteer获取Markdown内容 (Get Markdown content using Puppeteer)
-   * 通过浏览器模式获取HTML并转换为Markdown (Fetch HTML in browser mode and convert to Markdown)
+   * 通过浏览器模式获取网页并转换为Markdown (Fetch webpage and convert to Markdown in browser mode)
    * @param requestPayload 请求参数 (Request parameters)
    * @returns 获取结果 (Fetch result)
    */
   public async markdown(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { url, debug = false } = requestPayload;
+    const { 
+      url, 
+      debug = false,
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
+    } = requestPayload;
     
-    log('browser.startingBrowserFetchForMarkdown', debug, { url }, COMPONENTS.BROWSER_FETCH);
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
+    }
+    
+    log('browser.startingMarkdownFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
     
     try {
-      // 获取HTML内容
-      const htmlResult = await this.html(requestPayload);
+      // 使用通用的fetch方法获取内容 (Use common fetch method to get content)
+      const result = await BrowserFetcher.fetch(requestPayload);
       
-      if (htmlResult.isError) {
-        return htmlResult;
+      // 如果出错，直接返回错误 (If error, return error directly)
+      if (result.isError) {
+        return result;
       }
       
-      // 将HTML转换为Markdown
+      // 获取HTML内容 (Get HTML content)
+      const html = result.content[0].text;
+      
+      // 创建Turndown服务 (Create Turndown service)
+      log('browser.creatingTurndown', debug, {}, COMPONENTS.BROWSER_FETCH);
       const turndownService = new TurndownService({
         headingStyle: 'atx',
         codeBlockStyle: 'fenced',
@@ -447,20 +430,31 @@ export class BrowserFetcher implements IFetcher {
         }
       });
       
-      // 转换HTML为Markdown
-      const markdown = turndownService.turndown(htmlResult.content[0].text);
+      // 将HTML转换为Markdown (Convert HTML to Markdown)
+      log('browser.convertingToMarkdown', debug, {}, COMPONENTS.BROWSER_FETCH);
+      const markdown = turndownService.turndown(html);
+      log('browser.markdownContentLength', debug, { length: markdown.length }, COMPONENTS.BROWSER_FETCH);
       
-      return {
-        content: [{ type: 'text', text: markdown }],
-        isError: false
-      };
+      // 检查内容大小并处理 (Check content size and process)
+      const chunkingResult = this.handleContentChunking(
+        markdown, 
+        contentSizeLimit, 
+        enableContentSplitting, 
+        debug, 
+        COMPONENTS.BROWSER_FETCH
+      );
+      
+      if (chunkingResult) {
+        return chunkingResult;
+      }
+      
+      // 返回Markdown内容 (Return Markdown content)
+      return this.createSuccessResponse(markdown);
     } catch (error) {
-      log('browser.errorInBrowserFetchForMarkdown', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
+      // 处理错误 (Handle error)
+      log('browser.markdownFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
       
-      return {
-        content: [{ type: 'text', text: `Error converting HTML to Markdown for ${url}: ${error}` }],
-        isError: true
-      };
+      return this.createErrorResponse(`Error fetching Markdown: ${error}`);
     }
   }
 } 

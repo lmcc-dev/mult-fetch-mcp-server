@@ -8,20 +8,34 @@ import TurndownService from "turndown";
 import { RequestPayload, FetchResponse, IFetcher } from "../common/types.js";
 import { log, COMPONENTS } from '../../logger.js';
 import { HttpClient } from './HttpClient.js';
-import { ErrorHandler, ErrorType } from '../../utils/ErrorHandler.js';
+import { ErrorHandler } from '../../utils/ErrorHandler.js';
+import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
+import { BaseFetcher } from "../common/BaseFetcher.js";
 
 /**
  * Node模式获取器类 (Node mode fetcher class)
  * 使用node-fetch实现标准模式的网页获取 (Implements webpage fetching in standard mode using node-fetch)
  */
-export class NodeFetcher implements IFetcher {
+export class NodeFetcher extends BaseFetcher implements IFetcher {
   /**
    * 获取HTML内容 (Get HTML content)
    * @param requestPayload 请求参数 (Request parameters)
    * @returns HTML内容 (HTML content)
    */
   public async html(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { debug = false } = requestPayload;
+    const { 
+      debug = false, 
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
+    } = requestPayload;
+    
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.NODE_FETCH);
+    }
+    
     log('node.startingHtmlFetch', debug, {}, COMPONENTS.NODE_FETCH);
     
     try {
@@ -33,11 +47,21 @@ export class NodeFetcher implements IFetcher {
       const html = await response.text();
       log('node.htmlContentLength', debug, { length: html.length }, COMPONENTS.NODE_FETCH);
       
+      // 检查内容大小并处理 (Check content size and process)
+      const chunkingResult = this.handleContentChunking(
+        html, 
+        contentSizeLimit, 
+        enableContentSplitting, 
+        debug, 
+        COMPONENTS.NODE_FETCH
+      );
+      
+      if (chunkingResult) {
+        return chunkingResult;
+      }
+      
       // 返回HTML内容 (Return HTML content)
-      return {
-        content: [{ type: 'text', text: html }],
-        isError: false
-      };
+      return this.createSuccessResponse(html);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -48,10 +72,7 @@ export class NodeFetcher implements IFetcher {
       );
       
       // 返回错误信息 (Return error message)
-      return {
-        content: [{ type: 'text', text: `Error fetching HTML: ${errorMessage}` }],
-        isError: true
-      };
+      return this.createErrorResponse(`Error fetching HTML: ${errorMessage}`);
     }
   }
 
@@ -61,7 +82,19 @@ export class NodeFetcher implements IFetcher {
    * @returns JSON内容 (JSON content)
    */
   public async json(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { debug = false } = requestPayload;
+    const { 
+      debug = false, 
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
+    } = requestPayload;
+    
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.NODE_FETCH);
+    }
+    
     log('node.startingJsonFetch', debug, {}, COMPONENTS.NODE_FETCH);
     
     try {
@@ -73,16 +106,25 @@ export class NodeFetcher implements IFetcher {
       
       // 解析JSON (Parse JSON)
       log('node.parsingJson', debug, {}, COMPONENTS.NODE_FETCH);
-      let json;
       try {
-        json = JSON.parse(text);
+        JSON.parse(text);
         log('node.jsonParsed', debug, {}, COMPONENTS.NODE_FETCH);
         
+        // 检查内容大小并处理 (Check content size and process)
+        const chunkingResult = this.handleContentChunking(
+          text, 
+          contentSizeLimit, 
+          enableContentSplitting, 
+          debug, 
+          COMPONENTS.NODE_FETCH
+        );
+        
+        if (chunkingResult) {
+          return chunkingResult;
+        }
+        
         // 返回JSON内容 (Return JSON content)
-        return {
-          content: [{ type: 'text', text }],
-          isError: false
-        };
+        return this.createSuccessResponse(text);
       } catch (parseError) {
         // 处理JSON解析错误 (Handle JSON parse error)
         const textPreview = text.length > 100 ? `${text.substring(0, 100)}...` : text;
@@ -97,10 +139,7 @@ export class NodeFetcher implements IFetcher {
         }, COMPONENTS.NODE_FETCH);
         
         // 返回错误信息 (Return error message)
-        return {
-          content: [{ type: 'text', text: `Error parsing JSON: ${error}` }],
-          isError: true
-        };
+        return this.createErrorResponse(`Error parsing JSON: ${error.message}`);
       }
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
@@ -112,10 +151,7 @@ export class NodeFetcher implements IFetcher {
       );
       
       // 返回错误信息 (Return error message)
-      return {
-        content: [{ type: 'text', text: `Error fetching JSON: ${errorMessage}` }],
-        isError: true
-      };
+      return this.createErrorResponse(`Error fetching JSON: ${errorMessage}`);
     }
   }
 
@@ -125,7 +161,19 @@ export class NodeFetcher implements IFetcher {
    * @returns 纯文本内容 (Plain text content)
    */
   public async txt(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { debug = false } = requestPayload;
+    const { 
+      debug = false, 
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
+    } = requestPayload;
+    
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.NODE_FETCH);
+    }
+    
     log('node.startingTxtFetch', debug, {}, COMPONENTS.NODE_FETCH);
     
     try {
@@ -137,11 +185,21 @@ export class NodeFetcher implements IFetcher {
       const text = await response.text();
       log('node.textContentLength', debug, { length: text.length }, COMPONENTS.NODE_FETCH);
       
+      // 检查内容大小并处理 (Check content size and process)
+      const chunkingResult = this.handleContentChunking(
+        text, 
+        contentSizeLimit, 
+        enableContentSplitting, 
+        debug, 
+        COMPONENTS.NODE_FETCH
+      );
+      
+      if (chunkingResult) {
+        return chunkingResult;
+      }
+      
       // 返回纯文本内容 (Return plain text content)
-      return {
-        content: [{ type: 'text', text }],
-        isError: false
-      };
+      return this.createSuccessResponse(text);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -152,10 +210,7 @@ export class NodeFetcher implements IFetcher {
       );
       
       // 返回错误信息 (Return error message)
-      return {
-        content: [{ type: 'text', text: `Error fetching text: ${errorMessage}` }],
-        isError: true
-      };
+      return this.createErrorResponse(`Error fetching text: ${errorMessage}`);
     }
   }
 
@@ -165,7 +220,19 @@ export class NodeFetcher implements IFetcher {
    * @returns Markdown内容 (Markdown content)
    */
   public async markdown(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { debug = false } = requestPayload;
+    const { 
+      debug = false, 
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
+    } = requestPayload;
+    
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.NODE_FETCH);
+    }
+    
     log('node.startingMarkdownFetch', debug, {}, COMPONENTS.NODE_FETCH);
     
     try {
@@ -173,37 +240,23 @@ export class NodeFetcher implements IFetcher {
       const response = await HttpClient.fetchWithRedirects(requestPayload);
       
       // 读取响应文本 (Read response text)
-      log('node.readingText', debug, {}, COMPONENTS.NODE_FETCH);
-      const html = await response.text();
-      log('node.htmlContentLength', debug, { length: html.length }, COMPONENTS.NODE_FETCH);
+      const markdown = await response.text();
       
-      // 创建Turndown服务 (Create Turndown service)
-      log('node.creatingTurndown', debug, {}, COMPONENTS.NODE_FETCH);
-      const turndownService = new TurndownService({
-        headingStyle: 'atx',
-        codeBlockStyle: 'fenced',
-        bulletListMarker: '-'
-      });
+      // 检查内容大小并处理 (Check content size and process)
+      const chunkingResult = this.handleContentChunking(
+        markdown, 
+        contentSizeLimit, 
+        enableContentSplitting, 
+        debug, 
+        COMPONENTS.NODE_FETCH
+      );
       
-      // 添加表格支持
-      turndownService.addRule('tables', {
-        filter: ['table'],
-        replacement: function(content, node) {
-          const tableContent = content.trim();
-          return '\n\n' + tableContent + '\n\n';
-        }
-      });
-      
-      // 将HTML转换为Markdown (Convert HTML to Markdown)
-      log('node.convertingToMarkdown', debug, {}, COMPONENTS.NODE_FETCH);
-      const markdown = turndownService.turndown(html);
-      log('node.markdownContentLength', debug, { length: markdown.length }, COMPONENTS.NODE_FETCH);
+      if (chunkingResult) {
+        return chunkingResult;
+      }
       
       // 返回Markdown内容 (Return Markdown content)
-      return {
-        content: [{ type: 'text', text: markdown }],
-        isError: false
-      };
+      return this.createSuccessResponse(markdown);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -214,10 +267,7 @@ export class NodeFetcher implements IFetcher {
       );
       
       // 返回错误信息 (Return error message)
-      return {
-        content: [{ type: 'text', text: `Error fetching Markdown: ${errorMessage}` }],
-        isError: true
-      };
+      return this.createErrorResponse(`Error fetching Markdown: ${errorMessage}`);
     }
   }
-} 
+}
