@@ -22,6 +22,9 @@ import factoryZh from './i18n/locales/zh/factory.js';
 import errorsZh from './i18n/locales/zh/errors.js';
 import resourcesZh from './i18n/locales/zh/resources.js';
 import promptsZh from './i18n/locales/zh/prompts.js';
+import { contentSizeZh } from './i18n/locales/zh/contentSize.js';
+import { chunkManagerZh } from './i18n/locales/zh/chunkManager.js';
+import { processorZh } from './i18n/locales/zh/processor.js';
 
 // 创建翻译映射 (Create translation mapping)
 const translationMap: Record<string, any> = {
@@ -34,7 +37,10 @@ const translationMap: Record<string, any> = {
   factory: factoryZh,
   errors: errorsZh,
   resources: resourcesZh,
-  prompts: promptsZh
+  prompts: promptsZh,
+  contentSize: contentSizeZh,
+  chunkManager: chunkManagerZh,
+  processor: processorZh
 };
 
 // 组件名称常量 (Component name constants)
@@ -46,7 +52,10 @@ export const COMPONENTS = {
   RESOURCES: 'MCP-RESOURCES',
   PROMPTS: 'MCP-PROMPTS',
   TOOLS: 'MCP-TOOLS',
-  FETCHER_FACTORY: 'FETCHER-FACTORY'
+  FETCHER_FACTORY: 'FETCHER-FACTORY',
+  CONTENT_SIZE: 'CONTENT-SIZE',
+  CHUNK_MANAGER: 'CHUNK-MANAGER',
+  PROCESSOR: 'CONTENT-PROCESSOR'
 };
 
 // 日志文件路径 (Log file path)

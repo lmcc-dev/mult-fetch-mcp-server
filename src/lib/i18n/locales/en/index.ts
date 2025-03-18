@@ -14,6 +14,9 @@ import tools from './tools.js';
 import errors from './errors.js';
 import resources from './resources.js';
 import prompts from './prompts.js';
+import { contentSizeEn as contentSize } from './contentSize.js';
+import { chunkManagerEn as chunkManager } from './chunkManager.js';
+import { processorEn as processor } from './processor.js';
 
 // 英文翻译资源 (English translation resources)
 export const enTranslation = {
@@ -26,5 +29,8 @@ export const enTranslation = {
   tools,
   errors,
   resources,
-  prompts
+  prompts,
+  contentSize,
+  chunkManager,
+  processor
 }; 
