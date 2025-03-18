@@ -14,6 +14,7 @@ import { PageOperations, CookieManager } from './PageOperations.js';
 import { getRandomUserAgent, getSystemProxy } from '../common/utils.js';
 import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
 import { BaseFetcher } from '../common/BaseFetcher.js';
+import { ContentProcessor } from '../../utils/ContentProcessor.js';
 
 /**
  * 浏览器模式获取器类 (Browser mode fetcher class)
@@ -70,10 +71,7 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       // 如果只是要关闭浏览器，不需要获取内容
       if (url === 'about:blank' && closeBrowser) {
         await BrowserInstance.closeBrowser(debug);
-        return {
-          content: [{ type: 'text', text: 'Browser closed successfully' }],
-          isError: false
-        };
+        return BaseFetcher.createSuccessResponse('Browser closed successfully');
       }
       
       // 获取浏览器实例
@@ -167,10 +165,7 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
         await BrowserInstance.closeBrowser(debug);
       }
       
-      return {
-        content: [{ type: 'text', text: finalContent }],
-        isError: false
-      };
+      return BaseFetcher.createSuccessResponse(finalContent);
     } catch (error) {
       log('browser.fetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
       
@@ -179,10 +174,7 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
         await BrowserInstance.closeBrowser(debug);
       }
       
-      return {
-        content: [{ type: 'text', text: `Error fetching ${url}: ${error}` }],
-        isError: true
-      };
+      return BaseFetcher.createErrorResponse(`Error fetching ${url}: ${error}`);
     }
   }
 
@@ -241,7 +233,7 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       // 处理错误 (Handle error)
       log('browser.htmlFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
       
-      return this.createErrorResponse(`Error fetching HTML: ${error}`);
+      return BaseFetcher.createErrorResponse(`Error fetching HTML: ${error}`);
     }
   }
 
@@ -304,13 +296,13 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
         // 处理JSON解析错误 (Handle JSON parse error)
         log('browser.jsonParseError', debug, { error: String(parseError) }, COMPONENTS.BROWSER_FETCH);
         
-        return this.createErrorResponse(`Error parsing JSON: ${parseError}`);
+        return BaseFetcher.createErrorResponse(`Error parsing JSON: ${parseError}`);
       }
     } catch (error) {
       // 处理错误 (Handle error)
       log('browser.jsonFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
       
-      return this.createErrorResponse(`Error fetching JSON: ${error}`);
+      return BaseFetcher.createErrorResponse(`Error fetching JSON: ${error}`);
     }
   }
 
@@ -369,26 +361,24 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       }
       
       // 返回纯文本内容 (Return plain text content)
-      return this.createSuccessResponse(text);
+      return BaseFetcher.createSuccessResponse(text);
     } catch (error) {
       // 处理错误 (Handle error)
       log('browser.txtFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
       
-      return this.createErrorResponse(`Error fetching text: ${error}`);
+      return BaseFetcher.createErrorResponse(`Error fetching text: ${error}`);
     }
   }
 
   /**
-   * 使用Puppeteer获取Markdown内容 (Get Markdown content using Puppeteer)
-   * 通过浏览器模式获取网页并转换为Markdown (Fetch webpage and convert to Markdown in browser mode)
+   * 获取HTML并转换为纯文本 (Get HTML and convert to plain text)
    * @param requestPayload 请求参数 (Request parameters)
-   * @returns 获取结果 (Fetch result)
+   * @returns 纯文本响应 (Plain text response)
    */
-  public async markdown(requestPayload: RequestPayload): Promise<FetchResponse> {
+  public async plainText(requestPayload: RequestPayload): Promise<FetchResponse> {
     const { 
-      url, 
-      debug = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
+      debug = false, 
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
       enableContentSplitting = true,
       chunkId,
       chunkIndex
@@ -399,62 +389,86 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
     }
     
-    log('browser.startingMarkdownFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
+    log('browser.startingPlainTextFetch', debug, { url: requestPayload.url }, COMPONENTS.BROWSER_FETCH);
     
-    try {
-      // 使用通用的fetch方法获取内容 (Use common fetch method to get content)
-      const result = await BrowserFetcher.fetch(requestPayload);
-      
-      // 如果出错，直接返回错误 (If error, return error directly)
-      if (result.isError) {
-        return result;
-      }
-      
-      // 获取HTML内容 (Get HTML content)
-      const html = result.content[0].text;
-      
-      // 创建Turndown服务 (Create Turndown service)
-      log('browser.creatingTurndown', debug, {}, COMPONENTS.BROWSER_FETCH);
-      const turndownService = new TurndownService({
-        headingStyle: 'atx',
-        codeBlockStyle: 'fenced',
-        bulletListMarker: '-'
-      });
-      
-      // 添加表格支持
-      turndownService.addRule('tables', {
-        filter: ['table'],
-        replacement: function(content, node) {
-          const tableContent = content.trim();
-          return '\n\n' + tableContent + '\n\n';
-        }
-      });
-      
-      // 将HTML转换为Markdown (Convert HTML to Markdown)
-      log('browser.convertingToMarkdown', debug, {}, COMPONENTS.BROWSER_FETCH);
-      const markdown = turndownService.turndown(html);
-      log('browser.markdownContentLength', debug, { length: markdown.length }, COMPONENTS.BROWSER_FETCH);
-      
-      // 检查内容大小并处理 (Check content size and process)
-      const chunkingResult = this.handleContentChunking(
-        markdown, 
-        contentSizeLimit, 
-        enableContentSplitting, 
-        debug, 
-        COMPONENTS.BROWSER_FETCH
-      );
-      
-      if (chunkingResult) {
-        return chunkingResult;
-      }
-      
-      // 返回Markdown内容 (Return Markdown content)
-      return this.createSuccessResponse(markdown);
-    } catch (error) {
-      // 处理错误 (Handle error)
-      log('browser.markdownFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
-      
-      return this.createErrorResponse(`Error fetching Markdown: ${error}`);
+    // 使用HTML方法获取内容 (Use HTML method to get content)
+    const result = await this.html(requestPayload);
+    
+    if (result.isError) {
+      return result;
     }
+    
+    // 获取HTML内容 (Get HTML content)
+    const html = result.content[0].text;
+    
+    // 使用ContentProcessor将HTML转换为纯文本 (Use ContentProcessor to convert HTML to plain text)
+    const plainText = ContentProcessor.htmlToText(html, debug, COMPONENTS.BROWSER_FETCH);
+    
+    // 检查内容大小并处理 (Check content size and process)
+    const chunkingResult = this.handleContentChunking(
+      plainText, 
+      contentSizeLimit, 
+      enableContentSplitting, 
+      debug, 
+      COMPONENTS.BROWSER_FETCH
+    );
+    
+    if (chunkingResult) {
+      return chunkingResult;
+    }
+    
+    // 返回纯文本内容 (Return plain text content)
+    return BaseFetcher.createSuccessResponse(plainText);
+  }
+
+  /**
+   * 获取HTML并转换为Markdown (Get HTML and convert to Markdown)
+   * @param requestPayload 请求参数 (Request parameters)
+   * @returns Markdown内容 (Markdown content)
+   */
+  public async markdown(requestPayload: RequestPayload): Promise<FetchResponse> {
+    const { 
+      debug = false, 
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
+    } = requestPayload;
+    
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
+    }
+    
+    log('browser.startingMarkdownFetch', debug, { url: requestPayload.url }, COMPONENTS.BROWSER_FETCH);
+    
+    // 使用HTML方法获取内容 (Use HTML method to get content)
+    const result = await this.html(requestPayload);
+    
+    if (result.isError) {
+      return result;
+    }
+    
+    // 获取HTML内容 (Get HTML content)
+    const html = result.content[0].text;
+    
+    // 使用ContentProcessor将HTML转换为Markdown (Use ContentProcessor to convert HTML to Markdown)
+    const markdown = ContentProcessor.htmlToMarkdown(html, debug, COMPONENTS.BROWSER_FETCH);
+    
+    // 检查内容大小并处理 (Check content size and process)
+    const chunkingResult = this.handleContentChunking(
+      markdown, 
+      contentSizeLimit, 
+      enableContentSplitting, 
+      debug, 
+      COMPONENTS.BROWSER_FETCH
+    );
+    
+    if (chunkingResult) {
+      return chunkingResult;
+    }
+    
+    // 返回Markdown内容 (Return Markdown content)
+    return BaseFetcher.createSuccessResponse(markdown);
   }
 } 

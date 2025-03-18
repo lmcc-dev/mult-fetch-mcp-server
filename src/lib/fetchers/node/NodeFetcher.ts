@@ -11,6 +11,7 @@ import { HttpClient } from './HttpClient.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
 import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
 import { BaseFetcher } from "../common/BaseFetcher.js";
+import { ContentProcessor } from "../../utils/ContentProcessor.js";
 
 /**
  * Node模式获取器类 (Node mode fetcher class)
@@ -61,7 +62,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       }
       
       // 返回HTML内容 (Return HTML content)
-      return this.createSuccessResponse(html);
+      return BaseFetcher.createSuccessResponse(html);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -72,7 +73,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       );
       
       // 返回错误信息 (Return error message)
-      return this.createErrorResponse(`Error fetching HTML: ${errorMessage}`);
+      return BaseFetcher.createErrorResponse(`Error fetching HTML: ${errorMessage}`);
     }
   }
 
@@ -124,7 +125,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
         }
         
         // 返回JSON内容 (Return JSON content)
-        return this.createSuccessResponse(text);
+        return BaseFetcher.createSuccessResponse(text);
       } catch (parseError) {
         // 处理JSON解析错误 (Handle JSON parse error)
         const textPreview = text.length > 100 ? `${text.substring(0, 100)}...` : text;
@@ -139,7 +140,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
         }, COMPONENTS.NODE_FETCH);
         
         // 返回错误信息 (Return error message)
-        return this.createErrorResponse(`Error parsing JSON: ${error.message}`);
+        return BaseFetcher.createErrorResponse(`Error parsing JSON: ${error.message}`);
       }
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
@@ -151,7 +152,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       );
       
       // 返回错误信息 (Return error message)
-      return this.createErrorResponse(`Error fetching JSON: ${errorMessage}`);
+      return BaseFetcher.createErrorResponse(`Error fetching JSON: ${errorMessage}`);
     }
   }
 
@@ -199,7 +200,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       }
       
       // 返回纯文本内容 (Return plain text content)
-      return this.createSuccessResponse(text);
+      return BaseFetcher.createSuccessResponse(text);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -210,7 +211,67 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       );
       
       // 返回错误信息 (Return error message)
-      return this.createErrorResponse(`Error fetching text: ${errorMessage}`);
+      return BaseFetcher.createErrorResponse(`Error fetching text: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * 获取HTML并转换为纯文本 (Get HTML and convert to plain text)
+   * @param requestPayload 请求参数 (Request parameters)
+   * @returns 纯文本响应 (Plain text response)
+   */
+  public async plainText(requestPayload: RequestPayload): Promise<FetchResponse> {
+    const { 
+      debug = false, 
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
+      enableContentSplitting = true,
+      chunkId,
+      chunkIndex
+    } = requestPayload;
+    
+    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
+    if (chunkId && chunkIndex !== undefined) {
+      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.NODE_FETCH);
+    }
+    
+    log('node.startingPlainTextFetch', debug, { url: requestPayload.url }, COMPONENTS.NODE_FETCH);
+    
+    try {
+      // 执行请求 (Execute request)
+      const response = await HttpClient.fetchWithRedirects(requestPayload);
+      
+      // 读取响应文本 (Read response text)
+      const html = await response.text();
+      
+      // 使用ContentProcessor将HTML转换为纯文本 (Use ContentProcessor to convert HTML to plain text)
+      const plainText = ContentProcessor.htmlToText(html, debug, COMPONENTS.NODE_FETCH);
+      
+      // 检查内容大小并处理 (Check content size and process)
+      const chunkingResult = this.handleContentChunking(
+        plainText, 
+        contentSizeLimit, 
+        enableContentSplitting, 
+        debug, 
+        COMPONENTS.NODE_FETCH
+      );
+      
+      if (chunkingResult) {
+        return chunkingResult;
+      }
+      
+      // 返回纯文本内容 (Return plain text content)
+      return BaseFetcher.createSuccessResponse(plainText);
+    } catch (error) {
+      // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
+      const errorMessage = ErrorHandler.handleError(
+        error, 
+        COMPONENTS.NODE_FETCH, 
+        debug, 
+        { url: requestPayload.url, method: 'plainText' }
+      );
+      
+      // 返回错误信息 (Return error message)
+      return BaseFetcher.createErrorResponse(`Error fetching plain text: ${errorMessage}`);
     }
   }
 
@@ -233,14 +294,17 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.NODE_FETCH);
     }
     
-    log('node.startingMarkdownFetch', debug, {}, COMPONENTS.NODE_FETCH);
+    log('node.startingMarkdownFetch', debug, { url: requestPayload.url }, COMPONENTS.NODE_FETCH);
     
     try {
       // 执行请求 (Execute request)
       const response = await HttpClient.fetchWithRedirects(requestPayload);
       
       // 读取响应文本 (Read response text)
-      const markdown = await response.text();
+      const html = await response.text();
+      
+      // 使用ContentProcessor将HTML转换为Markdown (Use ContentProcessor to convert HTML to Markdown)
+      const markdown = ContentProcessor.htmlToMarkdown(html, debug, COMPONENTS.NODE_FETCH);
       
       // 检查内容大小并处理 (Check content size and process)
       const chunkingResult = this.handleContentChunking(
@@ -256,7 +320,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       }
       
       // 返回Markdown内容 (Return Markdown content)
-      return this.createSuccessResponse(markdown);
+      return BaseFetcher.createSuccessResponse(markdown);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -267,7 +331,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       );
       
       // 返回错误信息 (Return error message)
-      return this.createErrorResponse(`Error fetching Markdown: ${errorMessage}`);
+      return BaseFetcher.createErrorResponse(`Error fetching Markdown: ${errorMessage}`);
     }
   }
 }

@@ -53,6 +53,19 @@ export class Fetcher {
   }
 
   /**
+   * 获取HTML并转换为纯文本 (Get HTML and convert to plain text)
+   * @param requestPayload 请求参数 (Request parameters)
+   * @returns 纯文本内容 (Plain text content)
+   */
+  public static async plainText(requestPayload: RequestPayload): Promise<FetchResponse> {
+    const { debug = false } = requestPayload;
+    log('fetcher.fetchingPlainText', debug, { url: requestPayload.url }, COMPONENTS.SERVER);
+    
+    const fetcher = FetcherFactory.createFetcher(requestPayload);
+    return await fetcher.plainText(requestPayload);
+  }
+
+  /**
    * 获取Markdown内容 (Get Markdown content)
    * @param requestPayload 请求参数 (Request parameters)
    * @returns Markdown内容 (Markdown content)
