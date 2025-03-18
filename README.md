@@ -31,32 +31,35 @@ This project implements an MCP-compliant client and server for communication bet
 
 ```
 fetch-mcp/
-├── src/                # Source code directory
-│   ├── lib/            # Library files
-│   │   ├── BrowserFetcher.ts # Browser mode fetcher
-│   │   ├── NodeFetcher.ts    # Node.js mode fetcher
-│   │   ├── server/           # Server-related modules
-│   │   │   ├── index.ts      # Server entry point
-│   │   │   ├── browser.ts    # Browser management
-│   │   │   ├── fetcher.ts    # Web fetching logic
-│   │   │   ├── logger.ts     # Logging utilities
-│   │   │   ├── tools.ts      # Tool registration and handling
-│   │   │   └── types.ts      # Server type definitions
-│   │   ├── i18n/             # Internationalization support
-│   │   │   ├── index.ts      # i18n configuration
-│   │   │   └── logger.ts     # i18n logger utilities
-│   │   └── types.ts          # Common type definitions
-│   ├── client.ts       # MCP client implementation
-│   └── mcp-server.ts   # MCP server main entry
-├── index.ts            # Server entry point
-├── tests/              # Test files
-│   ├── test-mcp.ts     # MCP functionality tests
-│   ├── test-mini4k.ts  # Specific website tests
-│   └── test-direct-client.ts # Direct client call tests
-└── dist/               # Compiled files
-    ├── index.js        # Compiled entry point
-    ├── src/            # Compiled source code
-    └── tests/          # Compiled test files
+├── src/                         # Source code directory
+│   ├── lib/                     # Library files
+│   │   ├── fetchers/            # Web fetching implementations
+│   │   │   ├── browser/         # Browser-based fetching
+│   │   │   │   ├── BrowserFetcher.ts      # Browser fetching implementation
+│   │   │   │   ├── BrowserInstance.ts     # Browser instance management
+│   │   │   │   └── PageOperations.ts      # Page interaction operations
+│   │   │   ├── node/            # Node.js-based fetching
+│   │   │   └── common/          # Shared fetching utilities
+│   │   ├── utils/               # Utility modules
+│   │   │   ├── ChunkManager.ts        # Content chunking functionality
+│   │   │   ├── ContentProcessor.ts    # HTML to text conversion
+│   │   │   ├── ContentSizeManager.ts  # Content size limiting
+│   │   │   └── ErrorHandler.ts        # Error management
+│   │   ├── server/              # Server-related modules
+│   │   │   ├── index.ts         # Server entry point
+│   │   │   ├── browser.ts       # Browser management
+│   │   │   ├── fetcher.ts       # Web fetching logic
+│   │   │   ├── tools.ts         # Tool registration and handling
+│   │   │   ├── resources.ts     # Resource handling
+│   │   │   ├── prompts.ts       # Prompt templates
+│   │   │   └── types.ts         # Server type definitions
+│   │   ├── i18n/                # Internationalization support
+│   │   └── types.ts             # Common type definitions
+│   ├── client.ts                # MCP client implementation
+│   └── mcp-server.ts            # MCP server main entry
+├── index.ts                     # Server entry point
+├── tests/                       # Test files
+└── dist/                        # Compiled files
 ```
 
 ## MCP Specification
@@ -72,8 +75,10 @@ This project implements the Standard Input/Output (Stdio) transport method.
 
 - Implementation based on the official MCP SDK
 - Support for Standard Input/Output (Stdio) transport
-- Multiple web scraping methods (HTML, JSON, text, Markdown)
+- Multiple web scraping methods (HTML, JSON, text, Markdown, plain text conversion)
 - Intelligent mode switching: automatically switches between standard requests and browser mode
+- Content size management: automatically splits large content into manageable chunks
+- Chunked content retrieval: ability to request specific chunks of large content
 - Detailed debug logs output to standard error stream
 - Support for Chinese and English bilingual internationalization
 - Modular design for easy maintenance and extension
@@ -402,6 +407,7 @@ if (result.isError) {
 - `fetch_json`: Get JSON data
 - `fetch_txt`: Get plain text content
 - `fetch_markdown`: Get Markdown formatted content
+- `fetch_plaintext`: Get plain text content converted from HTML (strips HTML tags)
 
 ### Resources Support
 
@@ -472,6 +478,15 @@ Each tool supports the following parameters:
 - `noDelay`: Whether to disable random delay between requests (optional, default is false)
 - `useSystemProxy`: Whether to use system proxy (optional, default is true)
 
+#### Content Size Control Parameters
+- `enableContentSplitting`: Whether to split large content into chunks (optional, default is true)
+- `contentSizeLimit`: Maximum content size in bytes before splitting (optional, default is 100000)
+
+#### Chunk Control Parameters
+- `chunkId`: Unique identifier for a chunk set when content is split (read-only in response metadata)
+- `chunkIndex`: Index of the current chunk (used for requesting specific chunks)
+- `totalChunks`: Total number of chunks in the content (read-only in response metadata)
+
 #### Mode Control Parameters
 - `useBrowser`: Whether to use browser mode (optional, default is false)
 - `useNodeFetch`: Whether to force using Node.js mode (optional, default is false, mutually exclusive with `useBrowser`)
@@ -514,6 +529,16 @@ When `debug: true` is set, the logs will be output to stderr with the following 
 - `[NODE-FETCH]`: Logs from the Node.js fetcher
 - `[BROWSER-FETCH]`: Logs from the browser fetcher
 - `[CLIENT]`: Logs from the client
+- `[TOOLS]`: Logs from the tools implementation
+- `[FETCHER]`: Logs from the main fetcher interface
+- `[CONTENT]`: Logs related to content processing
+- `[CONTENT-PROCESSOR]`: Logs from the HTML content processor
+- `[CONTENT-SIZE]`: Logs related to content size management
+- `[CHUNK-MANAGER]`: Logs related to content chunking operations
+- `[ERROR-HANDLER]`: Logs related to error handling
+- `[BROWSER-MANAGER]`: Logs from the browser instance manager
+- `[REQUEST]`: Logs related to HTTP request details
+- `[RESPONSE]`: Logs related to HTTP response details
 
 ## License
 
