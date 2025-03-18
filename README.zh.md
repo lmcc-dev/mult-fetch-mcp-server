@@ -539,8 +539,7 @@ console.log('调试获取提示:', debugPrompt);
 - `[CHUNK-MANAGER]`: 内容分块操作相关的日志
 - `[ERROR-HANDLER]`: 错误处理相关的日志
 - `[BROWSER-MANAGER]`: 浏览器实例管理器的日志
-- `[REQUEST]`: HTTP请求详情相关的日志
-- `[RESPONSE]`: HTTP响应详情相关的日志
+
 
 ## 许可证
 

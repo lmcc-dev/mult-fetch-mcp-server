@@ -540,8 +540,7 @@ When `debug: true` is set, the logs will be output to stderr with the following 
 - `[CHUNK-MANAGER]`: Logs related to content chunking operations
 - `[ERROR-HANDLER]`: Logs related to error handling
 - `[BROWSER-MANAGER]`: Logs from the browser instance manager
-- `[REQUEST]`: Logs related to HTTP request details
-- `[RESPONSE]`: Logs related to HTTP response details
+
 
 ## License
 
