@@ -474,7 +474,7 @@ console.log('调试获取提示:', debugPrompt);
 #### 模式控制参数
 - `useBrowser`: 是否使用浏览器模式（可选，默认为false）
 - `useNodeFetch`: 是否强制使用Node.js模式（可选，默认为false，与`useBrowser`互斥）
-- `autoDetectMode`: 是否自动检测并切换到浏览器模式（可选，默认为true）
+- `autoDetectMode`: 是否在标准模式失败（出现403/Forbidden错误）时自动检测并切换到浏览器模式（可选，默认为true）。设置为false可以严格使用指定的模式，不进行自动切换。
 
 #### 浏览器模式特有参数
 - `waitForSelector`: 浏览器模式下等待的选择器（可选，默认为'body'）

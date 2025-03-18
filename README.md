@@ -475,7 +475,7 @@ Each tool supports the following parameters:
 #### Mode Control Parameters
 - `useBrowser`: Whether to use browser mode (optional, default is false)
 - `useNodeFetch`: Whether to force using Node.js mode (optional, default is false, mutually exclusive with `useBrowser`)
-- `autoDetectMode`: Whether to automatically detect and switch to browser mode (optional, default is true)
+- `autoDetectMode`: Whether to automatically detect and switch to browser mode if standard mode fails with 403/Forbidden errors (optional, default is true). Set to false to strictly use the specified mode without automatic switching.
 
 #### Browser Mode Specific Parameters
 - `waitForSelector`: Selector to wait for in browser mode (optional, default is 'body')
