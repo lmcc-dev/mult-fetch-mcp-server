@@ -12,10 +12,30 @@ import { fileURLToPath } from 'url';
 import { log, COMPONENTS } from './lib/logger.js';
 import { execSync } from 'child_process';
 import { isAccessDeniedError, isNetworkError } from './lib/utils/errorDetection.js';
+import fs from 'fs';
+import os from 'os';
 
 // 获取当前文件的目录路径 (Get the directory path of the current file)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// 临时文件路径，用于存储分段信息 (Temporary file path for storing chunk information)
+const CHUNK_INFO_FILE = path.join(os.tmpdir(), 'fetch-mcp-chunk-info.json');
+
+/**
+ * 分段信息接口 (Chunk information interface)
+ */
+interface ChunkInfo {
+  method: string;
+  url: string;
+  chunkId: string;
+  currentChunk: number;
+  totalChunks: number;
+  params: RequestPayload;
+}
+
+// 添加最大分块数限制，默认为10 (Add maximum chunk limit, default is 10)
+const DEFAULT_MAX_CHUNKS = 10;
 
 /**
  * 基于MCP的本地客户端 (MCP-based local client)
@@ -77,128 +97,169 @@ function responseRequiresBrowser(response: any, debug: boolean = false): boolean
 }
 
 /**
- * 智能获取函数，根据需要自动切换模式 (Smart fetch function, automatically switches modes as needed)
- * 支持在标准模式和浏览器模式之间自动切换 (Supports automatic switching between standard mode and browser mode)
+ * 保存分段信息到临时文件 (Save chunk information to temporary file)
+ * @param result 获取结果 (Fetch result)
  * @param params 请求参数 (Request parameters)
- * @returns 获取结果 (Fetch result)
+ * @param debug 是否为调试模式 (Whether in debug mode)
  */
-async function smartFetch(params: RequestPayload & { method?: string }) {
+function saveChunkInfo(result: any, params: RequestPayload, debug: boolean = false): void {
+  if (result.isChunked && result.hasMoreChunks) {
+    try {
+      const chunkInfo: ChunkInfo = {
+        method: params.method || '',
+        url: params.url,
+        chunkId: result.chunkId,
+        currentChunk: result.currentChunk,
+        totalChunks: result.totalChunks,
+        params: { ...params }
+      };
+      
+      fs.writeFileSync(CHUNK_INFO_FILE, JSON.stringify(chunkInfo, null, 2));
+      
+      if (debug) {
+        log('client.chunkInfoSaved', debug, { 
+          file: CHUNK_INFO_FILE,
+          current: result.currentChunk,
+          total: result.totalChunks
+        }, COMPONENTS.CLIENT);
+      }
+    } catch (error) {
+      if (debug) {
+        log('client.chunkInfoSaveError', debug, { error: String(error) }, COMPONENTS.CLIENT);
+      }
+    }
+  }
+}
+
+/**
+ * 加载分段信息从临时文件 (Load chunk information from temporary file)
+ * @param debug 是否为调试模式 (Whether in debug mode)
+ * @returns 分段信息 (Chunk information)
+ */
+function loadChunkInfo(debug: boolean = false): ChunkInfo | null {
+  try {
+    if (fs.existsSync(CHUNK_INFO_FILE)) {
+      const chunkInfoStr = fs.readFileSync(CHUNK_INFO_FILE, 'utf8');
+      const chunkInfo = JSON.parse(chunkInfoStr) as ChunkInfo;
+      
+      if (debug) {
+        log('client.chunkInfoLoaded', debug, { 
+          file: CHUNK_INFO_FILE,
+          current: chunkInfo.currentChunk,
+          total: chunkInfo.totalChunks
+        }, COMPONENTS.CLIENT);
+      }
+      
+      return chunkInfo;
+    }
+  } catch (error) {
+    if (debug) {
+      log('client.chunkInfoLoadError', debug, { error: String(error) }, COMPONENTS.CLIENT);
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * 从响应内容中解析分段信息 (Parse chunk information from response content)
+ * @param result 响应结果 (Response result)
+ * @returns 包含分段信息的结果 (Result with chunk information)
+ */
+function parseChunkInfo(result: any): any {
+  if (result.isError || !result.content || !result.content[0] || !result.content[0].text) {
+    return result;
+  }
+  
+  const content = result.content[0].text;
+  const chunkIdMatch = content.match(/chunkId="([^"]+)"/);
+  const totalChunksMatch = content.match(/Part \d+ of (\d+)/);
+  
+  if (!chunkIdMatch) {
+    return result;
+  }
+  
+  const chunkId = chunkIdMatch[1];
+  const currentChunk = 0; // 第一段的索引为0
+  const totalChunks = totalChunksMatch ? parseInt(totalChunksMatch[1], 10) : 1;
+  const hasMoreChunks = totalChunks > 1;
+  
+  return {
+    ...result,
+    isChunked: hasMoreChunks,
+    hasMoreChunks,
+    chunkId,
+    currentChunk,
+    totalChunks
+  };
+}
+
+/**
+ * 智能获取函数 (Smart fetch function)
+ * 根据参数执行相应的获取操作 (Perform fetch operation based on parameters)
+ */
+async function smartFetch(params: RequestPayload & { method?: string }, client: Client): Promise<any> {
+  // 不再从params中解构出debug，保留在rest中传递给MCP
+  const { method, ...rest } = params;
   const debug = params.debug === true;
   
-  // 创建服务器进程 (Create server process)
-  const serverPath = path.resolve(path.dirname(__dirname), 'index.js');
-  log('client.startingServer', debug, { path: serverPath }, COMPONENTS.CLIENT);
-  
-  // 创建客户端传输层 (Create client transport layer)
-  const transport = new StdioClientTransport({
-    command: 'node',
-    args: [serverPath],
-    stderr: 'inherit',
-    env: {
-      ...process.env,  // 传递所有环境变量，包括MCP_LANG和DEBUG
-    }
-  });
-  
-  // 创建客户端 (Create client)
-  const client = new Client({
-    name: "fetch-mcp-client",
-    version: "1.0.0"
-  });
-  
-  // 连接到传输层 (Connect to transport layer)
-  await client.connect(transport);
-  
-  try {
-    const { url, method = 'fetch_html' } = params;
-    log('client.fetchingUrl', debug, { url }, COMPONENTS.CLIENT);
-    
-    // 如果启用了自动检测模式（默认启用） (If auto-detect mode is enabled (enabled by default))
-    if (params.autoDetectMode !== false) {
-      // 首先尝试使用标准模式 (First try using standard mode)
-      log('client.usingMode', debug, { mode: params.useBrowser ? 'browser' : 'standard', url }, COMPONENTS.CLIENT);
-      
-      // 确保服务端也启用了自动检测模式
-      const paramsWithAutoDetect = {
-        ...params,
-        autoDetectMode: true
-      };
-      
-      const result = await client.callTool({
-        name: method,
-        arguments: paramsWithAutoDetect
-      });
-      
-      // 在调试模式下打印响应结果的摘要 (Print response result summary in debug mode)
-      if (debug) {
-        if (result.isError) {
-          log('client.fetchFailed', debug, { url, error: result.content[0].text }, COMPONENTS.CLIENT);
-        } else {
-          log('client.fetchSuccess', debug, { url }, COMPONENTS.CLIENT);
-        }
-      }
-      
-      // 检查是否需要切换到浏览器模式 (Check if need to switch to browser mode)
-      if (result.isError && responseRequiresBrowser(result, debug) && !params.useBrowser) {
-        log('client.browserModeNeeded', debug, { url }, COMPONENTS.CLIENT);
-        log('client.retryingWithBrowser', debug, { url }, COMPONENTS.CLIENT);
-        
-        // 切换到浏览器模式重试 (Switch to browser mode and retry)
-        const browserParams = {
-          ...params,
-          useBrowser: true,
-          debug: true,  // 确保在浏览器模式下启用调试
-          autoDetectMode: true  // 确保自动检测模式也被传递
-        };
-        
-        const browserResult = await client.callTool({
-          name: method,
-          arguments: browserParams
-        });
-        
-        if (browserResult.isError) {
-          log('client.browserModeFetchFailed', debug, { url, error: browserResult.content[0].text }, COMPONENTS.CLIENT);
-        } else {
-          log('client.browserModeFetchSuccess', debug, { url }, COMPONENTS.CLIENT);
-        }
-        
-        return browserResult;
-      }
-      
-      if (result.isError) {
-        log('client.fetchFailed', debug, { url, error: result.content[0].text }, COMPONENTS.CLIENT);
-      } else {
-        log('client.fetchSuccess', debug, { url }, COMPONENTS.CLIENT);
-      }
-      
-      return result;
-    } else {
-      // 直接使用指定的模式 (Directly use the specified mode)
-      log('client.usingMode', debug, { mode: params.useBrowser ? 'browser' : 'standard', url }, COMPONENTS.CLIENT);
-      
-      // 确保明确设置 autoDetectMode 为 false
-      const paramsWithoutAutoDetect = {
-        ...params,
-        autoDetectMode: false
-      };
-      
-      const result = await client.callTool({
-        name: method,
-        arguments: paramsWithoutAutoDetect
-      });
-      
-      if (result.isError) {
-        log('client.fetchFailed', debug, { url, error: result.content[0].text }, COMPONENTS.CLIENT);
-      } else {
-        log('client.fetchSuccess', debug, { url }, COMPONENTS.CLIENT);
-      }
-      
-      return result;
-    }
-  } finally {
-    // 关闭客户端连接 (Close client connection)
-    log('client.serverClosed', debug, {}, COMPONENTS.CLIENT);
-    await client.close();
+  // 检查是否提供了方法 (Check if method is provided)
+  if (!method) {
+    throw new Error('Method is required');
   }
+  
+  // 检查是否提供了URL (Check if URL is provided)
+  if (method.includes('fetch_') && !rest.url) {
+    throw new Error('URL is required for fetch methods');
+  }
+  
+  // 记录获取URL (Log fetch URL)
+  if (rest.url) {
+    log('client.fetchingUrl', debug, { url: rest.url }, COMPONENTS.CLIENT);
+  }
+  
+  // 检查是否需要使用浏览器模式 (Check if browser mode is needed)
+  const useBrowser = rest.useBrowser === true;
+  
+  // 记录使用的模式 (Log mode used)
+  if (useBrowser) {
+    log('client.usingBrowserMode', debug, {}, COMPONENTS.CLIENT);
+  } else {
+    log('client.usingStandardMode', debug, {}, COMPONENTS.CLIENT);
+  }
+  
+  // 在debug模式下输出发送给MCP的参数 (Output parameters sent to MCP in debug mode)
+  if (debug) {
+    log('client.sendingParameters', debug, { params: JSON.stringify(rest) }, COMPONENTS.CLIENT);
+  }
+  
+  // 执行获取操作 (Perform fetch operation)
+  // 注意：rest中包含debug参数，会被传递给MCP (Note: rest contains debug parameter, which will be passed to MCP)
+  const result = await client.callTool({
+    name: method,
+    arguments: rest
+  });
+  
+  // 检查是否需要使用浏览器模式 (Check if browser mode is needed)
+  if (responseRequiresBrowser(result) && !useBrowser && rest.autoDetectMode !== false) {
+    log('client.switchingToBrowserMode', debug, {}, COMPONENTS.CLIENT);
+    
+    // 使用浏览器模式重新获取 (Retry with browser mode)
+    return smartFetch({
+      ...params,
+      useBrowser: true
+    }, client);
+  }
+  
+  // 记录获取成功 (Log fetch success)
+  if (!result.isError) {
+    log('client.fetchSuccessful', debug, {}, COMPONENTS.CLIENT);
+  } else {
+    // 记录获取失败 (Log fetch failure)
+    log('client.fetchFailed', true, { error: result.content[0].text }, COMPONENTS.CLIENT);
+  }
+  
+  return result;
 }
 
 /**
@@ -206,42 +267,46 @@ async function smartFetch(params: RequestPayload & { method?: string }) {
  * 处理命令行参数并执行相应操作 (Process command line arguments and perform corresponding operations)
  */
 async function main() {
+  // 检查是否请求所有分段内容 (Check if requesting all chunks)
+  const allChunksFlag = process.argv.includes('--all-chunks');
+  let method: string;
+  let params: RequestPayload;
+  
+  // 获取最大分块数限制 (Get maximum chunk limit)
+  let maxChunks = DEFAULT_MAX_CHUNKS;
+  const maxChunksArg = process.argv.find(arg => arg.startsWith('--max-chunks='));
+  if (maxChunksArg) {
+    const maxChunksValue = maxChunksArg.split('=')[1];
+    if (maxChunksValue && !isNaN(parseInt(maxChunksValue))) {
+      maxChunks = parseInt(maxChunksValue);
+    }
+  }
+  
   // 检查命令行参数 (Check command line arguments)
   if (process.argv.length < 4) {
-    log('client.usageInfo', true, {}, COMPONENTS.CLIENT);
-    log('client.exampleUsage', true, {}, COMPONENTS.CLIENT);
+    log('client.usageInfo', true, { info: 'node src/client.js <method> <params_json> [--debug] [--all-chunks] [--max-chunks=N]' }, COMPONENTS.CLIENT);
+    log('client.exampleUsage', true, { example: 'node src/client.js fetch_html {"url":"https://example.com"}' }, COMPONENTS.CLIENT);
+    log('client.chunkUsageInfo', true, {}, COMPONENTS.CLIENT);
+    log('client.allChunksUsageInfo', true, {}, COMPONENTS.CLIENT);
+    log('client.maxChunksUsageInfo', true, { default: DEFAULT_MAX_CHUNKS }, COMPONENTS.CLIENT);
     process.exit(1);
   }
 
-  const method = process.argv[2];
+  method = process.argv[2];
   let paramsJson = process.argv[3];
-  let params: RequestPayload;
 
   try {
     params = JSON.parse(paramsJson);
-  } catch (error) {
-    log('client.invalidJson', true, {}, COMPONENTS.CLIENT);
-    
-    // 返回标准错误结构体 (Return standard error structure)
-    const errorResult = {
-      isError: true,
-      content: [
-        {
-          type: "text",
-          text: `Invalid JSON parameter: ${paramsJson}`
-        }
-      ]
-    };
-    
-    process.stdout.write(JSON.stringify(errorResult, null, 2));
+  } catch (e) {
+    log('client.invalidJson', true, { error: String(e) }, COMPONENTS.CLIENT);
     process.exit(1);
   }
 
-  const debug = params.debug === true;
+  const debug = params.debug === true || process.argv.includes('--debug');
   
   // 检查是否提供了代理参数 (Check if proxy parameter is provided)
   const proxyArg = process.argv[4];
-  if (proxyArg) {
+  if (proxyArg && !proxyArg.startsWith('--')) {
     if (proxyArg.startsWith('http://') || proxyArg.startsWith('https://')) {
       log('client.usingCommandLineProxy', debug, { proxy: proxyArg }, COMPONENTS.CLIENT);
       params.proxy = proxyArg;
@@ -309,29 +374,186 @@ async function main() {
     params.useSystemProxy = false;
   }
 
+  // 创建服务器进程 (Create server process)
+  const serverPath = path.resolve(path.dirname(__dirname), 'index.js');
+  log('client.startingServer', debug, { path: serverPath }, COMPONENTS.CLIENT);
+  
+  // 创建客户端传输层 (Create client transport layer)
+  const transport = new StdioClientTransport({
+    command: 'node',
+    args: [serverPath],
+    stderr: 'inherit',
+    env: {
+      ...process.env,  // 传递所有环境变量，包括MCP_LANG和DEBUG
+    }
+  });
+  
+  // 创建客户端 (Create client)
+  const client = new Client({
+    name: "fetch-mcp-client",
+    version: "1.0.0"
+  });
+  
+  // 连接到传输层 (Connect to transport layer)
+  await client.connect(transport);
+
   try {
-    // 执行请求 (Execute request)
-    const result = await smartFetch({ ...params, method });
+    // 执行获取操作 (Perform fetch operation)
+    const initialParams = {
+      ...params,
+      debug: debug,
+      method
+    };
     
-    // 使用process.stdout.write输出结果，这是实际的结果输出，不是日志
-    // (Use process.stdout.write to output the result, this is the actual result output, not a log)
+    // 获取第一段内容 (Fetch first chunk)
+    let result = await smartFetch(initialParams, client);
+    
+    // 调试输出，查看响应结构 (Debug output, check response structure)
+    if (debug) {
+      console.log('\n--- 响应结构 (Response structure) ---');
+      console.log(JSON.stringify(result, null, 2));
+      console.log('--- 响应结构结束 (End of response structure) ---\n');
+    }
+    
+    // 从响应内容中解析分段信息 (Parse chunk information from response content)
+    let chunkId: string | undefined;
+    let currentChunk = 0;
+    let totalChunks = 1;
+    let hasMoreChunks = false;
+    
+    if (result.content && result.content[0] && result.content[0].text) {
+      const content = result.content[0].text;
+      // 更新正则表达式以匹配系统提示中的分段信息
+      // Update regex to match chunk information in system notes
+      const chunkIdMatch = content.match(/chunkId="([^"]+)"/);
+      const partMatch = content.match(/This is part (\d+) of (\d+)/);
+      
+      if (chunkIdMatch) {
+        chunkId = chunkIdMatch[1];
+        if (partMatch) {
+          currentChunk = parseInt(partMatch[1], 10) - 1; // 转换为0索引 (Convert to 0-based index)
+          totalChunks = parseInt(partMatch[2], 10);
+          hasMoreChunks = currentChunk < totalChunks - 1;
+        }
+        
+        // 调试输出，查看解析后的分段信息 (Debug output, check parsed chunk information)
+        if (debug) {
+          console.log('\n--- 解析后的分段信息 (Parsed chunk information) ---');
+          console.log('chunkId:', chunkId);
+          console.log('currentChunk:', currentChunk);
+          console.log('totalChunks:', totalChunks);
+          console.log('hasMoreChunks:', hasMoreChunks);
+          console.log('--- 解析后的分段信息结束 (End of parsed chunk information) ---\n');
+        }
+      }
+    }
+    
+    // 输出第一段内容 (Output first chunk)
     process.stdout.write(JSON.stringify(result, null, 2));
-  } catch (error: any) {
-    log('client.requestFailed', debug, { error: error.message }, COMPONENTS.CLIENT);
     
-    // 即使在出错的情况下也输出标准结构体 (Output standard structure even in case of error)
+    // 如果启用了获取所有分段内容，并且结果包含分段信息 (If all chunks mode is enabled and result contains chunk information)
+    if (allChunksFlag && hasMoreChunks && chunkId) {
+      // 计算实际要获取的分块数量 (Calculate actual number of chunks to fetch)
+      const actualChunksToFetch = Math.min(totalChunks - 1, maxChunks);
+      
+      log('client.fetchingAllChunks', debug, { total: totalChunks, fetching: actualChunksToFetch }, COMPONENTS.CLIENT);
+      
+      if (actualChunksToFetch < totalChunks - 1) {
+        log('client.limitingChunks', debug, { limit: maxChunks, total: totalChunks }, COMPONENTS.CLIENT);
+        console.log(`\n注意：内容共有 ${totalChunks} 段，但只获取前 ${maxChunks + 1} 段 (Note: Content has ${totalChunks} chunks, but only fetching first ${maxChunks + 1} chunks)`);
+        console.log(`要获取更多分段，请使用 --max-chunks=N 参数 (To fetch more chunks, use --max-chunks=N parameter)\n`);
+      }
+      
+      // 不再创建数组存储所有分段内容，而是获取后立即输出
+      // No longer create an array to store all chunks, output immediately after fetching
+      
+      // 获取剩余的分段内容 (Fetch remaining chunks)
+      for (let i = 1; i <= actualChunksToFetch; i++) {
+        log('client.fetchingChunk', debug, { index: i, total: totalChunks }, COMPONENTS.CLIENT);
+        
+        // 输出正在获取的提示信息 (Output fetching prompt)
+        console.log(`\n正在获取第 ${i+1}/${totalChunks} 段内容... (Fetching chunk ${i+1}/${totalChunks}...)`);
+        
+        // 准备获取下一段内容的参数 (Prepare parameters for fetching next chunk)
+        const nextChunkParams = {
+          ...params,
+          debug: debug,
+          method,
+          chunkId: chunkId,
+          chunkIndex: i,
+          closeBrowser: false // 获取后续分段时强制设置为false，避免重复关闭浏览器
+        };
+        
+        // 获取下一段内容 (Fetch next chunk)
+        const nextChunkResult = await smartFetch(nextChunkParams, client);
+        
+        // 如果获取失败，输出错误信息并退出 (If fetch fails, output error message and exit)
+        if (nextChunkResult.isError) {
+          log('client.fetchChunkFailed', debug, { index: i, error: nextChunkResult.content[0].text }, COMPONENTS.CLIENT);
+          console.log(`\n获取第 ${i+1} 段内容失败: ${nextChunkResult.content[0].text}\n`);
+          break;
+        }
+        
+        // 立即输出分段内容 (Output chunk immediately)
+        console.log(`\n--- 第 ${i+1} 段内容 (Chunk ${i+1}) ---\n`);
+        process.stdout.write(JSON.stringify(nextChunkResult, null, 2));
+        
+        // 输出分隔线，使输出更清晰 (Output separator for clarity)
+        console.log('\n' + '-'.repeat(80));
+      }
+      
+      // 输出所有分段内容获取完成的信息 (Output all chunks fetched message)
+      const fetchedChunks = Math.min(totalChunks, maxChunks + 1);
+      log('client.allChunksFetched', debug, { fetched: fetchedChunks, total: totalChunks }, COMPONENTS.CLIENT);
+      
+      if (fetchedChunks < totalChunks) {
+        console.log(`\n已获取 ${fetchedChunks}/${totalChunks} 段内容 (Fetched ${fetchedChunks}/${totalChunks} chunks)\n`);
+      } else {
+        console.log(`\n所有分段内容获取完成，共 ${totalChunks} 段 (All chunks fetched, total: ${totalChunks})\n`);
+      }
+    } 
+    // 如果结果包含分段信息，但没有启用获取所有分段内容 (If result contains chunk information but all chunks mode is not enabled)
+    else if (hasMoreChunks && chunkId) {
+      log('client.hasMoreChunks', debug, { 
+        current: currentChunk,
+        total: totalChunks
+      }, COMPONENTS.CLIENT);
+      
+      // 提示用户如何获取所有分段内容 (Prompt user how to get all chunks)
+      const allChunksCommand = `node dist/src/client.js ${method} '${paramsJson}' ${debug ? '--debug' : ''} --all-chunks`;
+      const allChunksWithLimitCommand = `node dist/src/client.js ${method} '${paramsJson}' ${debug ? '--debug' : ''} --all-chunks --max-chunks=${maxChunks}`;
+      
+      log('client.allChunksCommand', debug, { command: allChunksCommand }, COMPONENTS.CLIENT);
+      
+      // 输出提示信息，告知用户有更多分段内容 (Output prompt message, inform user there are more chunks)
+      console.log(`\n内容已分段: ${currentChunk+1}/${totalChunks} 段 (Content is chunked: ${currentChunk+1}/${totalChunks} chunks)`);
+      console.log(`获取所有分段内容，请运行: (To fetch all chunks, run:)\n${allChunksCommand}\n`);
+      
+      if (totalChunks > maxChunks + 1) {
+        console.log(`获取前 ${maxChunks + 1} 段内容，请运行: (To fetch first ${maxChunks + 1} chunks, run:)\n${allChunksWithLimitCommand}\n`);
+      }
+    }
+  } catch (error: any) {
+    // 处理错误 (Handle error)
+    log('client.fatalError', true, { error: String(error) }, COMPONENTS.CLIENT);
+    
+    // 返回标准错误结构体 (Return standard error structure)
     const errorResult = {
       isError: true,
       content: [
         {
           type: "text",
-          text: `Client error: ${error.message}`
+          text: `Fatal error: ${String(error)}`
         }
       ]
     };
     
     process.stdout.write(JSON.stringify(errorResult, null, 2));
     process.exit(1);
+  } finally {
+    // 关闭客户端连接 (Close client connection)
+    log('client.serverClosed', debug, {}, COMPONENTS.CLIENT);
+    await client.close();
   }
 }
 
