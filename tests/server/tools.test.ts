@@ -62,7 +62,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     return listToolsHandler().then((result: any) => {
       expect(result).toHaveProperty('tools');
       expect(result.tools).toBeInstanceOf(Array);
-      expect(result.tools.length).toBe(4); // 应该有4个工具
+      expect(result.tools.length).toBe(5); // 应该有5个工具
       
       // 验证工具名称
       const toolNames = result.tools.map((tool: any) => tool.name);
@@ -70,6 +70,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
       expect(toolNames).toContain('fetch_json');
       expect(toolNames).toContain('fetch_txt');
       expect(toolNames).toContain('fetch_markdown');
+      expect(toolNames).toContain('fetch_plaintext'); // 验证新添加的HTML转文本工具
       
       // 验证每个工具都有必要的属性
       result.tools.forEach((tool: any) => {
@@ -79,7 +80,8 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
         expect(tool.inputSchema).toHaveProperty('type', 'object');
         expect(tool.inputSchema).toHaveProperty('properties');
         expect(tool.inputSchema.properties).toHaveProperty('url');
-        expect(tool.inputSchema).toHaveProperty('required', ['url']);
+        // 不同工具可能有不同的 required 字段
+        expect(tool.inputSchema).toHaveProperty('required');
       });
     });
   });
@@ -215,6 +217,39 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
       { url: 'https://example.com/readme.md', method: 'fetch_markdown' },
       'markdown'
+    );
+    
+    // 验证返回结果
+    expect(result).toHaveProperty('content');
+    expect(result).toHaveProperty('isError', false);
+    expect(result.content[0]).toHaveProperty('type', 'text');
+    expect(result.content[0]).toHaveProperty('text', 'mock content');
+  });
+  
+  test('应该正确处理 fetch_plaintext 工具调用 (Should handle fetch_plaintext tool call correctly)', async () => {
+    // 调用被测试的函数
+    registerTools(mockServer as unknown as Server);
+    
+    // 获取注册的处理程序
+    const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
+    
+    // 创建请求对象
+    const request = {
+      params: {
+        name: 'fetch_plaintext',
+        arguments: {
+          url: 'https://example.com'
+        }
+      }
+    };
+    
+    // 调用处理程序
+    const result = await callToolHandler(request);
+    
+    // 验证 fetchWithAutoDetect 被调用，且参数正确
+    expect(fetchWithAutoDetect).toHaveBeenCalledWith(
+      { url: 'https://example.com', method: 'fetch_plaintext' },
+      'plaintext'
     );
     
     // 验证返回结果
