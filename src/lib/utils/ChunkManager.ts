@@ -98,15 +98,10 @@ export class ChunkManager {
       return null;
     }
     
-    // 更新过期时间 (Update expiration time)
-    const expirationTime = Date.now() + this.EXPIRATION_TIME;
-    this.expirations.set(chunkId, expirationTime);
-    
     log('chunkManager.retrievedChunk', debug, { 
       chunkId, 
       index, 
-      totalChunks: chunks.length,
-      expiresAt: new Date(expirationTime).toISOString()
+      totalChunks: chunks.length
     }, COMPONENTS.CHUNK_MANAGER);
     
     // 返回指定索引的分段内容 (Return chunk content at specified index)
