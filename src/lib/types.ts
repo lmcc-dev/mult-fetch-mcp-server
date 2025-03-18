@@ -57,6 +57,8 @@ export const RequestPayloadSchema = z.object({
   waitForTimeout: z.number().optional(),
   scrollToBottom: z.boolean().optional(),
   closeBrowser: z.boolean().optional(),
+  chunkId: z.string().optional(),
+  chunkIndex: z.number().optional(),
 }).merge(BrowserParamsSchema);
 
 export type RequestPayload = z.infer<typeof RequestPayloadSchema>; 

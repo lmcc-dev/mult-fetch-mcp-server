@@ -10,6 +10,7 @@ import { log, COMPONENTS } from '../logger.js';
 import { fetchWithAutoDetect } from './fetcher.js';
 import { FetchParams } from './types.js';
 import { closeBrowserInstance } from './browser.js';
+import { BaseFetcher } from '../fetchers/common/BaseFetcher.js';
 
 /**
  * 获取HTML获取工具定义 (Get HTML fetch tool definition)
@@ -60,7 +61,7 @@ function getHtmlFetchToolDefinition() {
         },
         autoDetectMode: {
           type: "boolean",
-          description: "Optional flag to automatically switch to browser mode if standard fetch fails (default: true)",
+          description: "Optional flag to automatically switch to browser mode if standard fetch fails (default: true). Set to false to strictly use the specified mode without automatic switching.",
         },
         waitForSelector: {
           type: "string",
@@ -81,6 +82,22 @@ function getHtmlFetchToolDefinition() {
         closeBrowser: {
           type: "boolean",
           description: "Optional flag to close the browser after fetching (default: false)",
+        },
+        contentSizeLimit: {
+          type: "number",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+        },
+        enableContentSplitting: {
+          type: "boolean",
+          description: "Optional flag to enable content splitting for large responses (default: true)",
+        },
+        chunkId: {
+          type: "string",
+          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
+        },
+        chunkIndex: {
+          type: "number",
+          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
         },
       },
       required: ["url"],
@@ -147,6 +164,22 @@ function getJsonFetchToolDefinition() {
           type: "boolean",
           description: "Optional flag to close the browser after fetching (default: false)",
         },
+        contentSizeLimit: {
+          type: "number",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+        },
+        enableContentSplitting: {
+          type: "boolean",
+          description: "Optional flag to enable content splitting for large responses (default: true)",
+        },
+        chunkId: {
+          type: "string",
+          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
+        },
+        chunkIndex: {
+          type: "number",
+          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
+        },
       },
       required: ["url"],
     },
@@ -211,6 +244,22 @@ function getTextFetchToolDefinition() {
         scrollToBottom: {
           type: "boolean",
           description: "Optional flag to scroll to bottom of page in browser mode (default: false)",
+        },
+        contentSizeLimit: {
+          type: "number",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+        },
+        enableContentSplitting: {
+          type: "boolean",
+          description: "Optional flag to enable content splitting for large responses (default: true)",
+        },
+        chunkId: {
+          type: "string",
+          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
+        },
+        chunkIndex: {
+          type: "number",
+          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
         },
       },
       required: ["url"],
@@ -277,8 +326,117 @@ function getMarkdownFetchToolDefinition() {
           type: "boolean",
           description: "Optional flag to scroll to bottom of page in browser mode (default: false)",
         },
+        contentSizeLimit: {
+          type: "number",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+        },
+        enableContentSplitting: {
+          type: "boolean",
+          description: "Optional flag to enable content splitting for large responses (default: true)",
+        },
+        chunkId: {
+          type: "string",
+          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
+        },
+        chunkIndex: {
+          type: "number",
+          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
+        },
       },
       required: ["url"],
+    },
+  };
+}
+
+/**
+ * 获取纯文本获取工具定义 (Get plain text fetch tool definition)
+ * @returns 纯文本获取工具定义 (Plain text fetch tool definition)
+ */
+function getPlainTextFetchToolDefinition() {
+  return {
+    name: "fetch_plaintext",
+    description: "Fetch a website and return the content as plain text with HTML tags removed",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "URL of the website to fetch",
+        },
+        headers: {
+          type: "object",
+          description: "Optional headers to include in the request",
+        },
+        proxy: {
+          type: "string",
+          description: "Optional proxy server to use (format: http://host:port or https://host:port)",
+        },
+        noDelay: {
+          type: "boolean",
+          description: "Optional flag to disable random delay between requests (default: false)",
+        },
+        timeout: {
+          type: "number",
+          description: "Optional timeout in milliseconds (default: 30000)",
+        },
+        maxRedirects: {
+          type: "number",
+          description: "Optional maximum number of redirects to follow (default: 10)",
+        },
+        useSystemProxy: {
+          type: "boolean",
+          description: "Optional flag to use system proxy environment variables (default: true)",
+        },
+        debug: {
+          type: "boolean",
+          description: "Optional flag to enable detailed debug logging (default: false)",
+        },
+        useBrowser: {
+          type: "boolean",
+          description: "Optional flag to use headless browser for fetching (default: false)",
+        },
+        autoDetectMode: {
+          type: "boolean",
+          description: "Optional flag to automatically switch to browser mode if standard fetch fails (default: true). Set to false to strictly use the specified mode without automatic switching.",
+        },
+        waitForSelector: {
+          type: "string",
+          description: "Optional CSS selector to wait for when using browser mode",
+        },
+        waitForTimeout: {
+          type: "number",
+          description: "Optional timeout to wait after page load in browser mode (default: 5000)",
+        },
+        scrollToBottom: {
+          type: "boolean",
+          description: "Optional flag to scroll to bottom of page in browser mode (default: false)",
+        },
+        saveCookies: {
+          type: "boolean",
+          description: "Optional flag to save cookies for future requests to the same domain (default: true)",
+        },
+        closeBrowser: {
+          type: "boolean",
+          description: "Optional flag to close the browser after fetching (default: false)",
+        },
+        contentSizeLimit: {
+          type: "number",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+        },
+        enableContentSplitting: {
+          type: "boolean",
+          description: "Optional flag to enable content splitting for large responses (default: true)",
+        },
+        chunkId: {
+          type: "string",
+          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
+        },
+        chunkIndex: {
+          type: "number",
+          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
+        }
+      },
+      required: []
     },
   };
 }
@@ -292,7 +450,8 @@ function getAllToolDefinitions() {
     getHtmlFetchToolDefinition(),
     getJsonFetchToolDefinition(),
     getTextFetchToolDefinition(),
-    getMarkdownFetchToolDefinition()
+    getMarkdownFetchToolDefinition(),
+    getPlainTextFetchToolDefinition()
   ];
 }
 
@@ -322,7 +481,7 @@ function registerToolCallHandler(server: Server) {
     
     try {
       // 处理不同类型的获取请求 (Handle different types of fetch requests)
-      if (name === 'fetch_html' || name === 'fetch_json' || name === 'fetch_txt' || name === 'fetch_markdown') {
+      if (name === 'fetch_html' || name === 'fetch_json' || name === 'fetch_txt' || name === 'fetch_markdown' || name === 'fetch_plaintext') {
         const result = await handleFetchRequest(name, args, debug);
         
         // 直接返回符合 MCP SDK 要求的格式
@@ -331,29 +490,13 @@ function registerToolCallHandler(server: Server) {
         // 未知工具 (Unknown tool)
         log('tools.unknownTool', debug, { name }, COMPONENTS.SERVER);
         
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Unknown tool: ${name}`
-            }
-          ],
-          isError: true
-        };
+        return BaseFetcher.createErrorResponse(`Unknown tool: ${name}`);
       }
     } catch (error: any) {
       // 处理错误 (Handle error)
       log('tools.callError', debug, { name, error: error.message }, COMPONENTS.SERVER);
       
-      return {
-        content: [
-          {
-            type: "text",
-            text: error.message
-          }
-        ],
-        isError: true
-      };
+      return BaseFetcher.createErrorResponse(`Error fetching ${args.url || `chunk ${args.chunkId}`}: ${error.message}`);
     } finally {
       // 如果请求参数中指定了关闭浏览器，则关闭浏览器 (If request parameters specify to close browser, close browser)
       if (args.closeBrowser === true) {
@@ -372,22 +515,18 @@ function registerToolCallHandler(server: Server) {
  */
 async function handleFetchRequest(name: string, args: any, debug: boolean) {
   // 验证URL参数 (Validate URL parameter)
-  if (!args.url) {
-    log('tools.missingUrl', debug, {}, COMPONENTS.SERVER);
+  if (!args.url && !args.chunkId) {
+    log('tools.missingUrlOrChunkId', debug, {}, COMPONENTS.SERVER);
     
-    return {
-      content: [
-        {
-          type: "text",
-          text: "URL parameter is required"
-        }
-      ],
-      isError: true
-    };
+    return BaseFetcher.createErrorResponse("Either URL or chunkId parameter is required");
   }
   
   // 记录请求 (Log request)
-  log('tools.fetchRequest', debug, { url: args.url, type: name }, COMPONENTS.SERVER);
+  if (args.chunkId) {
+    log('tools.fetchChunkRequest', debug, { chunkId: args.chunkId, chunkIndex: args.chunkIndex, type: name }, COMPONENTS.SERVER);
+  } else {
+    log('tools.fetchRequest', debug, { url: args.url, type: name }, COMPONENTS.SERVER);
+  }
   
   // 执行获取请求 (Execute fetch request)
   try {
@@ -397,9 +536,9 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
     };
     
     // 根据工具名称确定内容类型 (Determine content type based on tool name)
-    const type = name.replace('fetch_', '') as 'html' | 'json' | 'txt' | 'markdown';
+    const type = name.replace('fetch_', '') as 'html' | 'json' | 'txt' | 'markdown' | 'plaintext';
     
-    const result = await fetchWithAutoDetect(params, type);
+    let result = await fetchWithAutoDetect(params, type);
     
     // 确保返回标准结构体 (Ensure returning standard structure)
     if (result.isError) {
@@ -426,6 +565,17 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
       if (!result.content[0].type) {
         result.content[0].type = "text";
       }
+      
+      // 如果内容是分段的，添加提示词 (If content is chunked, add prompt)
+      if (result.isChunked && result.hasMoreChunks) {
+        // 使用BaseFetcher的addChunkPrompt方法添加提示词 (Use BaseFetcher's addChunkPrompt method to add prompt)
+        result = BaseFetcher.addChunkPrompt(result);
+      }
+    }
+    
+    // 如果没有匹配的类型，返回错误
+    if (!result.content[0].type) {
+      return BaseFetcher.createErrorResponse(`Unsupported content type: ${type}`);
     }
     
     // 将FetchResponse转换为符合MCP SDK要求的格式
@@ -437,16 +587,8 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
     // 处理错误 (Handle error)
     log('tools.fetchError', debug, { url: args.url, error: error.message }, COMPONENTS.SERVER);
     
-    // 确保返回标准结构体 (Ensure returning standard structure)
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Error fetching ${args.url}: ${error.message}`
-        }
-      ],
-      isError: true
-    };
+    // 返回错误信息 (Return error message)
+    return BaseFetcher.createErrorResponse(`Error fetching ${args.url || `chunk ${args.chunkId}`}: ${error.message}`);
   }
 }
 

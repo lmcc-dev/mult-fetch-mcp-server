@@ -34,6 +34,15 @@ export async function fetchTxt(requestPayload: RequestPayload): Promise<FetchRes
 }
 
 /**
+ * 获取HTML并转换为纯文本 (Get HTML and convert to plain text)
+ * @param requestPayload 请求参数 (Request parameters)
+ * @returns 纯文本内容 (Plain text content)
+ */
+export async function fetchPlainText(requestPayload: RequestPayload): Promise<FetchResponse> {
+  return await Fetcher.plainText(requestPayload);
+}
+
+/**
  * 获取Markdown内容 (Get Markdown content)
  * @param requestPayload 请求参数 (Request parameters)
  * @returns Markdown内容 (Markdown content)
