@@ -489,3 +489,64 @@ These parameters help manage large content that would exceed AI model context si
 - `chunkId`: Unique identifier for a chunk set when content is split (read-only in response metadata)
 - `chunkIndex`: Index of the current chunk (used for requesting specific chunks)
 - `totalChunks`: Total number of chunks in the content (read-only in response metadata)
+
+#### Mode Control Parameters
+- `useBrowser`: Whether to use browser mode (optional, default is false)
+- `useNodeFetch`: Whether to force using Node.js mode (optional, default is false, mutually exclusive with `useBrowser`)
+- `autoDetectMode`: Whether to automatically detect and switch to browser mode if standard mode fails with 403/Forbidden errors (optional, default is true). Set to false to strictly use the specified mode without automatic switching.
+
+#### Browser Mode Specific Parameters
+- `waitForSelector`: Selector to wait for in browser mode (optional, default is 'body')
+- `waitForTimeout`: Timeout to wait in browser mode in milliseconds (optional, default is 5000)
+- `scrollToBottom`: Whether to scroll to the bottom of the page in browser mode (optional, default is false)
+- `saveCookies`: Whether to save cookies in browser mode (optional, default is true)
+- `closeBrowser`: Whether to close the browser instance (optional, default is false)
+
+#### Debug Parameters
+- `debug`: Whether to enable debug output (optional, default is false)
+
+### Special Usage
+
+#### Closing Browser Without Fetching
+To close the browser instance without performing any fetch operation:
+```json
+{
+  "url": "about:blank",
+  "closeBrowser": true
+}
+```
+
+#### Proxy Priority
+The proxy is determined in the following order:
+1. Command line specified proxy
+2. `proxy` parameter in the request
+3. Environment variables (if `useSystemProxy` is true)
+4. Git configuration (if `useSystemProxy` is true)
+
+If `proxy` is set, `useSystemProxy` will be automatically set to false.
+
+### Debug Output
+
+When `debug: true` is set, the logs will be output to stderr with the following prefixes:
+- `[MCP-SERVER]`: Logs from the MCP server
+- `[NODE-FETCH]`: Logs from the Node.js fetcher
+- `[BROWSER-FETCH]`: Logs from the browser fetcher
+- `[CLIENT]`: Logs from the client
+- `[TOOLS]`: Logs from the tools implementation
+- `[FETCHER]`: Logs from the main fetcher interface
+- `[CONTENT]`: Logs related to content processing
+- `[CONTENT-PROCESSOR]`: Logs from the HTML content processor
+- `[CONTENT-SIZE]`: Logs related to content size management
+- `[CHUNK-MANAGER]`: Logs related to content chunking operations
+- `[ERROR-HANDLER]`: Logs related to error handling
+- `[BROWSER-MANAGER]`: Logs from the browser instance manager
+- `[REQUEST]`: Logs related to HTTP request details
+- `[RESPONSE]`: Logs related to HTTP response details
+
+## License
+
+MIT
+
+---
+
+Updated by lmcc-dev
