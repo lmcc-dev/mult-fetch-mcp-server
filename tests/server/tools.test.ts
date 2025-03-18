@@ -259,6 +259,107 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     expect(result.content[0]).toHaveProperty('text', 'mock content');
   });
   
+  test('应该正确处理带有分块ID的请求 (Should handle request with chunk ID correctly)', async () => {
+    // 调用被测试的函数
+    registerTools(mockServer as unknown as Server);
+    
+    // 获取注册的处理程序
+    const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
+    
+    // 设置模拟返回值，模拟分块返回
+    (fetchWithAutoDetect as Mock).mockResolvedValue({
+      content: [{ 
+        type: 'text', 
+        text: 'chunk content',
+        metadata: {
+          chunkInfo: {
+            isChunked: true,
+            chunkId: 'test-chunk-id',
+            chunkIndex: 1,
+            totalChunks: 3
+          }
+        }
+      }],
+      isError: false
+    });
+    
+    // 创建请求对象，包含分块ID和索引
+    const request = {
+      params: {
+        name: 'fetch_html',
+        arguments: {
+          url: 'https://example.com',
+          chunkId: 'test-chunk-id',
+          chunkIndex: 1
+        }
+      }
+    };
+    
+    // 调用处理程序
+    const result = await callToolHandler(request);
+    
+    // 验证 fetchWithAutoDetect 被调用，且参数正确，包含分块信息
+    expect(fetchWithAutoDetect).toHaveBeenCalledWith(
+      { 
+        url: 'https://example.com', 
+        method: 'fetch_html',
+        chunkId: 'test-chunk-id',
+        chunkIndex: 1
+      },
+      'html'
+    );
+    
+    // 验证返回结果包含分块信息
+    expect(result).toHaveProperty('content');
+    expect(result).toHaveProperty('isError', false);
+    expect(result.content[0]).toHaveProperty('type', 'text');
+    expect(result.content[0]).toHaveProperty('text', 'chunk content');
+    expect(result.content[0]).toHaveProperty('metadata');
+    expect(result.content[0].metadata).toHaveProperty('chunkInfo');
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('isChunked', true);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('chunkId', 'test-chunk-id');
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('chunkIndex', 1);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('totalChunks', 3);
+  });
+  
+  test('应该正确处理启用内容分割的请求 (Should handle request with content splitting enabled)', async () => {
+    // 调用被测试的函数
+    registerTools(mockServer as unknown as Server);
+    
+    // 获取注册的处理程序
+    const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
+    
+    // 创建请求对象，启用内容分割
+    const request = {
+      params: {
+        name: 'fetch_html',
+        arguments: {
+          url: 'https://example.com',
+          enableContentSplitting: true,
+          contentSizeLimit: 1024 // 1KB
+        }
+      }
+    };
+    
+    // 调用处理程序
+    const result = await callToolHandler(request);
+    
+    // 验证 fetchWithAutoDetect 被调用，且参数正确
+    expect(fetchWithAutoDetect).toHaveBeenCalledWith(
+      { 
+        url: 'https://example.com', 
+        method: 'fetch_html',
+        enableContentSplitting: true,
+        contentSizeLimit: 1024
+      },
+      'html'
+    );
+    
+    // 验证返回结果
+    expect(result).toHaveProperty('content');
+    expect(result).toHaveProperty('isError', false);
+  });
+  
   test('应该正确处理未知工具调用 (Should handle unknown tool call correctly)', async () => {
     // 调用被测试的函数
     registerTools(mockServer as unknown as Server);
