@@ -5,6 +5,7 @@
  */
 
 import { log, COMPONENTS } from '../logger.js';
+import { TemplateUtils } from './TemplateUtils.js';
 
 /**
  * 内容大小管理器 (Content size manager)
@@ -131,26 +132,32 @@ export class ContentSizeManager {
     
     // 这里只添加占位符，实际的 chunkId 会在 ChunkManager 中替换 (Add placeholders here, actual chunkId will be replaced in ChunkManager)
     const finalChunks = rawChunks.map((chunk, index) => {
-      // 判断是否为最后一个分段 (Check if it's the last chunk)
-      const isLastChunk = index === totalChunks - 1;
-      
-      if (isLastChunk) {
-        // 最后一个分段使用不同的模板，不包含获取下一个分段的提示
-        // Last chunk uses a different template without prompt for next chunk
-        const chunkInfo = lastChunkInfoTemplate
-          .replace(/{{current}}/g, (index + 1).toString())
-          .replace(/{{total}}/g, totalChunks.toString());
+      if (index === totalChunks - 1) {
+        // 最后一个分段，不添加下一个分段的索引 (Last chunk, don't add next index)
+        // 创建替换项 (Create replacements)
+        const replacements: Record<string, string> = {
+          current: (index + 1).toString(),
+          total: totalChunks.toString()
+        };
+        
+        // 使用TemplateUtils替换占位符 (Use TemplateUtils to replace placeholders)
+        const chunkInfo = TemplateUtils.replaceTemplateVariables(lastChunkInfoTemplate, replacements);
         
         return chunk + chunkInfo;
       } else {
         // 非最后一个分段，添加下一个分段的索引 (Not the last chunk, add next index)
         const nextIndex = index + 1;
         
-        const chunkInfo = chunkInfoTemplate
-          .replace(/{{current}}/g, (index + 1).toString())
-          .replace(/{{total}}/g, totalChunks.toString())
-          .replace(/{{chunkId}}/g, '{{chunkId}}') // 保留占位符 (Keep placeholder)
-          .replace(/{{nextIndex}}/g, nextIndex.toString());
+        // 创建替换项 (Create replacements)
+        const replacements: Record<string, string> = {
+          current: (index + 1).toString(),
+          total: totalChunks.toString(),
+          chunkId: '{{chunkId}}', // 保留占位符 (Keep placeholder)
+          nextIndex: nextIndex.toString()
+        };
+        
+        // 使用TemplateUtils替换占位符 (Use TemplateUtils to replace placeholders)
+        const chunkInfo = TemplateUtils.replaceTemplateVariables(chunkInfoTemplate, replacements);
         
         return chunk + chunkInfo;
       }

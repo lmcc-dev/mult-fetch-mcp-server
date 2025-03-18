@@ -63,6 +63,10 @@ export const RequestPayloadSchema = z.object({
   scrollToBottom: z.boolean().optional(),
   closeBrowser: z.boolean().optional(),
   saveCookies: z.boolean().optional(),
+  contentSizeLimit: z.number().optional(),
+  enableContentSplitting: z.boolean().optional(),
+  chunkId: z.string().optional(),
+  chunkIndex: z.number().optional(),
 }).merge(BrowserParamsSchema);
 
 export type RequestPayload = z.infer<typeof RequestPayloadSchema>;
@@ -74,6 +78,11 @@ export type RequestPayload = z.infer<typeof RequestPayloadSchema>;
 export interface FetchResponse {
   content: Array<{ type: string; text: string }>;
   isError: boolean;
+  isChunked?: boolean;
+  totalChunks?: number;
+  currentChunk?: number;
+  chunkId?: string;
+  hasMoreChunks?: boolean;
 }
 
 /**
@@ -125,5 +134,6 @@ export interface IFetcher {
   html(requestPayload: RequestPayload): Promise<any>;
   json(requestPayload: RequestPayload): Promise<any>;
   txt(requestPayload: RequestPayload): Promise<any>;
+  plainText(requestPayload: RequestPayload): Promise<any>;
   markdown(requestPayload: RequestPayload): Promise<any>;
 } 
