@@ -17,7 +17,7 @@ export default {
   
   // 系统代理相关 (System proxy related)
   [NODE_KEYS.checkingProxyEnv]: 'Checking proxy environment variables',
-  [NODE_KEYS.envVarValue]: 'Environment variable {{envVar}} = {{value}}',
+  [NODE_KEYS.envVarValue]: 'Environment variable {{envVar}} value: {{value}}',
   [NODE_KEYS.foundSystemProxy]: 'Found system proxy: {{proxy}}',
   [NODE_KEYS.checkingSystemEnvVars]: 'Checking system environment variables, platform: {{platform}}',
   [NODE_KEYS.windowsEnvVars]: 'Windows environment variables: {{output}}',
@@ -67,5 +67,7 @@ export default {
   [NODE_KEYS.startingMarkdownFetch]: 'Starting Markdown fetch',
   [NODE_KEYS.creatingTurndown]: 'Creating Turndown service',
   [NODE_KEYS.convertingToMarkdown]: 'Converting HTML to Markdown',
-  [NODE_KEYS.markdownContentLength]: 'Markdown content length: {{length}} bytes'
+  [NODE_KEYS.markdownContentLength]: 'Markdown content length: {{length}} bytes',
+  [NODE_KEYS.contentSplit]: 'Content split into {{chunks}} chunks',
+  [NODE_KEYS.gettingChunk]: 'Getting chunk content, ID: {{chunkId}}, index: {{chunkIndex}}'
 }; 

@@ -38,6 +38,25 @@ export const CLIENT_KEYS = (() => {
     fetchSuccessful: keyGen('fetchSuccessful'),
     contentLength: keyGen('contentLength'),
     
+    // 分段内容相关 (Chunked content related)
+    hasMoreChunks: keyGen('hasMoreChunks'),
+    nextChunkCommand: keyGen('nextChunkCommand'),
+    chunkInfoSaved: keyGen('chunkInfoSaved'),
+    chunkInfoSaveError: keyGen('chunkInfoSaveError'),
+    chunkInfoLoaded: keyGen('chunkInfoLoaded'),
+    chunkInfoLoadError: keyGen('chunkInfoLoadError'),
+    noChunkInfo: keyGen('noChunkInfo'),
+    fetchingNextChunk: keyGen('fetchingNextChunk'),
+    chunkUsageInfo: keyGen('chunkUsageInfo'),
+    invalidChunkIndex: keyGen('invalidChunkIndex'),
+    missingMethodOrUrl: keyGen('missingMethodOrUrl'),
+    fetchingAllChunks: keyGen('fetchingAllChunks'),
+    fetchingChunk: keyGen('fetchingChunk'),
+    fetchChunkFailed: keyGen('fetchChunkFailed'),
+    allChunksFetched: keyGen('allChunksFetched'),
+    allChunksCommand: keyGen('allChunksCommand'),
+    allChunksUsageInfo: keyGen('allChunksUsageInfo'),
+    
     // 调试相关 (Debug related)
     debugMode: keyGen('debugMode'),
     debugInfo: keyGen('debugInfo'),
@@ -69,6 +88,14 @@ export const CLIENT_KEYS = (() => {
     browserModeFetchFailed: keyGen('browserModeFetchFailed'),
     browserModeFetchSuccess: keyGen('browserModeFetchSuccess'),
     serverClosed: keyGen('serverClosed'),
-    proxySet: keyGen('proxySet')
+    proxySet: keyGen('proxySet'),
+    // 模式相关 (Mode related)
+    usingStandardMode: keyGen('usingStandardMode'),
+    usingBrowserMode: keyGen('usingBrowserMode'),
+    
+    // 参数相关 (Parameters related)
+    sendingParameters: keyGen('sendingParameters'),
+    limitingChunks: keyGen('limitingChunks'),
+    maxChunksUsageInfo: keyGen('maxChunksUsageInfo')
   } as const;
 })(); 

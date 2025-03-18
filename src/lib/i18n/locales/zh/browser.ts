@@ -22,7 +22,10 @@ export default {
   [BROWSER_KEYS.scrollingToBottom]: "自动滚动页面...",
   [BROWSER_KEYS.scrollError]: "滚动时出错: {{error}}",
   [BROWSER_KEYS.gettingContent]: "获取页面内容...",
-  [BROWSER_KEYS.contentLength]: "内容长度: {{length}} 字节",
+  [BROWSER_KEYS.contentLength]: "内容长度: {{length}}字节",
+  [BROWSER_KEYS.contentTruncated]: "内容已从 {{originalLength}} 字节截断至 {{truncatedLength}} 字节",
+  [BROWSER_KEYS.contentSplit]: "内容已分段，共 {{chunks}} 个分段",
+  [BROWSER_KEYS.startingHtmlFetch]: "开始获取HTML",
   
   // Cookie 相关 (Cookie related)
   [BROWSER_KEYS.savingCookies]: "保存域名的 Cookie: {{domain}}",
@@ -34,19 +37,18 @@ export default {
   // 错误相关 (Error related)
   [BROWSER_KEYS.errorLoadingCookies]: "加载 Cookie 错误: {{error}}",
   [BROWSER_KEYS.errorSavingCookies]: "保存 Cookie 错误: {{error}}",
-  [BROWSER_KEYS.errorNavigating]: "导航到 URL 错误: {{error}}",
+  [BROWSER_KEYS.errorNavigating]: "导航到 {{url}} 错误: {{error}}",
   [BROWSER_KEYS.errorGettingContent]: "获取内容错误: {{error}}",
   [BROWSER_KEYS.errorClosingBrowser]: "关闭浏览器错误: {{error}}",
   [BROWSER_KEYS.errorCreatingPage]: "创建页面错误: {{error}}",
   [BROWSER_KEYS.closingError]: "浏览器关闭过程中出错: {{error}}",
   
   // 额外的浏览器相关键 (Additional browser related keys)
-  [BROWSER_KEYS.waiting]: "浏览器正在启动，请等待...",
+  [BROWSER_KEYS.waiting]: "等待 {{ms}}ms",
   [BROWSER_KEYS.startupSuccess]: "浏览器启动成功",
   [BROWSER_KEYS.navigating]: "导航到 URL: {{url}}",
   [BROWSER_KEYS.scrolling]: "自动滚动页面...",
   [BROWSER_KEYS.scrollCompleted]: "自动滚动完成",
-  [BROWSER_KEYS.contentTruncated]: "内容过大，正在截断...",
   [BROWSER_KEYS.pageClosed]: "页面已关闭",
   [BROWSER_KEYS.fetchError]: "浏览器获取错误: {{error}}",
   [BROWSER_KEYS.highMemory]: "检测到高内存使用: {{usage}}MB",
@@ -66,11 +68,15 @@ export default {
   [BROWSER_KEYS.cloudflareError]: "Cloudflare 错误: {{error}}",
   [BROWSER_KEYS.continuingWithoutBypass]: "继续而不绕过 Cloudflare",
   [BROWSER_KEYS.unableToBypassCloudflare]: "无法绕过 Cloudflare 保护",
+  [BROWSER_KEYS.cloudflareBypass]: "尝试绕过 Cloudflare 保护",
+  [BROWSER_KEYS.cloudflareBypassSuccess]: "已成功绕过 Cloudflare 保护",
+  [BROWSER_KEYS.cloudflareBypassFailed]: "绕过 Cloudflare 保护失败: {{error}}",
+  [BROWSER_KEYS.cloudflareBypassNotNeeded]: "继续而不绕过 Cloudflare",
   
   // 获取和重试相关 (Fetch and retry related)
   [BROWSER_KEYS.fetchingWithRetry]: "重试获取: 第 {{attempt}} 次，共 {{maxAttempts}} 次",
   [BROWSER_KEYS.memoryUsage]: "当前内存使用: {{usage}}MB",
-  [BROWSER_KEYS.memoryTooHigh]: "内存使用过高: {{usage}}MB",
+  [BROWSER_KEYS.memoryTooHigh]: "内存使用过高: 堆使用 {{heapUsed}}MB，堆总计 {{heapTotal}}MB，RSS {{rss}}MB",
   [BROWSER_KEYS.contentTooLarge]: "内容过大: {{size}} 字节",
   [BROWSER_KEYS.failedToParseJSON]: "解析 JSON 失败: {{error}}",
   [BROWSER_KEYS.startingBrowserFetchForMarkdown]: "开始浏览器获取 Markdown",
@@ -90,5 +96,38 @@ export default {
   [BROWSER_KEYS.reusingExistingBrowser]: "重用现有浏览器实例",
   [BROWSER_KEYS.startingBrowser]: "启动浏览器...",
   [BROWSER_KEYS.browserStarted]: "浏览器已启动",
-  [BROWSER_KEYS.browserStartError]: "浏览器启动错误: {{error}}"
+  [BROWSER_KEYS.browserStartError]: "浏览器启动错误: {{error}}",
+  
+  // Fetch 相关 (Fetch related)
+  [BROWSER_KEYS.htmlFetchError]: "获取 HTML 错误: {{error}}",
+  [BROWSER_KEYS.jsonFetchError]: "获取 JSON 错误: {{error}}",
+  [BROWSER_KEYS.txtFetchError]: "获取文本错误: {{error}}",
+  [BROWSER_KEYS.markdownFetchError]: "获取 Markdown 错误: {{error}}",
+  [BROWSER_KEYS.creatingTurndown]: "创建 Turndown 服务",
+  [BROWSER_KEYS.convertingToMarkdown]: "将 HTML 转换为 Markdown",
+  [BROWSER_KEYS.markdownContentLength]: "Markdown 内容长度: {{length}} 字节",
+  [BROWSER_KEYS.startingJsonFetch]: "开始获取 JSON",
+  [BROWSER_KEYS.startingTxtFetch]: "开始获取文本",
+  [BROWSER_KEYS.startingMarkdownFetch]: "开始获取 Markdown",
+  [BROWSER_KEYS.jsonParsed]: "JSON 解析成功",
+  [BROWSER_KEYS.jsonParseError]: "解析 JSON 错误: {{error}}",
+  
+  // 代理相关 (Proxy related)
+  [BROWSER_KEYS.proxyConnected]: "代理已连接",
+  [BROWSER_KEYS.proxyError]: "代理错误: {{error}}",
+  
+  // 响应相关 (Response related)
+  [BROWSER_KEYS.responseStatus]: "响应状态: {{status}}",
+  [BROWSER_KEYS.responseError]: "响应错误: {{status}} {{statusText}}",
+  [BROWSER_KEYS.responseSuccess]: "响应成功",
+  [BROWSER_KEYS.responseRedirect]: "响应重定向到: {{location}}",
+  [BROWSER_KEYS.responseTimeout]: "响应超时，超过 {{timeout}}ms",
+  
+  // 错误处理 (Error handling)
+  [BROWSER_KEYS.errorResponse]: "错误响应: {{status}}",
+  [BROWSER_KEYS.errorResponseBody]: "错误响应内容: {{body}}",
+  [BROWSER_KEYS.accessDenied]: "访问被拒绝: {{error}}",
+  [BROWSER_KEYS.timeoutError]: "超时错误: {{error}}",
+  [BROWSER_KEYS.networkError]: "网络错误: {{error}}",
+  [BROWSER_KEYS.unknownError]: "未知错误: {{error}}"
 }; 

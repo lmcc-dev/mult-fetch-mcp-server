@@ -67,11 +67,13 @@ export default {
   
   // 文本获取相关 (Text fetch related)
   [NODE_KEYS.startingTxtFetch]: "开始获取纯文本",
-  [NODE_KEYS.textContentLength]: "文本内容长度: {{length}}字节",
+  [NODE_KEYS.textContentLength]: "Text内容长度: {{length}}字节",
   
   // Markdown 获取相关 (Markdown fetch related)
   [NODE_KEYS.startingMarkdownFetch]: "开始获取Markdown",
   [NODE_KEYS.creatingTurndown]: "创建Turndown服务",
   [NODE_KEYS.convertingToMarkdown]: "将HTML转换为Markdown",
-  [NODE_KEYS.markdownContentLength]: "Markdown内容长度: {{length}}字节"
+  [NODE_KEYS.markdownContentLength]: "Markdown内容长度: {{length}}字节",
+  [NODE_KEYS.contentSplit]: '内容已分段，共{{chunks}}个分段',
+  [NODE_KEYS.gettingChunk]: '获取分段内容，ID: {{chunkId}}, 索引: {{chunkIndex}}'
 }; 

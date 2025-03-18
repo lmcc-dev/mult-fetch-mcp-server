@@ -34,6 +34,27 @@ export default {
   [CLIENT_KEYS.fetchSuccessful]: 'Fetch successful',
   [CLIENT_KEYS.contentLength]: 'Content length: {{length}} bytes',
   
+  // 分段内容相关 (Chunked content related)
+  [CLIENT_KEYS.hasMoreChunks]: 'Content is chunked: {{current}}/{{total}} chunks',
+  [CLIENT_KEYS.nextChunkCommand]: 'To fetch the next chunk, run: {{command}}',
+  [CLIENT_KEYS.chunkInfoSaved]: 'Chunk information saved to {{file}}',
+  [CLIENT_KEYS.chunkInfoSaveError]: 'Failed to save chunk information: {{error}}',
+  [CLIENT_KEYS.chunkInfoLoaded]: 'Chunk information loaded from {{file}}',
+  [CLIENT_KEYS.chunkInfoLoadError]: 'Failed to load chunk information: {{error}}',
+  [CLIENT_KEYS.noChunkInfo]: 'No previous chunk information found',
+  [CLIENT_KEYS.fetchingNextChunk]: 'Fetching next chunk ({{chunkIndex}}/{{total}})',
+  [CLIENT_KEYS.chunkUsageInfo]: 'For chunked content: Use --all-chunks to fetch all chunks at once',
+  [CLIENT_KEYS.invalidChunkIndex]: 'Invalid chunk index: {{index}}',
+  [CLIENT_KEYS.missingMethodOrUrl]: 'Missing method or URL parameters',
+  [CLIENT_KEYS.fetchingAllChunks]: 'Fetching all chunks, total: {{total}}',
+  [CLIENT_KEYS.fetchingChunk]: 'Fetching chunk {{index}}/{{total}}',
+  [CLIENT_KEYS.fetchChunkFailed]: 'Failed to fetch chunk {{index}}: {{error}}',
+  [CLIENT_KEYS.allChunksFetched]: 'All chunks fetched, total: {{total}}',
+  [CLIENT_KEYS.allChunksCommand]: 'To fetch all chunks at once, run: {{command}}',
+  [CLIENT_KEYS.allChunksUsageInfo]: 'Use --all-chunks to fetch all chunks in a single command',
+  [CLIENT_KEYS.limitingChunks]: 'Limiting chunks to {{limit}} (total: {{total}})',
+  [CLIENT_KEYS.maxChunksUsageInfo]: 'Use --max-chunks=N to limit the number of chunks to fetch (default: {{default}})',
+  
   // 调试相关 (Debug related)
   [CLIENT_KEYS.debugMode]: 'Debug mode: {{enabled}}',
   [CLIENT_KEYS.debugInfo]: 'Debug info: {{info}}',
@@ -67,5 +88,12 @@ export default {
   [CLIENT_KEYS.browserModeFetchFailed]: 'Browser mode fetch failed: {{error}}',
   [CLIENT_KEYS.browserModeFetchSuccess]: 'Browser mode fetch successful',
   [CLIENT_KEYS.serverClosed]: 'Server closed',
-  [CLIENT_KEYS.proxySet]: 'Proxy set: {{proxy}}'
+  [CLIENT_KEYS.proxySet]: 'Proxy set: {{proxy}}',
+  
+  // 模式相关 (Mode related)
+  [CLIENT_KEYS.usingStandardMode]: 'Using standard mode',
+  [CLIENT_KEYS.usingBrowserMode]: 'Using browser mode',
+  
+  // 参数相关 (Parameters related)
+  [CLIENT_KEYS.sendingParameters]: 'Sending parameters to MCP: {{params}}'
 }; 
