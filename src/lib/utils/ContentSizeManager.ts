@@ -14,9 +14,9 @@ import { TemplateUtils } from './TemplateUtils.js';
 export class ContentSizeManager {
   /**
    * 默认大小限制，单位为字节 (Default size limit in bytes)
-   * 默认为100KB (Default is 100KB)
+   * 默认为50KB (Default is 50KB)
    */
-  private static readonly DEFAULT_SIZE_LIMIT = 100 * 1024; // 100KB
+  private static readonly DEFAULT_SIZE_LIMIT = 50 * 1024; // 50KB
 
   /**
    * 获取默认大小限制 (Get default size limit)
@@ -105,21 +105,32 @@ export class ContentSizeManager {
    * @param content 原始内容 (Original content)
    * @param sizeLimit 每个片段的大小限制，单位为字节 (Size limit for each chunk in bytes)
    * @param debug 是否启用调试模式 (Whether debug mode is enabled)
+   * @param offset 当前偏移量，用于确定是首次请求还是后续请求 (Current offset, used to determine if it's initial or subsequent request)
    * @returns 内容片段数组 (Array of content chunks)
    */
-  public static splitContentIntoChunks(content: string, sizeLimit: number = this.DEFAULT_SIZE_LIMIT, debug: boolean = false): string[] {
-    // 分段信息模板 (Chunk information template)
-    const chunkInfoTemplate = '\n\n=== SYSTEM NOTE ===\nContent is too long and has been split. This is part {{current}} of {{total}}.\nTo view the next part, use the same tool function with parameters chunkId="{{chunkId}}" and chunkIndex={{nextIndex}}\n===================';
+  public static splitContentIntoChunks(
+    content: string,
+    sizeLimit: number = this.DEFAULT_SIZE_LIMIT,
+    debug: boolean = false,
+    offset: number = 0
+  ): { chunks: string[], totalBytes: number } {
+    // 计算内容总字节大小 (Calculate total size of content in bytes)
+    const totalBytes = Buffer.byteLength(content, 'utf8');
     
-    // 最后一个分段的信息模板 (Last chunk information template)
-    const lastChunkInfoTemplate = '\n\n=== SYSTEM NOTE ===\nContent is too long and has been split. This is part {{current}} of {{total}}.\nThis is the last part of the content.\n===================';
+    // 使用TemplateUtils中的常量和方法生成示例模板以计算大小
+    // (Use constants and methods from TemplateUtils to generate example templates for size calculation)
+    const sampleChunkId = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+    const samplePrompt = TemplateUtils.generateSizeBasedChunkPrompt(
+      50000, // fetchedBytes 
+      totalBytes, 
+      sampleChunkId, 
+      totalBytes - 50000, // remainingBytes
+      Math.ceil((totalBytes - 50000) / sizeLimit), // estimatedRequests
+      sizeLimit,
+      true // isFirstRequest
+    );
     
-    // 计算分段信息的最大大小 (Calculate maximum size of chunk information)
-    const maxChunkInfoSize = Buffer.byteLength(chunkInfoTemplate
-      .replace('{{current}}', '999')
-      .replace('{{total}}', '999')
-      .replace('{{chunkId}}', 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
-      .replace('{{nextIndex}}', '999'), 'utf8');
+    const maxChunkInfoSize = Buffer.byteLength(samplePrompt, 'utf8');
     
     // 计算实际可用的分段大小 (Calculate actual available chunk size)
     const effectiveChunkSize = sizeLimit - maxChunkInfoSize;
@@ -127,42 +138,16 @@ export class ContentSizeManager {
     // 分割内容 (Split content)
     const rawChunks = this.splitContentIntoRawChunks(content, effectiveChunkSize, debug);
     
-    // 添加分段信息 (Add chunk information)
-    const totalChunks = rawChunks.length;
+    // 不需要添加分段信息，这将在加载时动态添加
+    // (No need to add chunk information, it will be added dynamically when loading)
     
-    // 这里只添加占位符，实际的 chunkId 会在 ChunkManager 中替换 (Add placeholders here, actual chunkId will be replaced in ChunkManager)
-    const finalChunks = rawChunks.map((chunk, index) => {
-      if (index === totalChunks - 1) {
-        // 最后一个分段，不添加下一个分段的索引 (Last chunk, don't add next index)
-        // 创建替换项 (Create replacements)
-        const replacements: Record<string, string> = {
-          current: (index + 1).toString(),
-          total: totalChunks.toString()
-        };
-        
-        // 使用TemplateUtils替换占位符 (Use TemplateUtils to replace placeholders)
-        const chunkInfo = TemplateUtils.replaceTemplateVariables(lastChunkInfoTemplate, replacements);
-        
-        return chunk + chunkInfo;
-      } else {
-        // 非最后一个分段，添加下一个分段的索引 (Not the last chunk, add next index)
-        const nextIndex = index + 1;
-        
-        // 创建替换项 (Create replacements)
-        const replacements: Record<string, string> = {
-          current: (index + 1).toString(),
-          total: totalChunks.toString(),
-          chunkId: '{{chunkId}}', // 保留占位符 (Keep placeholder)
-          nextIndex: nextIndex.toString()
-        };
-        
-        // 使用TemplateUtils替换占位符 (Use TemplateUtils to replace placeholders)
-        const chunkInfo = TemplateUtils.replaceTemplateVariables(chunkInfoTemplate, replacements);
-        
-        return chunk + chunkInfo;
-      }
-    });
+    log('contentSize.splitIntoChunks', debug, { 
+      totalChunks: rawChunks.length, 
+      totalBytes,
+      effectiveChunkSize,
+      sizeLimit
+    }, COMPONENTS.CONTENT_SIZE);
     
-    return finalChunks;
+    return { chunks: rawChunks, totalBytes };
   }
 } 

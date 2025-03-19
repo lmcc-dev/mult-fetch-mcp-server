@@ -59,6 +59,9 @@ export const RequestPayloadSchema = z.object({
   closeBrowser: z.boolean().optional(),
   chunkId: z.string().optional(),
   chunkIndex: z.number().optional(),
+  contentSizeLimit: z.number().optional(),
+  startCursor: z.number().optional(),
+  enableContentSplitting: z.boolean().optional(),
 }).merge(BrowserParamsSchema);
 
 export type RequestPayload = z.infer<typeof RequestPayloadSchema>; 
