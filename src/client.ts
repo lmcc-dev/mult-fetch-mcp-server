@@ -14,6 +14,7 @@ import { execSync } from 'child_process';
 import { isAccessDeniedError, isNetworkError } from './lib/utils/errorDetection.js';
 import fs from 'fs';
 import os from 'os';
+import { ContentSizeManager } from './lib/utils/ContentSizeManager.js';
 
 // 获取当前文件的目录路径 (Get the directory path of the current file)
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +33,10 @@ interface ChunkInfo {
   currentChunk: number;
   totalChunks: number;
   params: RequestPayload;
+  // 添加字节级分块相关字段 (Add byte-level chunking related fields)
+  startCursor?: number;
+  fetchedBytes?: number;
+  totalBytes?: number;
 }
 
 // 添加最大分块数限制，默认为10 (Add maximum chunk limit, default is 10)
@@ -173,16 +178,55 @@ function parseChunkInfo(result: any): any {
   
   const content = result.content[0].text;
   const chunkIdMatch = content.match(/chunkId="([^"]+)"/);
-  const totalChunksMatch = content.match(/Part \d+ of (\d+)/);
+  
+  // 更新正则表达式，识别新的基于字节的分块信息 (Update regex to identify new byte-based chunking info)
+  const byteInfoMatch = content.match(/(\d+) bytes retrieved \((\d+)% of total (\d+) bytes\)/);
+  const remainingBytesMatch = content.match(/(\d+) bytes remaining/);
+  
+  // 存在chunkId但找不到分块信息，可能是老的格式 (ChunkId exists but no chunking info, might be old format)
+  const partMatch = content.match(/This is part (\d+) of (\d+)/);
   
   if (!chunkIdMatch) {
     return result;
   }
   
   const chunkId = chunkIdMatch[1];
-  const currentChunk = 0; // 第一段的索引为0
-  const totalChunks = totalChunksMatch ? parseInt(totalChunksMatch[1], 10) : 1;
-  const hasMoreChunks = totalChunks > 1;
+  let currentChunk = 0; 
+  let totalChunks = 1;
+  let hasMoreChunks = false;
+  let fetchedBytes = 0;
+  let totalBytes = 0;
+  let remainingBytes = 0;
+  
+  // 检查是否包含字节级分块信息 (Check if contains byte-level chunking info)
+  if (byteInfoMatch) {
+    fetchedBytes = parseInt(byteInfoMatch[1], 10);
+    const percentage = parseInt(byteInfoMatch[2], 10);
+    totalBytes = parseInt(byteInfoMatch[3], 10);
+    
+    if (remainingBytesMatch) {
+      remainingBytes = parseInt(remainingBytesMatch[1], 10);
+    } else {
+      remainingBytes = totalBytes - fetchedBytes;
+    }
+    
+    // 如果还有剩余字节，表示有更多分块 (If there are remaining bytes, indicates more chunks)
+    hasMoreChunks = remainingBytes > 0;
+    
+    // 估算总分块数 (Estimate total chunks)
+    if (fetchedBytes > 0) {
+      // 估算总块数，基于已获取的字节数 (Estimate total chunks based on fetched bytes)
+      totalChunks = Math.ceil(totalBytes / fetchedBytes);
+      // 当前是第几块 (Current chunk number)
+      currentChunk = Math.floor(fetchedBytes / (totalBytes / totalChunks));
+    }
+  }
+  // 如果没有字节级信息，使用旧的部分匹配 (If no byte-level info, use old part matching)
+  else if (partMatch) {
+    currentChunk = parseInt(partMatch[1], 10) - 1; // 转换为0索引 (Convert to 0-based index)
+    totalChunks = parseInt(partMatch[2], 10);
+    hasMoreChunks = currentChunk < totalChunks - 1;
+  }
   
   return {
     ...result,
@@ -190,7 +234,10 @@ function parseChunkInfo(result: any): any {
     hasMoreChunks,
     chunkId,
     currentChunk,
-    totalChunks
+    totalChunks,
+    fetchedBytes,
+    totalBytes,
+    remainingBytes
   };
 }
 
@@ -410,9 +457,7 @@ async function main() {
     
     // 调试输出，查看响应结构 (Debug output, check response structure)
     if (debug) {
-      console.log('\n--- 响应结构 (Response structure) ---');
-      console.log(JSON.stringify(result, null, 2));
-      console.log('--- 响应结构结束 (End of response structure) ---\n');
+      log('client.responseStructure', debug, { structure: JSON.stringify(result, null, 2) }, COMPONENTS.CLIENT);
     }
     
     // 从响应内容中解析分段信息 (Parse chunk information from response content)
@@ -423,27 +468,93 @@ async function main() {
     
     if (result.content && result.content[0] && result.content[0].text) {
       const content = result.content[0].text;
-      // 更新正则表达式以匹配系统提示中的分段信息
       // Update regex to match chunk information in system notes
-      const chunkIdMatch = content.match(/chunkId="([^"]+)"/);
-      const partMatch = content.match(/This is part (\d+) of (\d+)/);
+      const systemNoteMatch = content.match(/=== SYSTEM NOTE ===\s*([\s\S]*?)\s*={19}/);
+      const chunkIdMatch = systemNoteMatch ? systemNoteMatch[1].match(/chunkId(?:=|\s*[:=]\s*|\s*)?["']?([^"',\s]+)["']?/i) : null;
+      
+      // 匹配字节级分块信息 (Match byte-level chunking information)
+      // 更新正则表达式来适应新的系统注释格式 (Update regex to adapt to new system note format)
+      const bytesRetrievedMatch = systemNoteMatch ? 
+        systemNoteMatch[1].match(/(?:You'?(?:ve|have))?\s*retrieved\s*(\d+(?:,\d+)*)\s*bytes\s*\((\d+)%\s*of\s*(?:the\s*)?total\s*(\d+(?:,\d+)*)\s*bytes\)/) : null;
+      
+      // 尝试兼容新旧两种格式 (Try to be compatible with both new and old formats)
+      const remainingBytesMatch = systemNoteMatch ? 
+        systemNoteMatch[1].match(/(\d+(?:,\d+)*)\s*bytes\s*(?:are\s*)?remaining/) : null;
+      
+      const moreRequestsMatch = systemNoteMatch ? 
+        systemNoteMatch[1].match(/(?:a|ap)proximately\s*(\d+)\s*more\s*requests?\s*(?:are\s*)?needed/) : null;
+      
+      // 旧版分块信息匹配 (Old version chunking information matching)
+      const partMatch = systemNoteMatch ? 
+        systemNoteMatch[1].match(/This is part (\d+) of (\d+)/) : null;
       
       if (chunkIdMatch) {
         chunkId = chunkIdMatch[1];
-        if (partMatch) {
+        
+        // 判断是否有字节级分块信息 (Check if there's byte-level chunking info)
+        if (bytesRetrievedMatch) {
+          // 移除数字中的逗号 (Remove commas from numbers)
+          const fetchedBytesStr = bytesRetrievedMatch[1].replace(/,/g, '');
+          const totalBytesStr = bytesRetrievedMatch[3].replace(/,/g, '');
+          
+          const fetchedBytes = parseInt(fetchedBytesStr, 10);
+          const percentage = parseInt(bytesRetrievedMatch[2], 10);
+          const totalBytes = parseInt(totalBytesStr, 10);
+          
+          let remainingBytes = 0;
+          if (remainingBytesMatch) {
+            remainingBytes = parseInt(remainingBytesMatch[1].replace(/,/g, ''), 10);
+          } else {
+            remainingBytes = totalBytes - fetchedBytes;
+          }
+          
+          // 如果还有剩余字节，表示有更多分块 (If there are remaining bytes, indicates more chunks)
+          hasMoreChunks = remainingBytes > 0;
+          
+          // 估算剩余的请求次数 (Estimate remaining requests)
+          let estimatedRemainingRequests = 0;
+          if (moreRequestsMatch) {
+            estimatedRemainingRequests = parseInt(moreRequestsMatch[1], 10);
+          } else if (fetchedBytes > 0) {
+            // 基于当前获取的字节数估算 (Estimate based on current fetched bytes)
+            estimatedRemainingRequests = Math.ceil(remainingBytes / fetchedBytes);
+          }
+          
+          // 估算总分块数 (Estimate total chunks)
+          totalChunks = 1 + estimatedRemainingRequests;
+          currentChunk = 0; // 当前是第一块 (Current is the first chunk)
+          
+          // 将字节信息添加到结果中 (Add byte information to result)
+          result.fetchedBytes = fetchedBytes;
+          result.totalBytes = totalBytes;
+          result.remainingBytes = remainingBytes;
+          
+          // 调试输出，查看解析后的分段信息 (Debug output, check parsed chunk information)
+          if (debug) {
+            log('client.parsedByteChunkInfo', debug, {
+              chunkId,
+              fetchedBytes,
+              totalBytes,
+              remainingBytes,
+              estimatedRemainingRequests
+            }, COMPONENTS.CLIENT);
+          }
+        }
+        // 尝试匹配旧版的分块格式 (Try to match old version chunking format)
+        else if (partMatch) {
           currentChunk = parseInt(partMatch[1], 10) - 1; // 转换为0索引 (Convert to 0-based index)
           totalChunks = parseInt(partMatch[2], 10);
           hasMoreChunks = currentChunk < totalChunks - 1;
-        }
-        
-        // 调试输出，查看解析后的分段信息 (Debug output, check parsed chunk information)
-        if (debug) {
-          console.log('\n--- 解析后的分段信息 (Parsed chunk information) ---');
-          console.log('chunkId:', chunkId);
-          console.log('currentChunk:', currentChunk);
-          console.log('totalChunks:', totalChunks);
-          console.log('hasMoreChunks:', hasMoreChunks);
-          console.log('--- 解析后的分段信息结束 (End of parsed chunk information) ---\n');
+          
+          // 调试输出，查看解析后的分段信息 (Debug output, check parsed chunk information)
+          if (debug) {
+            log('client.parsedChunkInfo', debug, {
+              chunkId,
+              currentChunk,
+              totalChunks,
+              hasMoreChunks
+            }, COMPONENTS.CLIENT);
+          }
         }
       }
     }
@@ -453,70 +564,123 @@ async function main() {
     
     // 如果启用了获取所有分段内容，并且结果包含分段信息 (If all chunks mode is enabled and result contains chunk information)
     if (allChunksFlag && hasMoreChunks && chunkId) {
-      // 计算实际要获取的分块数量 (Calculate actual number of chunks to fetch)
-      const actualChunksToFetch = Math.min(totalChunks - 1, maxChunks);
-      
-      log('client.fetchingAllChunks', debug, { total: totalChunks, fetching: actualChunksToFetch }, COMPONENTS.CLIENT);
-      
-      if (actualChunksToFetch < totalChunks - 1) {
-        log('client.limitingChunks', debug, { limit: maxChunks, total: totalChunks }, COMPONENTS.CLIENT);
-        console.log(`\n注意：内容共有 ${totalChunks} 段，但只获取前 ${maxChunks + 1} 段 (Note: Content has ${totalChunks} chunks, but only fetching first ${maxChunks + 1} chunks)`);
-        console.log(`要获取更多分段，请使用 --max-chunks=N 参数 (To fetch more chunks, use --max-chunks=N parameter)\n`);
-      }
-      
-      // 不再创建数组存储所有分段内容，而是获取后立即输出
-      // No longer create an array to store all chunks, output immediately after fetching
-      
-      // 获取剩余的分段内容 (Fetch remaining chunks)
-      for (let i = 1; i <= actualChunksToFetch; i++) {
-        log('client.fetchingChunk', debug, { index: i, total: totalChunks }, COMPONENTS.CLIENT);
-        
-        // 输出正在获取的提示信息 (Output fetching prompt)
-        console.log(`\n正在获取第 ${i+1}/${totalChunks} 段内容... (Fetching chunk ${i+1}/${totalChunks}...)`);
-        
-        // 准备获取下一段内容的参数 (Prepare parameters for fetching next chunk)
-        const nextChunkParams = {
-          ...params,
-          debug: debug,
-          method,
-          chunkId: chunkId,
-          chunkIndex: i,
-          closeBrowser: false // 获取后续分段时强制设置为false，避免重复关闭浏览器
-        };
-        
-        // 获取下一段内容 (Fetch next chunk)
-        const nextChunkResult = await smartFetch(nextChunkParams, client);
-        
-        // 如果获取失败，输出错误信息并退出 (If fetch fails, output error message and exit)
-        if (nextChunkResult.isError) {
-          log('client.fetchChunkFailed', debug, { index: i, error: nextChunkResult.content[0].text }, COMPONENTS.CLIENT);
-          console.log(`\n获取第 ${i+1} 段内容失败: ${nextChunkResult.content[0].text}\n`);
-          break;
+      try {
+        // 确保totalChunks的计算正确 (Ensure totalChunks calculation is correct)
+        if (result.totalBytes && result.fetchedBytes) {
+          // 字节级分块：根据总字节数和已获取字节数计算总块数
+          // Byte-level chunking: calculate total chunks based on total bytes and fetched bytes
+          const contentSizeLimit = params.contentSizeLimit || ContentSizeManager.getDefaultSizeLimit();
+          const remainingBytes = result.totalBytes - result.fetchedBytes;
+          // 计算剩余需要的块数，加上已获取的第一个块
+          // Calculate remaining chunks needed, plus the already fetched first chunk
+          totalChunks = Math.ceil(remainingBytes / contentSizeLimit) + 1;
+          
+          log('client.recalculatedTotalChunks', debug, { 
+            totalBytes: result.totalBytes,
+            fetchedBytes: result.fetchedBytes, 
+            remainingBytes: remainingBytes,
+            contentSizeLimit: contentSizeLimit,
+            totalChunks: totalChunks 
+          }, COMPONENTS.CLIENT);
         }
         
-        // 立即输出分段内容 (Output chunk immediately)
-        console.log(`\n--- 第 ${i+1} 段内容 (Chunk ${i+1}) ---\n`);
-        process.stdout.write(JSON.stringify(nextChunkResult, null, 2));
+        // 计算实际要获取的分块数量 (Calculate actual number of chunks to fetch)
+        const actualChunksToFetch = Math.min(totalChunks - 1, maxChunks);
         
-        // 输出分隔线，使输出更清晰 (Output separator for clarity)
-        console.log('\n' + '-'.repeat(80));
-      }
-      
-      // 输出所有分段内容获取完成的信息 (Output all chunks fetched message)
-      const fetchedChunks = Math.min(totalChunks, maxChunks + 1);
-      log('client.allChunksFetched', debug, { fetched: fetchedChunks, total: totalChunks }, COMPONENTS.CLIENT);
-      
-      if (fetchedChunks < totalChunks) {
-        console.log(`\n已获取 ${fetchedChunks}/${totalChunks} 段内容 (Fetched ${fetchedChunks}/${totalChunks} chunks)\n`);
-      } else {
-        console.log(`\n所有分段内容获取完成，共 ${totalChunks} 段 (All chunks fetched, total: ${totalChunks})\n`);
+        log('client.fetchingAllChunks', debug, { total: totalChunks, fetching: actualChunksToFetch }, COMPONENTS.CLIENT);
+        
+        if (actualChunksToFetch < totalChunks - 1) {
+          log('client.limitingChunks', debug, { limit: maxChunks, total: totalChunks }, COMPONENTS.CLIENT);
+          log('client.chunkLimitNotice', true, { total: totalChunks, fetching: maxChunks + 1 }, COMPONENTS.CLIENT);
+          log('client.chunkLimitHint', true, {}, COMPONENTS.CLIENT);
+        }
+        
+        // 获取剩余的分段内容 (Fetch remaining chunks)
+        let nextStartCursor = result.fetchedBytes || 0;  // 字节级分块的起始位置 (Starting position for byte-level chunking)
+        
+        for (let i = 1; i <= actualChunksToFetch; i++) {
+          log('client.fetchingChunk', debug, { index: i, total: totalChunks }, COMPONENTS.CLIENT);
+          
+          // 输出正在获取的提示信息 (Output fetching prompt)
+          log('client.fetchingChunkProgress', true, { current: i+1, total: totalChunks }, COMPONENTS.CLIENT);
+          
+          // 准备获取下一段内容的参数 (Prepare parameters for fetching next chunk)
+          const nextChunkParams = {
+            ...params,
+            debug: debug,
+            method,
+            chunkId: chunkId,
+            startCursor: nextStartCursor,  // 使用字节级起始位置 (Use byte-level starting position)
+            closeBrowser: false // 获取后续分段时强制设置为false，避免重复关闭浏览器
+          };
+          
+          // 获取下一段内容 (Fetch next chunk)
+          const nextChunkResult = await smartFetch(nextChunkParams, client);
+          
+          // 如果获取失败，输出错误信息并退出 (If fetch fails, output error message and exit)
+          if (nextChunkResult.isError) {
+            log('client.fetchChunkFailed', debug, { index: i, error: nextChunkResult.content[0].text }, COMPONENTS.CLIENT);
+            log('client.fetchChunkFailedError', true, { index: i+1, error: nextChunkResult.content[0].text }, COMPONENTS.CLIENT);
+            break;
+          }
+          
+          // 更新下一段的起始位置 (Update starting position for next chunk)
+          if (nextChunkResult.fetchedBytes) {
+            // 使用返回的已获取字节数更新起始位置 (Use returned fetched bytes to update starting position)
+            nextStartCursor = result.fetchedBytes + nextChunkResult.fetchedBytes;
+          } else if (nextChunkResult.content && nextChunkResult.content[0] && nextChunkResult.content[0].text) {
+            // 尝试从响应内容中解析起始位置 (Try to parse starting position from response content)
+            const content = nextChunkResult.content[0].text;
+            const systemNoteMatch = content.match(/=== SYSTEM NOTE ===\s*([\s\S]*?)\s*={19}/);
+            if (systemNoteMatch) {
+              const startCursorMatch = systemNoteMatch[1].match(/startCursor=(\d+)/);
+              if (startCursorMatch) {
+                nextStartCursor = parseInt(startCursorMatch[1], 10);
+              } else {
+                // 如果找不到明确的startCursor值，使用估算值 (If no explicit startCursor value found, use estimated value)
+                nextStartCursor += (params.contentSizeLimit || 1000);
+              }
+            } else {
+              // 如果没有字节级信息，则递增索引 (If no byte-level info, increment index)
+              nextStartCursor += (params.contentSizeLimit || 1000);
+            }
+          } else {
+            // 如果没有任何信息可用，则递增索引 (If no information available, increment index)
+            nextStartCursor += (params.contentSizeLimit || 1000);
+          }
+          
+          // 立即输出分段内容 (Output chunk immediately)
+          log('client.chunkContent', true, { index: i+1 }, COMPONENTS.CLIENT);
+          process.stdout.write(JSON.stringify(nextChunkResult, null, 2));
+          process.stdout.write('\n');  // 添加额外的换行符，使输出更清晰 (Add extra newline for clearer output)
+          
+          // 输出分隔线，使输出更清晰 (Output separator for clarity)
+          log('client.chunkSeparator', true, {}, COMPONENTS.CLIENT);
+        }
+        
+        // 输出所有分段内容获取完成的信息 (Output all chunks fetched message)
+        const fetchedChunks = Math.min(totalChunks, maxChunks + 1);
+        log('client.allChunksFetched', debug, { fetched: fetchedChunks, total: totalChunks }, COMPONENTS.CLIENT);
+        
+        if (fetchedChunks < totalChunks) {
+          log('client.partialChunksFetched', true, { fetched: fetchedChunks, total: totalChunks }, COMPONENTS.CLIENT);
+        } else {
+          log('client.completeChunksFetched', true, { total: totalChunks }, COMPONENTS.CLIENT);
+        }
+      } catch (error: any) {
+        // 处理获取分块内容过程中的错误 (Handle errors during chunk fetching)
+        log('client.fetchingChunksError', true, { error: String(error) }, COMPONENTS.CLIENT);
+        log('client.fetchingChunksErrorMessage', true, { error: String(error) }, COMPONENTS.CLIENT);
       }
     } 
     // 如果结果包含分段信息，但没有启用获取所有分段内容 (If result contains chunk information but all chunks mode is not enabled)
     else if (hasMoreChunks && chunkId) {
       log('client.hasMoreChunks', debug, { 
         current: currentChunk,
-        total: totalChunks
+        total: totalChunks,
+        fetchedBytes: result.fetchedBytes,
+        totalBytes: result.totalBytes,
+        remainingBytes: result.remainingBytes
       }, COMPONENTS.CLIENT);
       
       // 提示用户如何获取所有分段内容 (Prompt user how to get all chunks)
@@ -526,11 +690,15 @@ async function main() {
       log('client.allChunksCommand', debug, { command: allChunksCommand }, COMPONENTS.CLIENT);
       
       // 输出提示信息，告知用户有更多分段内容 (Output prompt message, inform user there are more chunks)
-      console.log(`\n内容已分段: ${currentChunk+1}/${totalChunks} 段 (Content is chunked: ${currentChunk+1}/${totalChunks} chunks)`);
-      console.log(`获取所有分段内容，请运行: (To fetch all chunks, run:)\n${allChunksCommand}\n`);
+      if (result.fetchedBytes && result.totalBytes) {
+        log('client.contentChunkedBytes', true, { fetched: result.fetchedBytes, total: result.totalBytes }, COMPONENTS.CLIENT);
+      } else {
+        log('client.contentChunkedCount', true, { current: currentChunk+1, total: totalChunks }, COMPONENTS.CLIENT);
+      }
+      log('client.fetchAllChunksHint', true, { command: allChunksCommand }, COMPONENTS.CLIENT);
       
       if (totalChunks > maxChunks + 1) {
-        console.log(`获取前 ${maxChunks + 1} 段内容，请运行: (To fetch first ${maxChunks + 1} chunks, run:)\n${allChunksWithLimitCommand}\n`);
+        log('client.fetchLimitedChunksHint', true, { limit: maxChunks + 1, command: allChunksWithLimitCommand }, COMPONENTS.CLIENT);
       }
     }
   } catch (error: any) {
@@ -549,7 +717,6 @@ async function main() {
     };
     
     process.stdout.write(JSON.stringify(errorResult, null, 2));
-    process.exit(1);
   } finally {
     // 关闭客户端连接 (Close client connection)
     log('client.serverClosed', debug, {}, COMPONENTS.CLIENT);
