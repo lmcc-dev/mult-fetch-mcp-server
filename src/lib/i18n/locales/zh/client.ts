@@ -55,6 +55,24 @@ export default {
   [CLIENT_KEYS.limitingChunks]: '限制获取分段数量为 {{limit}} (总计: {{total}})',
   [CLIENT_KEYS.maxChunksUsageInfo]: '使用 --max-chunks=N 参数限制获取的分段数量 (默认: {{default}})',
   
+  // 新增的分段内容相关键 (New chunked content related keys)
+  [CLIENT_KEYS.responseStructure]: '\n--- 响应结构 (Response structure) ---\n{{structure}}\n--- 响应结构结束 (End of response structure) ---\n',
+  [CLIENT_KEYS.parsedByteChunkInfo]: '\n--- 解析后的字节级分段信息 (Parsed byte-level chunk information) ---\nchunkId: {{chunkId}}\nfetchedBytes: {{fetchedBytes}}\ntotalBytes: {{totalBytes}}\nremainingBytes: {{remainingBytes}}\nestimatedRemainingRequests: {{estimatedRemainingRequests}}\n--- 解析后的字节级分段信息结束 (End of parsed byte-level chunk information) ---\n',
+  [CLIENT_KEYS.parsedChunkInfo]: '\n--- 解析后的分段信息 (Parsed chunk information) ---\nchunkId: {{chunkId}}\ncurrentChunk: {{currentChunk}}\ntotalChunks: {{totalChunks}}\nhasMoreChunks: {{hasMoreChunks}}\n--- 解析后的分段信息结束 (End of parsed chunk information) ---\n',
+  [CLIENT_KEYS.chunkLimitNotice]: '\n注意：内容共有 {{total}} 段，但只获取前 {{fetching}} 段 (Note: Content has {{total}} chunks, but only fetching first {{fetching}} chunks)',
+  [CLIENT_KEYS.chunkLimitHint]: '要获取更多分段，请使用 --max-chunks=N 参数 (To fetch more chunks, use --max-chunks=N parameter)\n',
+  [CLIENT_KEYS.fetchingChunkProgress]: '\n正在获取第 {{current}}/{{total}} 段内容... (Fetching chunk {{current}}/{{total}}...)',
+  [CLIENT_KEYS.fetchChunkFailedError]: '\n获取第 {{index}} 段内容失败: {{error}}\n',
+  [CLIENT_KEYS.chunkContent]: '\n--- 第 {{index}} 段内容 (Chunk {{index}}) ---\n',
+  [CLIENT_KEYS.chunkSeparator]: '\n' + '-'.repeat(80),
+  [CLIENT_KEYS.partialChunksFetched]: '\n已获取 {{fetched}}/{{total}} 段内容 (Fetched {{fetched}}/{{total}} chunks)\n',
+  [CLIENT_KEYS.completeChunksFetched]: '\n所有分段内容获取完成，共 {{total}} 段 (All chunks fetched, total: {{total}})\n',
+  [CLIENT_KEYS.fetchingChunksErrorMessage]: '\n获取分块内容时出错: {{error}}\n',
+  [CLIENT_KEYS.contentChunkedBytes]: '\n内容已分段: 已获取 {{fetched}} 字节，总共 {{total}} 字节 (Content is chunked: retrieved {{fetched}} bytes of total {{total}} bytes)',
+  [CLIENT_KEYS.contentChunkedCount]: '\n内容已分段: {{current}}/{{total}} 段 (Content is chunked: {{current}}/{{total}} chunks)',
+  [CLIENT_KEYS.fetchAllChunksHint]: '获取所有分段内容，请运行: (To fetch all chunks, run:)\n{{command}}\n',
+  [CLIENT_KEYS.fetchLimitedChunksHint]: '获取前 {{limit}} 段内容，请运行: (To fetch first {{limit}} chunks, run:)\n{{command}}\n',
+  
   // 调试相关 (Debug related)
   [CLIENT_KEYS.debugMode]: '调试模式: {{enabled}}',
   [CLIENT_KEYS.debugInfo]: '调试信息: {{info}}',

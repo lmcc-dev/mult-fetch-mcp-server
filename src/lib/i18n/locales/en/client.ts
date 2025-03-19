@@ -55,6 +55,24 @@ export default {
   [CLIENT_KEYS.limitingChunks]: 'Limiting chunks to {{limit}} (total: {{total}})',
   [CLIENT_KEYS.maxChunksUsageInfo]: 'Use --max-chunks=N to limit the number of chunks to fetch (default: {{default}})',
   
+  // 新增的分段内容相关键 (New chunked content related keys)
+  [CLIENT_KEYS.responseStructure]: '\n--- Response structure ---\n{{structure}}\n--- End of response structure ---\n',
+  [CLIENT_KEYS.parsedByteChunkInfo]: '\n--- Parsed byte-level chunk information ---\nchunkId: {{chunkId}}\nfetchedBytes: {{fetchedBytes}}\ntotalBytes: {{totalBytes}}\nremainingBytes: {{remainingBytes}}\nestimatedRemainingRequests: {{estimatedRemainingRequests}}\n--- End of parsed byte-level chunk information ---\n',
+  [CLIENT_KEYS.parsedChunkInfo]: '\n--- Parsed chunk information ---\nchunkId: {{chunkId}}\ncurrentChunk: {{currentChunk}}\ntotalChunks: {{totalChunks}}\nhasMoreChunks: {{hasMoreChunks}}\n--- End of parsed chunk information ---\n',
+  [CLIENT_KEYS.chunkLimitNotice]: '\nNote: Content has {{total}} chunks, but only fetching first {{fetching}} chunks',
+  [CLIENT_KEYS.chunkLimitHint]: 'To fetch more chunks, use --max-chunks=N parameter\n',
+  [CLIENT_KEYS.fetchingChunkProgress]: '\nFetching chunk {{current}}/{{total}}...',
+  [CLIENT_KEYS.fetchChunkFailedError]: '\nFailed to fetch chunk {{index}}: {{error}}\n',
+  [CLIENT_KEYS.chunkContent]: '\n--- Chunk {{index}} ---\n',
+  [CLIENT_KEYS.chunkSeparator]: '\n' + '-'.repeat(80),
+  [CLIENT_KEYS.partialChunksFetched]: '\nFetched {{fetched}}/{{total}} chunks\n',
+  [CLIENT_KEYS.completeChunksFetched]: '\nAll chunks fetched, total: {{total}}\n',
+  [CLIENT_KEYS.fetchingChunksErrorMessage]: '\nError fetching chunks: {{error}}\n',
+  [CLIENT_KEYS.contentChunkedBytes]: '\nContent is chunked: retrieved {{fetched}} bytes of total {{total}} bytes',
+  [CLIENT_KEYS.contentChunkedCount]: '\nContent is chunked: {{current}}/{{total}} chunks',
+  [CLIENT_KEYS.fetchAllChunksHint]: 'To fetch all chunks, run:\n{{command}}\n',
+  [CLIENT_KEYS.fetchLimitedChunksHint]: 'To fetch first {{limit}} chunks, run:\n{{command}}\n',
+  
   // 调试相关 (Debug related)
   [CLIENT_KEYS.debugMode]: 'Debug mode: {{enabled}}',
   [CLIENT_KEYS.debugInfo]: 'Debug info: {{info}}',

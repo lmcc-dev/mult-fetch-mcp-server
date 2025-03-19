@@ -56,6 +56,23 @@ export const CLIENT_KEYS = (() => {
     allChunksFetched: keyGen('allChunksFetched'),
     allChunksCommand: keyGen('allChunksCommand'),
     allChunksUsageInfo: keyGen('allChunksUsageInfo'),
+    // 新增分块相关键 (New chunk related keys)
+    responseStructure: keyGen('responseStructure'),
+    parsedByteChunkInfo: keyGen('parsedByteChunkInfo'),
+    parsedChunkInfo: keyGen('parsedChunkInfo'),
+    chunkLimitNotice: keyGen('chunkLimitNotice'),
+    chunkLimitHint: keyGen('chunkLimitHint'),
+    fetchingChunkProgress: keyGen('fetchingChunkProgress'),
+    fetchChunkFailedError: keyGen('fetchChunkFailedError'),
+    chunkContent: keyGen('chunkContent'),
+    chunkSeparator: keyGen('chunkSeparator'),
+    partialChunksFetched: keyGen('partialChunksFetched'),
+    completeChunksFetched: keyGen('completeChunksFetched'),
+    fetchingChunksErrorMessage: keyGen('fetchingChunksErrorMessage'),
+    contentChunkedBytes: keyGen('contentChunkedBytes'),
+    contentChunkedCount: keyGen('contentChunkedCount'),
+    fetchAllChunksHint: keyGen('fetchAllChunksHint'),
+    fetchLimitedChunksHint: keyGen('fetchLimitedChunksHint'),
     
     // 调试相关 (Debug related)
     debugMode: keyGen('debugMode'),
