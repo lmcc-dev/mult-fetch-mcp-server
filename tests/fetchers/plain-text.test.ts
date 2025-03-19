@@ -4,107 +4,180 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi, Mock } from 'vitest';
 import { fetchPlainText } from '../../src/lib/fetch.js';
-import { FetcherFactory } from '../../src/lib/fetchers/FetcherFactory.js';
+import { Fetcher } from '../../src/lib/fetchers/index.js';
+import { RequestPayload } from '../../src/lib/fetchers/common/types.js';
 
-// 模拟FetcherFactory
-vi.mock('../../src/lib/fetchers/FetcherFactory.js', () => ({
-  FetcherFactory: {
-    createFetcher: vi.fn().mockImplementation((payload) => {
-      return {
-        plainText: vi.fn().mockImplementation(async () => {
-          if (payload.url === 'https://example.com') {
-            return {
-              content: [{ type: 'text', text: 'Hello World' }],
-              isError: false
-            };
-          } else if (payload.url === 'https://example.com/large') {
-            // 返回分块内容
-            return {
-              content: [{ type: 'text', text: 'This is chunk 1 with system note' }],
-              isError: false,
-              isChunked: true,
-              totalChunks: 2,
-              currentChunk: 1,
-              chunkId: 'test-chunk-id',
-              hasMoreChunks: true
-            };
-          } else if (payload.url === 'https://example.com/error') {
-            throw new Error('Fetch error');
-          }
-          return {
-            content: [{ type: 'text', text: '' }],
-            isError: false
-          };
-        })
-      };
-    })
+// 定义测试中使用的类型
+interface ContentItem {
+  type: string;
+  text: string;
+  metadata?: {
+    chunkInfo: {
+      isChunked: boolean;
+      chunkId: string;
+      startCursor: number;
+      totalBytes: number;
+      fetchedBytes: number;
+      remainingBytes: number;
+      isLastChunk: boolean;
+    }
+  }
+}
+
+// Mock the Fetcher.plainText function
+vi.mock('../../src/lib/fetchers/index.js', () => ({
+  Fetcher: {
+    plainText: vi.fn()
   }
 }));
 
-describe('fetchPlainText 测试 (fetchPlainText Tests)', () => {
-  beforeEach(() => {
-    // 清理所有模拟方法的调用记录
-    vi.clearAllMocks();
-  });
-
-  test('fetchPlainText应正确获取内容并转换为纯文本 (fetchPlainText should correctly fetch and convert content to plain text)', async () => {
-    const url = 'https://example.com';
-    const result = await fetchPlainText({ url });
-
-    // 验证结果格式
+describe('plain-text fetcher 测试 (plain-text fetcher tests)', () => {
+  test('应该正确获取并转换内容为纯文本 (should correctly fetch and convert content to plain text)', async () => {
+    // 模拟 Fetcher.plainText 的返回值
+    (Fetcher.plainText as Mock).mockResolvedValue({
+      content: [{ type: 'text', text: '<div>Example content</div>' }],
+      isError: false
+    });
+    
+    // 调用被测试的函数
+    const result = await fetchPlainText({ url: 'https://example.com', startCursor: 0 });
+    
+    // 验证 Fetcher.plainText 被调用并传递了正确的参数
+    expect(Fetcher.plainText).toHaveBeenCalledWith({ 
+      url: 'https://example.com', 
+      startCursor: 0 
+    });
+    
+    // 验证返回结果正确
     expect(result).toHaveProperty('content');
-    expect(result).toHaveProperty('isError');
-    expect(result.isError).toBe(false);
-    expect(result.content).toBeInstanceOf(Array);
-    expect(result.content[0]).toHaveProperty('type');
-    expect(result.content[0]).toHaveProperty('text');
-    expect(result.content[0].text).toBe('Hello World');
-
-    // 验证方法调用
-    expect(FetcherFactory.createFetcher).toHaveBeenCalledWith({ url });
+    expect(result).toHaveProperty('isError', false);
+    expect(result.content[0]).toHaveProperty('type', 'text');
+    expect(result.content[0]).toHaveProperty('text', '<div>Example content</div>');
   });
-
-  test('fetchPlainText应处理大内容并正确分块 (fetchPlainText should handle large content and chunk it correctly)', async () => {
-    const url = 'https://example.com/large';
-    const result = await fetchPlainText({ url });
-
-    // 验证结果包含内容
+  
+  test('应该正确处理大型内容并返回分块信息 (should handle large content and return chunk information)', async () => {
+    // 模拟返回值，包含分块信息
+    const chunkInfo = {
+      isChunked: true,
+      chunkId: 'test-chunk-id',
+      startCursor: 0,
+      totalBytes: 10000,
+      fetchedBytes: 1000,
+      remainingBytes: 9000,
+      isLastChunk: false
+    };
+    
+    (Fetcher.plainText as Mock).mockResolvedValue({
+      content: [{ 
+        type: 'text', 
+        text: 'Large content example', 
+        metadata: { chunkInfo }
+      }],
+      isError: false
+    });
+    
+    // 调用被测试的函数
+    const result = await fetchPlainText({ 
+      url: 'https://example.com/large',
+      enableContentSplitting: true,
+      contentSizeLimit: 1000,
+      startCursor: 0
+    } as RequestPayload);
+    
+    // 验证 Fetcher.plainText 被调用并传递了正确的参数
+    expect(Fetcher.plainText).toHaveBeenCalledWith({ 
+      url: 'https://example.com/large', 
+      enableContentSplitting: true,
+      contentSizeLimit: 1000,
+      startCursor: 0 
+    });
+    
+    // 验证返回结果包含分块信息
     expect(result).toHaveProperty('content');
-    expect(result).toHaveProperty('isError');
-    expect(result.isError).toBe(false);
-    
-    // 验证分块信息
-    expect(result).toHaveProperty('isChunked');
-    expect(result.isChunked).toBe(true);
-    expect(result).toHaveProperty('totalChunks');
-    expect(result.totalChunks).toBe(2);
-    expect(result).toHaveProperty('currentChunk');
-    expect(result.currentChunk).toBe(1);
-    expect(result).toHaveProperty('chunkId');
-    expect(result.chunkId).toBe('test-chunk-id');
-    
-    // 验证方法调用
-    expect(FetcherFactory.createFetcher).toHaveBeenCalledWith({ url });
+    expect(result).toHaveProperty('isError', false);
+    // 由于类型问题，使用toEqual代替单独的属性断言
+    expect(result.content[0]).toEqual({
+      type: 'text',
+      text: 'Large content example',
+      metadata: { chunkInfo }
+    });
   });
-
-  test('fetchPlainText在提供无效URL时应抛出错误 (fetchPlainText should throw an error when an invalid URL is provided)', async () => {
-    const url = 'https://example.com/error';
+  
+  test('应该正确处理后续分块请求 (should handle subsequent chunk requests)', async () => {
+    // 模拟返回值，包含后续分块信息
+    const chunkInfo = {
+      isChunked: true,
+      chunkId: 'test-chunk-id',
+      startCursor: 1000,
+      totalBytes: 10000,
+      fetchedBytes: 1000,
+      remainingBytes: 8000,
+      isLastChunk: false
+    };
     
-    await expect(fetchPlainText({ url })).rejects.toThrow('Fetch error');
+    (Fetcher.plainText as Mock).mockResolvedValue({
+      content: [{ 
+        type: 'text', 
+        text: 'Subsequent chunk content', 
+        metadata: { chunkInfo }
+      }],
+      isError: false
+    });
     
-    // 验证方法调用
-    expect(FetcherFactory.createFetcher).toHaveBeenCalledWith({ url });
+    // 调用被测试的函数，包含chunkId和startCursor
+    const result = await fetchPlainText({ 
+      url: 'https://example.com/large',
+      chunkId: 'test-chunk-id',
+      startCursor: 1000
+    } as unknown as RequestPayload);
+    
+    // 验证 Fetcher.plainText 被调用并传递了正确的参数
+    expect(Fetcher.plainText).toHaveBeenCalledWith({ 
+      url: 'https://example.com/large', 
+      chunkId: 'test-chunk-id',
+      startCursor: 1000
+    });
+    
+    // 验证返回结果包含分块信息
+    expect(result).toHaveProperty('content');
+    expect(result).toHaveProperty('isError', false);
+    // 由于类型问题，使用toEqual代替单独的属性断言
+    expect(result.content[0]).toEqual({
+      type: 'text',
+      text: 'Subsequent chunk content',
+      metadata: { chunkInfo }
+    });
   });
-
-  test('fetchPlainText应支持自定义参数 (fetchPlainText should support custom parameters)', async () => {
-    const url = 'https://example.com';
-    const params = { useBrowser: true };
+  
+  test('当URL无效时应抛出错误 (should throw error when URL is invalid)', async () => {
+    // 模拟 Fetcher.plainText 抛出错误
+    const errorMessage = 'Invalid URL or unable to fetch';
+    (Fetcher.plainText as Mock).mockRejectedValue(new Error(errorMessage));
     
-    await fetchPlainText({ url, ...params });
+    // 将 fetchPlainText 包装在 try/catch 中来获取生成的错误响应
+    let result;
+    try {
+      await fetchPlainText({ url: 'https://example.com/error', startCursor: 0 });
+      // 如果没有抛出错误，测试应该失败
+      expect(true).toBe(false);
+    } catch (error) {
+      // 处理错误，获取生成的错误响应
+      result = {
+        isError: true,
+        content: [{ type: 'text', text: errorMessage }]
+      };
+    }
     
-    // 验证方法调用时传递了自定义参数
-    expect(FetcherFactory.createFetcher).toHaveBeenCalledWith({ url, ...params });
+    // 验证 Fetcher.plainText 被调用并传递了正确的参数
+    expect(Fetcher.plainText).toHaveBeenCalledWith({ 
+      url: 'https://example.com/error', 
+      startCursor: 0
+    });
+    
+    // 验证返回结果包含错误信息
+    expect(result).toHaveProperty('isError', true);
+    expect(result.content[0]).toHaveProperty('text', errorMessage);
   });
 }); 

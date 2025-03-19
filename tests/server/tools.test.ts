@@ -106,7 +106,8 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
       params: {
         name: 'fetch_html',
         arguments: {
-          url: 'https://example.com'
+          url: 'https://example.com',
+          startCursor: 0
         }
       }
     };
@@ -116,7 +117,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com', method: 'fetch_html' },
+      { url: 'https://example.com', method: 'fetch_html', startCursor: 0 },
       'html'
     );
     
@@ -139,7 +140,8 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
       params: {
         name: 'fetch_json',
         arguments: {
-          url: 'https://example.com/data.json'
+          url: 'https://example.com/data.json',
+          startCursor: 0
         }
       }
     };
@@ -149,7 +151,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/data.json', method: 'fetch_json' },
+      { url: 'https://example.com/data.json', method: 'fetch_json', startCursor: 0 },
       'json'
     );
     
@@ -172,7 +174,8 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
       params: {
         name: 'fetch_txt',
         arguments: {
-          url: 'https://example.com/text.txt'
+          url: 'https://example.com/text.txt',
+          startCursor: 0
         }
       }
     };
@@ -182,7 +185,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/text.txt', method: 'fetch_txt' },
+      { url: 'https://example.com/text.txt', method: 'fetch_txt', startCursor: 0 },
       'txt'
     );
     
@@ -205,7 +208,8 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
       params: {
         name: 'fetch_markdown',
         arguments: {
-          url: 'https://example.com/readme.md'
+          url: 'https://example.com/readme.md',
+          startCursor: 0
         }
       }
     };
@@ -215,7 +219,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/readme.md', method: 'fetch_markdown' },
+      { url: 'https://example.com/readme.md', method: 'fetch_markdown', startCursor: 0 },
       'markdown'
     );
     
@@ -238,7 +242,8 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
       params: {
         name: 'fetch_plaintext',
         arguments: {
-          url: 'https://example.com'
+          url: 'https://example.com',
+          startCursor: 0
         }
       }
     };
@@ -248,7 +253,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com', method: 'fetch_plaintext' },
+      { url: 'https://example.com', method: 'fetch_plaintext', startCursor: 0 },
       'plaintext'
     );
     
@@ -275,22 +280,25 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
           chunkInfo: {
             isChunked: true,
             chunkId: 'test-chunk-id',
-            chunkIndex: 1,
-            totalChunks: 3
+            startCursor: 1000,
+            totalBytes: 5000,
+            fetchedBytes: 1000,
+            remainingBytes: 3000,
+            isLastChunk: false
           }
         }
       }],
       isError: false
     });
     
-    // 创建请求对象，包含分块ID和索引
+    // 创建请求对象，包含分块ID和起始游标
     const request = {
       params: {
         name: 'fetch_html',
         arguments: {
           url: 'https://example.com',
           chunkId: 'test-chunk-id',
-          chunkIndex: 1
+          startCursor: 1000
         }
       }
     };
@@ -304,7 +312,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
         url: 'https://example.com', 
         method: 'fetch_html',
         chunkId: 'test-chunk-id',
-        chunkIndex: 1
+        startCursor: 1000
       },
       'html'
     );
@@ -318,8 +326,11 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     expect(result.content[0].metadata).toHaveProperty('chunkInfo');
     expect(result.content[0].metadata.chunkInfo).toHaveProperty('isChunked', true);
     expect(result.content[0].metadata.chunkInfo).toHaveProperty('chunkId', 'test-chunk-id');
-    expect(result.content[0].metadata.chunkInfo).toHaveProperty('chunkIndex', 1);
-    expect(result.content[0].metadata.chunkInfo).toHaveProperty('totalChunks', 3);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('startCursor', 1000);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('totalBytes', 5000);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('fetchedBytes', 1000);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('remainingBytes', 3000);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('isLastChunk', false);
   });
   
   test('应该正确处理启用内容分割的请求 (Should handle request with content splitting enabled)', async () => {
@@ -329,6 +340,26 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
     
+    // 设置模拟返回值，模拟分块返回
+    (fetchWithAutoDetect as Mock).mockResolvedValue({
+      content: [{ 
+        type: 'text', 
+        text: 'chunked content',
+        metadata: {
+          chunkInfo: {
+            isChunked: true,
+            chunkId: 'auto-generated-id',
+            startCursor: 0,
+            totalBytes: 10000,
+            fetchedBytes: 1024,
+            remainingBytes: 8976,
+            isLastChunk: false
+          }
+        }
+      }],
+      isError: false
+    });
+    
     // 创建请求对象，启用内容分割
     const request = {
       params: {
@@ -336,7 +367,8 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
         arguments: {
           url: 'https://example.com',
           enableContentSplitting: true,
-          contentSizeLimit: 1024 // 1KB
+          contentSizeLimit: 1024, // 1KB
+          startCursor: 0
         }
       }
     };
@@ -350,14 +382,24 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
         url: 'https://example.com', 
         method: 'fetch_html',
         enableContentSplitting: true,
-        contentSizeLimit: 1024
+        contentSizeLimit: 1024,
+        startCursor: 0
       },
       'html'
     );
     
-    // 验证返回结果
+    // 验证返回结果包含分块信息
     expect(result).toHaveProperty('content');
     expect(result).toHaveProperty('isError', false);
+    expect(result.content[0]).toHaveProperty('metadata');
+    expect(result.content[0].metadata).toHaveProperty('chunkInfo');
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('isChunked', true);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('chunkId', 'auto-generated-id');
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('startCursor', 0);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('totalBytes', 10000);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('fetchedBytes', 1024);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('remainingBytes', 8976);
+    expect(result.content[0].metadata.chunkInfo).toHaveProperty('isLastChunk', false);
   });
   
   test('应该正确处理未知工具调用 (Should handle unknown tool call correctly)', async () => {
@@ -400,26 +442,26 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     // 获取注册的处理程序
     const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
     
+    // 模拟fetchWithAutoDetect抛出错误
+    (fetchWithAutoDetect as Mock).mockRejectedValue(new Error('Fetch failed'));
+    
     // 创建请求对象
     const request = {
       params: {
         name: 'fetch_html',
         arguments: {
-          url: 'https://example.com'
+          url: 'https://example.com',
+          startCursor: 0
         }
       }
     };
     
-    // 设置模拟抛出错误
-    (fetchWithAutoDetect as Mock).mockRejectedValue(new Error('Fetch failed'));
-    
     // 调用处理程序
     const result = await callToolHandler(request);
     
-    // 验证返回结果
-    expect(result).toHaveProperty('content');
+    // 验证返回错误
     expect(result).toHaveProperty('isError', true);
     expect(result.content[0]).toHaveProperty('text');
-    expect(result.content[0].text).toContain('Fetch failed');
+    expect(result.content[0].text).toContain('Error fetching https://example.com');
   });
 }); 
