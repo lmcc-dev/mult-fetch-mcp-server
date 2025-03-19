@@ -59,6 +59,8 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
+    "@types/html-to-text": "^9.0.4",
+    "html-to-text": "^9.0.5",
     "http-proxy-agent": "^7.0.2",
     "https-proxy-agent": "^7.0.6",
     "i18next": "^24.2.2",

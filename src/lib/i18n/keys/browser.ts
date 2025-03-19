@@ -28,6 +28,9 @@ export const BROWSER_KEYS = (() => {
         scrollError: keyGen('scrollError'),
         gettingContent: keyGen('gettingContent'),
         contentLength: keyGen('contentLength'),
+        contentTruncated: keyGen('contentTruncated'),
+        contentSplit: keyGen('contentSplit'),
+        startingHtmlFetch: keyGen('startingHtmlFetch'),
 
         // Cookie 相关 (Cookie related)
         savingCookies: keyGen('savingCookies'),
@@ -51,7 +54,6 @@ export const BROWSER_KEYS = (() => {
         navigating: keyGen('navigating'),
         scrolling: keyGen('scrolling'),
         scrollCompleted: keyGen('scrollCompleted'),
-        contentTruncated: keyGen('contentTruncated'),
         pageClosed: keyGen('pageClosed'),
         fetchError: keyGen('fetchError'),
         highMemory: keyGen('highMemory'),
@@ -71,6 +73,10 @@ export const BROWSER_KEYS = (() => {
         cloudflareError: keyGen('cloudflareError'),
         continuingWithoutBypass: keyGen('continuingWithoutBypass'),
         unableToBypassCloudflare: keyGen('unableToBypassCloudflare'),
+        cloudflareBypass: keyGen('cloudflareBypass'),
+        cloudflareBypassSuccess: keyGen('cloudflareBypassSuccess'),
+        cloudflareBypassFailed: keyGen('cloudflareBypassFailed'),
+        cloudflareBypassNotNeeded: keyGen('cloudflareBypassNotNeeded'),
 
         // 获取和重试相关 (Fetch and retry related)
         fetchingWithRetry: keyGen('fetchingWithRetry'),
@@ -95,6 +101,42 @@ export const BROWSER_KEYS = (() => {
         reusingExistingBrowser: keyGen('reusingExistingBrowser'),
         startingBrowser: keyGen('startingBrowser'),
         browserStarted: keyGen('browserStarted'),
-        browserStartError: keyGen('browserStartError')
+        browserStartError: keyGen('browserStartError'),
+        
+        // Fetch 相关 (Fetch related)
+        htmlFetchError: keyGen('htmlFetchError'),
+        jsonFetchError: keyGen('jsonFetchError'),
+        txtFetchError: keyGen('txtFetchError'),
+        markdownFetchError: keyGen('markdownFetchError'),
+        creatingTurndown: keyGen('creatingTurndown'),
+        convertingToMarkdown: keyGen('convertingToMarkdown'),
+        markdownContentLength: keyGen('markdownContentLength'),
+        startingJsonFetch: keyGen('startingJsonFetch'),
+        startingTxtFetch: keyGen('startingTxtFetch'),
+        startingMarkdownFetch: keyGen('startingMarkdownFetch'),
+        startingPlainTextFetch: keyGen('startingPlainTextFetch'),
+        extractingText: keyGen('extractingText'),
+        textExtracted: keyGen('textExtracted'),
+        jsonParsed: keyGen('jsonParsed'),
+        jsonParseError: keyGen('jsonParseError'),
+        
+        // 代理相关 (Proxy related)
+        proxyConnected: keyGen('proxyConnected'),
+        proxyError: keyGen('proxyError'),
+        
+        // 响应相关 (Response related)
+        responseStatus: keyGen('responseStatus'),
+        responseError: keyGen('responseError'),
+        responseSuccess: keyGen('responseSuccess'),
+        responseRedirect: keyGen('responseRedirect'),
+        responseTimeout: keyGen('responseTimeout'),
+        
+        // 错误处理 (Error handling)
+        errorResponse: keyGen('errorResponse'),
+        errorResponseBody: keyGen('errorResponseBody'),
+        accessDenied: keyGen('accessDenied'),
+        timeoutError: keyGen('timeoutError'),
+        networkError: keyGen('networkError'),
+        unknownError: keyGen('unknownError')
     } as const;
 })();

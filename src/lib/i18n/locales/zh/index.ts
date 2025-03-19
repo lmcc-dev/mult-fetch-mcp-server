@@ -14,6 +14,10 @@ import tools from './tools.js';
 import errors from './errors.js';
 import resources from './resources.js';
 import prompts from './prompts.js';
+import url from './url.js';
+import { contentSizeZh as contentSize } from './contentSize.js';
+import { chunkManagerZh as chunkManager } from './chunkManager.js';
+import { processorZh as processor } from './processor.js';
 
 // 中文翻译资源 (Chinese translation resources)
 export const zhTranslation = {
@@ -26,5 +30,9 @@ export const zhTranslation = {
   tools,
   errors,
   resources,
-  prompts
+  prompts,
+  url,
+  contentSize,
+  chunkManager,
+  processor
 }; 

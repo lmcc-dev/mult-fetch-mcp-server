@@ -38,6 +38,47 @@ export const CLIENT_KEYS = (() => {
     fetchSuccessful: keyGen('fetchSuccessful'),
     contentLength: keyGen('contentLength'),
     
+    // 分段内容相关 (Chunked content related)
+    hasMoreChunks: keyGen('hasMoreChunks'),
+    nextChunkCommand: keyGen('nextChunkCommand'),
+    chunkInfoSaved: keyGen('chunkInfoSaved'),
+    chunkInfoSaveError: keyGen('chunkInfoSaveError'),
+    chunkInfoLoaded: keyGen('chunkInfoLoaded'),
+    chunkInfoLoadError: keyGen('chunkInfoLoadError'),
+    noChunkInfo: keyGen('noChunkInfo'),
+    fetchingNextChunk: keyGen('fetchingNextChunk'),
+    chunkUsageInfo: keyGen('chunkUsageInfo'),
+    invalidChunkIndex: keyGen('invalidChunkIndex'),
+    missingMethodOrUrl: keyGen('missingMethodOrUrl'),
+    fetchingAllChunks: keyGen('fetchingAllChunks'),
+    fetchingChunk: keyGen('fetchingChunk'),
+    fetchChunkFailed: keyGen('fetchChunkFailed'),
+    allChunksFetched: keyGen('allChunksFetched'),
+    allChunksCommand: keyGen('allChunksCommand'),
+    allChunksUsageInfo: keyGen('allChunksUsageInfo'),
+    // 新增分块相关键 (New chunk related keys)
+    responseStructure: keyGen('responseStructure'),
+    parsedByteChunkInfo: keyGen('parsedByteChunkInfo'),
+    parsedChunkInfo: keyGen('parsedChunkInfo'),
+    chunkLimitNotice: keyGen('chunkLimitNotice'),
+    chunkLimitHint: keyGen('chunkLimitHint'),
+    fetchingChunkProgress: keyGen('fetchingChunkProgress'),
+    fetchChunkFailedError: keyGen('fetchChunkFailedError'),
+    chunkContent: keyGen('chunkContent'),
+    chunkSeparator: keyGen('chunkSeparator'),
+    partialChunksFetched: keyGen('partialChunksFetched'),
+    completeChunksFetched: keyGen('completeChunksFetched'),
+    fetchingChunksErrorMessage: keyGen('fetchingChunksErrorMessage'),
+    contentChunkedBytes: keyGen('contentChunkedBytes'),
+    contentChunkedCount: keyGen('contentChunkedCount'),
+    fetchAllChunksHint: keyGen('fetchAllChunksHint'),
+    fetchLimitedChunksHint: keyGen('fetchLimitedChunksHint'),
+    firstChunkCompleted: keyGen('firstChunkCompleted'),
+    chunkProgress: keyGen('chunkProgress'),
+    chunkCompleted: keyGen('chunkCompleted'),
+    recalculatedTotalChunks: keyGen('recalculatedTotalChunks'),
+    fetchingChunksError: keyGen('fetchingChunksError'),
+    
     // 调试相关 (Debug related)
     debugMode: keyGen('debugMode'),
     debugInfo: keyGen('debugInfo'),
@@ -69,6 +110,19 @@ export const CLIENT_KEYS = (() => {
     browserModeFetchFailed: keyGen('browserModeFetchFailed'),
     browserModeFetchSuccess: keyGen('browserModeFetchSuccess'),
     serverClosed: keyGen('serverClosed'),
-    proxySet: keyGen('proxySet')
+    proxySet: keyGen('proxySet'),
+    // 模式相关 (Mode related)
+    usingStandardMode: keyGen('usingStandardMode'),
+    usingBrowserMode: keyGen('usingBrowserMode'),
+    
+    // 参数相关 (Parameters related)
+    sendingParameters: keyGen('sendingParameters'),
+    limitingChunks: keyGen('limitingChunks'),
+    maxChunksUsageInfo: keyGen('maxChunksUsageInfo'),
+    alternateUsageInfo: keyGen('alternateUsageInfo'),
+    switchingToBrowserMode: keyGen('switchingToBrowserMode'),
+    invalidUrl: keyGen('invalidUrl'),
+    missingUrl: keyGen('missingUrl'),
+    missingStartCursor: keyGen('missingStartCursor')
   } as const;
 })(); 

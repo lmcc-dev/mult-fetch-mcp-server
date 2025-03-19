@@ -34,6 +34,50 @@ export default {
   [CLIENT_KEYS.fetchSuccessful]: '获取成功',
   [CLIENT_KEYS.contentLength]: '内容长度: {{length}} 字节',
   
+  // 分段内容相关 (Chunked content related)
+  [CLIENT_KEYS.hasMoreChunks]: '内容已分段: {{current}}/{{total}} 段',
+  [CLIENT_KEYS.nextChunkCommand]: '获取下一段内容，请运行: {{command}}',
+  [CLIENT_KEYS.chunkInfoSaved]: '分段信息已保存到 {{file}}',
+  [CLIENT_KEYS.chunkInfoSaveError]: '保存分段信息失败: {{error}}',
+  [CLIENT_KEYS.chunkInfoLoaded]: '已从 {{file}} 加载分段信息',
+  [CLIENT_KEYS.chunkInfoLoadError]: '加载分段信息失败: {{error}}',
+  [CLIENT_KEYS.noChunkInfo]: '未找到之前的分段信息',
+  [CLIENT_KEYS.fetchingNextChunk]: '正在获取下一段内容 ({{chunkIndex}}/{{total}})',
+  [CLIENT_KEYS.chunkUsageInfo]: '对于分段内容: 使用 --all-chunks 一次性获取所有分段',
+  [CLIENT_KEYS.invalidChunkIndex]: '无效的分段索引: {{index}}',
+  [CLIENT_KEYS.missingMethodOrUrl]: '缺少方法或URL参数',
+  [CLIENT_KEYS.fetchingAllChunks]: '正在获取所有分段内容，共 {{total}} 段',
+  [CLIENT_KEYS.fetchingChunk]: '正在获取第 {{index}}/{{total}} 段内容',
+  [CLIENT_KEYS.fetchChunkFailed]: '获取第 {{index}} 段内容失败: {{error}}',
+  [CLIENT_KEYS.allChunksFetched]: '所有分段内容获取完成，共 {{total}} 段',
+  [CLIENT_KEYS.allChunksCommand]: '一次性获取所有分段内容，请运行: {{command}}',
+  [CLIENT_KEYS.allChunksUsageInfo]: '使用 --all-chunks 参数一次性获取所有分段内容',
+  [CLIENT_KEYS.limitingChunks]: '限制获取分段数量为 {{limit}} (总计: {{total}})',
+  [CLIENT_KEYS.maxChunksUsageInfo]: '使用 --max-chunks=N 参数限制获取的分段数量 (默认: {{default}})',
+  
+  // 新增的分段内容相关键 (New chunked content related keys)
+  [CLIENT_KEYS.responseStructure]: '\n--- 响应结构 (Response structure) ---\n{{structure}}\n--- 响应结构结束 (End of response structure) ---\n',
+  [CLIENT_KEYS.parsedByteChunkInfo]: '\n--- 解析后的字节级分段信息 (Parsed byte-level chunk information) ---\nchunkId: {{chunkId}}\nfetchedBytes: {{fetchedBytes}}\ntotalBytes: {{totalBytes}}\nremainingBytes: {{remainingBytes}}\nestimatedRemainingRequests: {{estimatedRemainingRequests}}\n--- 解析后的字节级分段信息结束 (End of parsed byte-level chunk information) ---\n',
+  [CLIENT_KEYS.parsedChunkInfo]: '\n--- 解析后的分段信息 (Parsed chunk information) ---\nchunkId: {{chunkId}}\ncurrentChunk: {{currentChunk}}\ntotalChunks: {{totalChunks}}\nhasMoreChunks: {{hasMoreChunks}}\n--- 解析后的分段信息结束 (End of parsed chunk information) ---\n',
+  [CLIENT_KEYS.chunkLimitNotice]: '\n注意：内容共有 {{total}} 段，但只获取前 {{fetching}} 段',
+  [CLIENT_KEYS.chunkLimitHint]: '要获取更多分段，请使用 --max-chunks=N 参数 (To fetch more chunks, use --max-chunks=N parameter)\n',
+  [CLIENT_KEYS.fetchingChunkProgress]: '\n正在获取第 {{current}}/{{total}} 段内容...',
+  [CLIENT_KEYS.fetchChunkFailedError]: '\n获取第 {{index}} 段内容失败: {{error}}\n',
+  [CLIENT_KEYS.chunkContent]: '\n--- 第 {{index}} 段内容 ---\n',
+  [CLIENT_KEYS.chunkSeparator]: '\n' + '-'.repeat(80),
+  [CLIENT_KEYS.partialChunksFetched]: '\n已获取 {{fetched}}/{{total}} 段内容\n',
+  [CLIENT_KEYS.completeChunksFetched]: '\n所有分段内容获取完成，共 {{total}} 段\n',
+  [CLIENT_KEYS.fetchingChunksErrorMessage]: '\n获取分块内容时出错: {{error}}\n',
+  [CLIENT_KEYS.contentChunkedBytes]: '\n内容已分段: 已获取 {{fetched}} 字节，总共 {{total}} 字节',
+  [CLIENT_KEYS.contentChunkedCount]: '\n内容已分段: {{current}}/{{total}} 段',
+  [CLIENT_KEYS.fetchAllChunksHint]: '获取所有分段内容，请运行:\n{{command}}\n',
+  [CLIENT_KEYS.fetchLimitedChunksHint]: '获取前 {{limit}} 段内容，请运行:\n{{command}}\n',
+  [CLIENT_KEYS.firstChunkCompleted]: '\n第一段内容已完成: {{index}}/{{total}}\n',
+  [CLIENT_KEYS.chunkProgress]: '\n第 {{current}}/{{total}} 段完成，已获取 {{fetchedBytes}}/{{totalBytes}} 字节 ({{percent}}%)\n',
+  [CLIENT_KEYS.chunkCompleted]: '\n第 {{current}}/{{total}} 段完成\n',
+  [CLIENT_KEYS.recalculatedTotalChunks]: '重新计算总块数: {{totalChunks}} (基于总字节数: {{totalBytes}}, 已获取字节数: {{fetchedBytes}}, 剩余字节数: {{remainingBytes}}, 内容大小限制: {{contentSizeLimit}})',
+  [CLIENT_KEYS.fetchingChunksError]: '获取分块内容时发生错误: {{error}}',
+  
   // 调试相关 (Debug related)
   [CLIENT_KEYS.debugMode]: '调试模式: {{enabled}}',
   [CLIENT_KEYS.debugInfo]: '调试信息: {{info}}',
@@ -46,6 +90,7 @@ export default {
   [CLIENT_KEYS.statusCodeDetected]: '检测到状态码: {{code}}',
   [CLIENT_KEYS.usageInfo]: '使用信息: {{info}}',
   [CLIENT_KEYS.exampleUsage]: '使用示例: {{example}}',
+  [CLIENT_KEYS.alternateUsageInfo]: '对于替代格式，使用 --plaintext 或 --markdown 标志',
   [CLIENT_KEYS.invalidJson]: '无效的 JSON: {{error}}',
   [CLIENT_KEYS.usingCommandLineProxy]: '使用命令行代理: {{proxy}}',
   [CLIENT_KEYS.invalidProxyFormat]: '无效的代理格式: {{proxy}}',
@@ -67,5 +112,16 @@ export default {
   [CLIENT_KEYS.browserModeFetchFailed]: '浏览器模式获取失败: {{error}}',
   [CLIENT_KEYS.browserModeFetchSuccess]: '浏览器模式获取成功',
   [CLIENT_KEYS.serverClosed]: '服务器已关闭',
-  [CLIENT_KEYS.proxySet]: '代理已设置: {{proxy}}'
+  [CLIENT_KEYS.proxySet]: '代理已设置: {{proxy}}',
+  
+  // 模式相关 (Mode related)
+  [CLIENT_KEYS.usingStandardMode]: '使用标准模式',
+  [CLIENT_KEYS.usingBrowserMode]: '使用浏览器模式',
+  [CLIENT_KEYS.switchingToBrowserMode]: '正在切换至浏览器模式',
+  
+  // 参数相关 (Parameters related)
+  [CLIENT_KEYS.sendingParameters]: '正在发送参数到 MCP: {{params}}',
+  [CLIENT_KEYS.invalidUrl]: '无效的 URL: {{url}}',
+  [CLIENT_KEYS.missingUrl]: '缺少 URL 参数',
+  [CLIENT_KEYS.missingStartCursor]: '缺少 startCursor 参数'
 }; 

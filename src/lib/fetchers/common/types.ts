@@ -63,6 +63,10 @@ export const RequestPayloadSchema = z.object({
   scrollToBottom: z.boolean().optional(),
   closeBrowser: z.boolean().optional(),
   saveCookies: z.boolean().optional(),
+  contentSizeLimit: z.number().optional(),
+  enableContentSplitting: z.boolean().optional(),
+  chunkId: z.string().optional(),
+  startCursor: z.number().optional(),
 }).merge(BrowserParamsSchema);
 
 export type RequestPayload = z.infer<typeof RequestPayloadSchema>;
@@ -74,6 +78,17 @@ export type RequestPayload = z.infer<typeof RequestPayloadSchema>;
 export interface FetchResponse {
   content: Array<{ type: string; text: string }>;
   isError: boolean;
+  isChunked?: boolean;
+  totalChunks?: number;
+  currentChunk?: number;
+  chunkId?: string;
+  hasMoreChunks?: boolean;
+  
+  // 新增的基于字节的分块属性 (New byte-based chunking properties)
+  totalBytes?: number;     // 总字节数 (Total bytes)
+  fetchedBytes?: number;   // 已获取的字节数 (Fetched bytes)
+  remainingBytes?: number; // 剩余字节数 (Remaining bytes)
+  isLastChunk?: boolean;   // 是否是最后一个分块 (Whether it's the last chunk)
 }
 
 /**
@@ -125,5 +140,6 @@ export interface IFetcher {
   html(requestPayload: RequestPayload): Promise<any>;
   json(requestPayload: RequestPayload): Promise<any>;
   txt(requestPayload: RequestPayload): Promise<any>;
+  plainText(requestPayload: RequestPayload): Promise<any>;
   markdown(requestPayload: RequestPayload): Promise<any>;
 } 

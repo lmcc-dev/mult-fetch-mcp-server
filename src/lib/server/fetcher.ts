@@ -8,6 +8,7 @@ import { Fetcher } from '../fetch.js';
 import { FetchParams } from './types.js';
 import { log, COMPONENTS } from '../logger.js';
 import { initializeBrowser, closeBrowserInstance, shouldSwitchToBrowser } from './browser.js';
+import { BaseFetcher } from '../fetchers/common/BaseFetcher.js';
 
 /**
  * 辅助函数：根据类型和参数自动选择合适的获取方法 (Helper function: automatically select appropriate fetching method based on type and parameters)
@@ -16,7 +17,7 @@ import { initializeBrowser, closeBrowserInstance, shouldSwitchToBrowser } from '
  * @param type 内容类型 (Content type)
  * @returns 获取结果 (Fetch result)
  */
-export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'json' | 'txt' | 'markdown') {
+export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'json' | 'txt' | 'markdown' | 'plaintext') {
   const useBrowser = params.useBrowser === true;
   const autoDetectMode = params.autoDetectMode !== false; // 除非明确设置为 false，否则默认为 true (Unless explicitly set to false, default to true)
   const closeBrowserAfterFetch = params.closeBrowser === true; // 是否在获取后关闭浏览器 (Whether to close the browser after fetching)
@@ -45,6 +46,8 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
           return await Fetcher.txt(params);
         case 'markdown':
           return await Fetcher.markdown(params);
+        case 'plaintext':
+          return await Fetcher.plainText(params);
         default:
           throw new Error(`Unsupported content type: ${type}`);
       }
@@ -72,6 +75,10 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
           }
           case 'markdown': {
             result = await Fetcher.markdown(params);
+            break;
+          }
+          case 'plaintext': {
+            result = await Fetcher.plainText(params);
             break;
           }
           default:
@@ -120,6 +127,9 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
                 break;
               case 'markdown':
                 browserResult = await Fetcher.markdown(browserParams);
+                break;
+              case 'plaintext':
+                browserResult = await Fetcher.plainText(browserParams);
                 break;
               default:
                 throw new Error(`Unsupported content type: ${type}`);
@@ -172,6 +182,9 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
             case 'markdown':
               browserResult = await Fetcher.markdown(browserParams);
               break;
+            case 'plaintext':
+              browserResult = await Fetcher.plainText(browserParams);
+              break;
             default:
               throw new Error(`Unsupported content type: ${type}`);
           }
@@ -198,8 +211,5 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
   }
   
   // 如果没有匹配的类型，返回错误
-  return {
-    content: [{ type: 'text', text: `Unsupported content type: ${type}` }],
-    isError: true
-  };
-}// 修复注释
+  return BaseFetcher.createErrorResponse(`Unsupported content type: ${type}`);
+}

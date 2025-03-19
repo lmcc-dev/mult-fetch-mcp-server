@@ -35,5 +35,10 @@ export default {
   [TOOLS_KEYS.callError]: 'Error calling tool {{name}}: {{error}}',
   [TOOLS_KEYS.missingUrl]: 'Missing URL parameter',
   [TOOLS_KEYS.fetchRequest]: 'Fetching {{type}} from URL: {{url}}',
-  [TOOLS_KEYS.fetchError]: 'Error fetching from URL {{url}}: {{error}}'
+  [TOOLS_KEYS.fetchError]: 'Error fetching from URL {{url}}: {{error}}',
+  
+  // 参数相关 (Parameters related)
+  [TOOLS_KEYS.missingUrlOrChunkId]: 'Missing URL or chunk ID',
+  [TOOLS_KEYS.missingStartCursor]: 'Missing start cursor parameter',
+  [TOOLS_KEYS.fetchChunkRequest]: 'Fetching chunk: {{chunkId}} from startCursor: {{startCursor}}',
 }; 

@@ -6,6 +6,7 @@
 
 import { log, COMPONENTS } from '../logger.js';
 import { isAccessDeniedError, isNetworkError } from './errorDetection.js';
+import { BaseFetcher } from '../fetchers/common/BaseFetcher.js';
 
 // 扩展组件常量 (Extend component constants)
 const EXTENDED_COMPONENTS = {
@@ -110,15 +111,8 @@ export class FetchError extends Error {
    * 转换为标准响应格式 (Convert to standard response format)
    * @returns 标准响应对象 (Standard response object)
    */
-  toResponse(): { isError: true; content: Array<{ text: string }> } {
-    return {
-      isError: true,
-      content: [
-        {
-          text: this.message
-        }
-      ]
-    };
+  toResponse(): { isError: true; content: Array<{ type: string; text: string }> } {
+    return BaseFetcher.createErrorResponse(this.message) as { isError: true; content: Array<{ type: string; text: string }> };
   }
 }
 

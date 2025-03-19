@@ -28,32 +28,35 @@
 
 ```
 fetch-mcp/
-├── src/                # 源代码目录
-│   ├── lib/            # 库文件
-│   │   ├── BrowserFetcher.ts # 浏览器模式获取器
-│   │   ├── NodeFetcher.ts    # Node.js 模式获取器
-│   │   ├── server/           # 服务器相关模块
-│   │   │   ├── index.ts      # 服务器入口
-│   │   │   ├── browser.ts    # 浏览器管理
-│   │   │   ├── fetcher.ts    # 网页获取逻辑
-│   │   │   ├── logger.ts     # 日志工具
-│   │   │   ├── tools.ts      # 工具注册和处理
-│   │   │   └── types.ts      # 服务器类型定义
-│   │   ├── i18n/             # 国际化支持
-│   │   │   ├── index.ts      # 国际化配置
-│   │   │   └── logger.ts     # 国际化日志工具
-│   │   └── types.ts          # 通用类型定义
-│   ├── client.ts       # MCP 客户端实现
-│   └── mcp-server.ts   # MCP 服务器主入口
-├── index.ts            # 服务器入口点
-├── tests/              # 测试文件
-│   ├── test-mcp.ts     # MCP 功能测试
-│   ├── test-mini4k.ts  # 特定网站测试
-│   └── test-direct-client.ts # 直接客户端调用测试
-└── dist/               # 编译后的文件
-    ├── index.js        # 编译后的入口点
-    ├── src/            # 编译后的源代码
-    └── tests/          # 编译后的测试文件
+├── src/                         # 源代码目录
+│   ├── lib/                     # 库文件
+│   │   ├── fetchers/            # 网页获取实现
+│   │   │   ├── browser/         # 基于浏览器的获取
+│   │   │   │   ├── BrowserFetcher.ts      # 浏览器获取实现
+│   │   │   │   ├── BrowserInstance.ts     # 浏览器实例管理
+│   │   │   │   └── PageOperations.ts      # 页面交互操作
+│   │   │   ├── node/            # 基于Node.js的获取
+│   │   │   └── common/          # 共享获取工具
+│   │   ├── utils/               # 工具模块
+│   │   │   ├── ChunkManager.ts        # 内容分块功能
+│   │   │   ├── ContentProcessor.ts    # HTML到文本转换
+│   │   │   ├── ContentSizeManager.ts  # 内容大小限制
+│   │   │   └── ErrorHandler.ts        # 错误处理
+│   │   ├── server/              # 服务器相关模块
+│   │   │   ├── index.ts         # 服务器入口
+│   │   │   ├── browser.ts       # 浏览器管理
+│   │   │   ├── fetcher.ts       # 网页获取逻辑
+│   │   │   ├── tools.ts         # 工具注册和处理
+│   │   │   ├── resources.ts     # 资源处理
+│   │   │   ├── prompts.ts       # 提示模板
+│   │   │   └── types.ts         # 服务器类型定义
+│   │   ├── i18n/                # 国际化支持
+│   │   └── types.ts             # 通用类型定义
+│   ├── client.ts                # MCP 客户端实现
+│   └── mcp-server.ts            # MCP 服务器主入口
+├── index.ts                     # 服务器入口点
+├── tests/                       # 测试文件
+└── dist/                        # 编译后的文件
 ```
 
 ## MCP规范
@@ -69,8 +72,10 @@ fetch-mcp/
 
 - 基于官方 MCP SDK 的实现
 - 支持标准输入输出（Stdio）传输方式
-- 提供了多种网页抓取方法（HTML、JSON、文本、Markdown）
+- 提供了多种网页抓取方法（HTML、JSON、文本、Markdown、纯文本转换）
 - 智能模式切换：自动在标准请求和浏览器模式之间切换
+- 内容大小管理：自动将大型内容分割成可管理的块，以解决AI模型上下文大小限制问题
+- 分块内容检索：能够请求大型内容的特定块，同时保持上下文连续性
 - 详细的调试日志输出到标准错误流
 - 支持中英文双语国际化
 - 模块化设计，便于维护和扩展
@@ -168,6 +173,7 @@ npx @lmcc-dev/mult-fetch-mcp-server
 - `fetch_json`: 获取 JSON 数据
 - `fetch_txt`: 获取纯文本内容
 - `fetch_markdown`: 获取 Markdown 格式内容
+- `fetch_plaintext`: 获取从HTML转换的纯文本内容（去除HTML标签）
 
 ## 构建
 
@@ -187,13 +193,36 @@ mult-fetch-mcp-server
 npx mult-fetch-mcp-server
 ```
 
-## 运行客户端
+## 客户端演示工具
+
+> **注意**：以下 client.js 功能仅供演示和测试使用。当与 Claude 或其他 AI 助手一起使用时，MCP 服务器由 AI 驱动，它会自动管理分块处理过程。
+
+### 命令行客户端
+
+本项目包含一个命令行客户端，用于测试和开发目的：
 
 ```bash
 pnpm run client <method> <params_json>
 # 例如
 pnpm run client fetch_html '{"url": "https://example.com", "debug": true}'
 ```
+
+### 演示客户端分块控制参数
+
+在使用命令行客户端进行测试时，可以使用这些参数来演示内容分块功能：
+
+- `--all-chunks`：命令行标志，用于自动按顺序获取所有块（仅用于演示目的）
+- `--max-chunks`：命令行标志，用于限制要获取的最大块数（可选，默认为10）
+
+#### 实时输出演示
+
+client.js 演示工具提供实时输出功能：
+
+```bash
+node dist/src/client.js fetch_html '{"url":"https://example.com", "startCursor": 0, "contentSizeLimit": 500}' --all-chunks --debug
+```
+
+演示客户端将自动按顺序获取所有块并立即显示它们，展示大型内容如何能够实时处理。
 
 ## 运行测试
 
@@ -401,6 +430,7 @@ if (result.isError) {
 - `fetch_json`: 获取JSON数据
 - `fetch_txt`: 获取纯文本内容
 - `fetch_markdown`: 获取Markdown格式内容
+- `fetch_plaintext`: 获取从HTML转换的纯文本内容（去除HTML标签）
 
 ### 资源支持
 
@@ -471,10 +501,22 @@ console.log('调试获取提示:', debugPrompt);
 - `noDelay`: 是否禁用请求间的随机延迟（可选，默认为false）
 - `useSystemProxy`: 是否使用系统代理（可选，默认为true）
 
+#### 内容大小控制参数
+- `enableContentSplitting`: 是否将大内容分割成多个块（可选，默认为true）
+- `contentSizeLimit`: 内容分割前的最大字节数（可选，默认为50000）
+- `startCursor`: 字节级偏移量，用于从特定位置开始获取内容（可选，默认为0）
+
+这些参数有助于管理超出AI模型上下文大小限制的大型内容，允许您以可管理的块获取网页内容，同时保持处理完整信息的能力。
+
+#### 分块管理
+- `chunkId`: 内容分割时的块集唯一标识符（用于请求后续块）
+
+当内容被分割成多个块时，响应中包含元数据，允许AI使用`chunkId`和`startCursor`参数请求后续块。系统使用字节级分块管理提供对内容检索的精确控制，实现从内容中任何位置无缝处理。
+
 #### 模式控制参数
 - `useBrowser`: 是否使用浏览器模式（可选，默认为false）
 - `useNodeFetch`: 是否强制使用Node.js模式（可选，默认为false，与`useBrowser`互斥）
-- `autoDetectMode`: 是否自动检测并切换到浏览器模式（可选，默认为true）
+- `autoDetectMode`: 是否在标准模式失败（出现403/Forbidden错误）时自动检测并切换到浏览器模式（可选，默认为true）。设置为false可以严格使用指定的模式，不进行自动切换。
 
 #### 浏览器模式特有参数
 - `waitForSelector`: 浏览器模式下等待的选择器（可选，默认为'body'）
@@ -513,6 +555,15 @@ console.log('调试获取提示:', debugPrompt);
 - `[NODE-FETCH]`: Node.js获取器的日志
 - `[BROWSER-FETCH]`: 浏览器获取器的日志
 - `[CLIENT]`: 客户端的日志
+- `[TOOLS]`: 工具实现的日志
+- `[FETCHER]`: 主获取器接口的日志
+- `[CONTENT]`: 内容处理相关的日志
+- `[CONTENT-PROCESSOR]`: HTML内容处理器的日志
+- `[CONTENT-SIZE]`: 内容大小管理相关的日志
+- `[CHUNK-MANAGER]`: 内容分块操作相关的日志
+- `[ERROR-HANDLER]`: 错误处理相关的日志
+- `[BROWSER-MANAGER]`: 浏览器实例管理器的日志
+
 
 ## 许可证
 

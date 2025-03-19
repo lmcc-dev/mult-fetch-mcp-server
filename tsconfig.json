@@ -11,6 +11,6 @@
     "noImplicitAny": false,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "*.ts"],
+  "include": ["src/**/*.ts", "tests/**/*.ts", "*.ts", "src/lib/i18n/keys.ts3"],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }
