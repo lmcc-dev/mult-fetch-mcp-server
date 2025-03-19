@@ -77,7 +77,8 @@ async function testMini4k() {
           debug: true,
           timeout: 30000,
           waitForTimeout: 3000,
-          scrollToBottom: false // 禁用滚动到底部
+          scrollToBottom: false, // 禁用滚动到底部
+          startCursor: 0
         }
       });
       
@@ -99,7 +100,8 @@ async function testMini4k() {
           useBrowser: true,
           timeout: 30000,
           waitForTimeout: 3000,
-          scrollToBottom: false // 禁用滚动到底部
+          scrollToBottom: false, // 禁用滚动到底部
+          startCursor: 0
         }
       });
       
@@ -111,6 +113,96 @@ async function testMini4k() {
         console.log(`浏览器模式错误: ${browserResult.content[0].text}`);
       }
       
+      // 测试 HTML 转纯文本功能
+      console.log('\n测试 HTML 转纯文本功能...');
+      const plaintextResult = await client.callTool({
+        name: 'fetch_plaintext',
+        arguments: {
+          url: 'https://mini4k.com',
+          debug: true,
+          useBrowser: true, // 使用浏览器模式，因为标准模式可能会失败
+          timeout: 30000,
+          waitForTimeout: 3000,
+          startCursor: 0
+        }
+      });
+      
+      console.log(`纯文本结果 - 是否错误: ${plaintextResult.isError}`);
+      if (!plaintextResult.isError && plaintextResult.content && plaintextResult.content[0]) {
+        console.log(`纯文本内容长度: ${plaintextResult.content[0].text.length} 字节`);
+        console.log(`纯文本内容预览: ${plaintextResult.content[0].text.substring(0, 200)}...`);
+      } else if (plaintextResult.isError) {
+        console.log(`纯文本错误: ${plaintextResult.content[0].text}`);
+      }
+      
+      // 测试分块功能
+      console.log('\n测试分块功能...');
+      const chunkResult = await client.callTool({
+        name: 'fetch_html',
+        arguments: {
+          url: 'https://mini4k.com',
+          debug: true,
+          useBrowser: true,
+          timeout: 30000,
+          waitForTimeout: 3000,
+          contentSizeLimit: 3000, // 设置较小的内容大小限制来触发分块
+          startCursor: 0,
+          enableContentSplitting: true
+        }
+      });
+      
+      console.log(`分块结果 - 是否错误: ${chunkResult.isError}`);
+      if (!chunkResult.isError && chunkResult.content && chunkResult.content[0]) {
+        console.log(`第一个分块内容长度: ${chunkResult.content[0].text.length} 字节`);
+        console.log(`第一个分块内容预览: ${chunkResult.content[0].text.substring(0, 100)}...`);
+        
+        // 检查是否有更多分块
+        const systemNoteMatch = chunkResult.content[0].text.match(/===\s*SYSTEM\s*NOTE\s*===.*?====================/s);
+        if (systemNoteMatch) {
+          console.log('检测到系统注释，表示有更多分块可用');
+          console.log(systemNoteMatch[0]);
+          
+          // 提取 chunkId 和 fetchedBytes
+          const chunkIdMatch = systemNoteMatch[0].match(/chunkId:\s*"([^"]+)"/);
+          const fetchedBytesMatch = systemNoteMatch[0].match(/fetchedBytes:\s*(\d+)/);
+          
+          if (chunkIdMatch && fetchedBytesMatch) {
+            const chunkId = chunkIdMatch[1];
+            const fetchedBytes = parseInt(fetchedBytesMatch[1]);
+            
+            console.log(`获取到 chunkId: ${chunkId}, fetchedBytes: ${fetchedBytes}`);
+            
+            // 获取第二个分块
+            console.log('\n获取第二个分块...');
+            const secondChunkResult = await client.callTool({
+              name: 'fetch_html',
+              arguments: {
+                url: 'https://mini4k.com',
+                debug: true,
+                useBrowser: true,
+                timeout: 30000,
+                chunkId: chunkId,
+                startCursor: fetchedBytes,
+                contentSizeLimit: 3000,
+                enableContentSplitting: true
+              }
+            });
+            
+            console.log(`第二个分块结果 - 是否错误: ${secondChunkResult.isError}`);
+            if (!secondChunkResult.isError && secondChunkResult.content && secondChunkResult.content[0]) {
+              console.log(`第二个分块内容长度: ${secondChunkResult.content[0].text.length} 字节`);
+              console.log(`第二个分块内容预览: ${secondChunkResult.content[0].text.substring(0, 100)}...`);
+            } else if (secondChunkResult.isError) {
+              console.log(`第二个分块错误: ${secondChunkResult.content[0].text}`);
+            }
+          }
+        } else {
+          console.log('没有检测到更多分块');
+        }
+      } else if (chunkResult.isError) {
+        console.log(`分块错误: ${chunkResult.content[0].text}`);
+      }
+      
       // 关闭浏览器实例
       console.log('\n关闭浏览器实例...');
       await client.callTool({
@@ -119,7 +211,8 @@ async function testMini4k() {
           url: 'about:blank',
           debug: true,
           useBrowser: true,
-          closeBrowser: true
+          closeBrowser: true,
+          startCursor: 0
         }
       });
       

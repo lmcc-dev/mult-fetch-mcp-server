@@ -73,6 +73,11 @@ export const CLIENT_KEYS = (() => {
     contentChunkedCount: keyGen('contentChunkedCount'),
     fetchAllChunksHint: keyGen('fetchAllChunksHint'),
     fetchLimitedChunksHint: keyGen('fetchLimitedChunksHint'),
+    firstChunkCompleted: keyGen('firstChunkCompleted'),
+    chunkProgress: keyGen('chunkProgress'),
+    chunkCompleted: keyGen('chunkCompleted'),
+    recalculatedTotalChunks: keyGen('recalculatedTotalChunks'),
+    fetchingChunksError: keyGen('fetchingChunksError'),
     
     // 调试相关 (Debug related)
     debugMode: keyGen('debugMode'),
@@ -113,6 +118,7 @@ export const CLIENT_KEYS = (() => {
     // 参数相关 (Parameters related)
     sendingParameters: keyGen('sendingParameters'),
     limitingChunks: keyGen('limitingChunks'),
-    maxChunksUsageInfo: keyGen('maxChunksUsageInfo')
+    maxChunksUsageInfo: keyGen('maxChunksUsageInfo'),
+    alternateUsageInfo: keyGen('alternateUsageInfo')
   } as const;
 })(); 

@@ -317,7 +317,8 @@ async function main() {
   // 检查是否请求所有分段内容 (Check if requesting all chunks)
   const allChunksFlag = process.argv.includes('--all-chunks');
   let method: string;
-  let params: RequestPayload;
+  let params: RequestPayload = {};
+  let paramsJson = "{}";
   
   // 获取最大分块数限制 (Get maximum chunk limit)
   let maxChunks = DEFAULT_MAX_CHUNKS;
@@ -329,24 +330,60 @@ async function main() {
     }
   }
   
-  // 检查命令行参数 (Check command line arguments)
-  if (process.argv.length < 4) {
+  // 解析命令行参数 (Parse command line arguments)
+  if (process.argv.length < 3) {
     log('client.usageInfo', true, { info: 'node src/client.js <method> <params_json> [--debug] [--all-chunks] [--max-chunks=N]' }, COMPONENTS.CLIENT);
     log('client.exampleUsage', true, { example: 'node src/client.js fetch_html {"url":"https://example.com"}' }, COMPONENTS.CLIENT);
     log('client.chunkUsageInfo', true, {}, COMPONENTS.CLIENT);
     log('client.allChunksUsageInfo', true, {}, COMPONENTS.CLIENT);
     log('client.maxChunksUsageInfo', true, { default: DEFAULT_MAX_CHUNKS }, COMPONENTS.CLIENT);
+    log('client.alternateUsageInfo', true, { example: 'node src/client.js fetch_html --url=https://example.com --startCursor=0' }, COMPONENTS.CLIENT);
     process.exit(1);
   }
 
   method = process.argv[2];
-  let paramsJson = process.argv[3];
-
-  try {
-    params = JSON.parse(paramsJson);
-  } catch (e) {
-    log('client.invalidJson', true, { error: String(e) }, COMPONENTS.CLIENT);
-    process.exit(1);
+  
+  // 检查参数格式：JSON 或 命令行参数 (Check parameter format: JSON or command line arguments)
+  const thirdArg = process.argv[3];
+  const isJsonParams = thirdArg && thirdArg.startsWith('{') && thirdArg.endsWith('}');
+  
+  if (isJsonParams) {
+    // JSON 格式参数 (JSON format parameters)
+    paramsJson = thirdArg;
+    try {
+      params = JSON.parse(paramsJson);
+    } catch (e) {
+      log('client.invalidJson', true, { error: String(e) }, COMPONENTS.CLIENT);
+      process.exit(1);
+    }
+  } else {
+    // 命令行参数格式 (Command line argument format)
+    // 收集所有 --key=value 格式的参数
+    const argParams = process.argv.slice(3).filter(arg => arg.startsWith('--') && arg.includes('='));
+    
+    // 创建参数对象 (Create parameter object)
+    for (const arg of argParams) {
+      if (arg === '--debug' || arg === '--all-chunks' || arg.startsWith('--max-chunks=')) {
+        continue; // 这些是特殊标志，不是参数 (These are special flags, not parameters)
+      }
+      
+      const [key, value] = arg.substring(2).split('=');
+      if (key && value !== undefined) {
+        // 尝试将可能的数字和布尔值转换为实际类型 (Try to convert possible numbers and booleans to actual types)
+        if (value === 'true') {
+          params[key] = true;
+        } else if (value === 'false') {
+          params[key] = false;
+        } else if (!isNaN(Number(value)) && value.trim() !== '') {
+          params[key] = Number(value);
+        } else {
+          params[key] = value;
+        }
+      }
+    }
+    
+    // 转换为 JSON 字符串以便在日志等地方使用 (Convert to JSON string for use in logs, etc.)
+    paramsJson = JSON.stringify(params);
   }
 
   const debug = params.debug === true || process.argv.includes('--debug');
@@ -560,7 +597,7 @@ async function main() {
     }
     
     // 输出第一段内容 (Output first chunk)
-    process.stdout.write(JSON.stringify(result, null, 2));
+    console.log(JSON.stringify(result, null, 2));
     
     // 如果启用了获取所有分段内容，并且结果包含分段信息 (If all chunks mode is enabled and result contains chunk information)
     if (allChunksFlag && hasMoreChunks && chunkId) {
@@ -598,11 +635,17 @@ async function main() {
         // 获取剩余的分段内容 (Fetch remaining chunks)
         let nextStartCursor = result.fetchedBytes || 0;  // 字节级分块的起始位置 (Starting position for byte-level chunking)
         
+        // 立即输出分块分隔符，表示第一个分块已完成 (Output chunk separator immediately to indicate first chunk is complete)
+        console.log('\n');  // 添加空行使输出更清晰 (Add empty line for clearer output)
+        log('client.chunkSeparator', true, {}, COMPONENTS.CLIENT);
+        log('client.firstChunkCompleted', true, { index: 1, total: totalChunks }, COMPONENTS.CLIENT);
+        
         for (let i = 1; i <= actualChunksToFetch; i++) {
-          log('client.fetchingChunk', debug, { index: i, total: totalChunks }, COMPONENTS.CLIENT);
+          const currentChunkNumber = i + 1; // 当前分块编号（从1开始）
           
-          // 输出正在获取的提示信息 (Output fetching prompt)
-          log('client.fetchingChunkProgress', true, { current: i+1, total: totalChunks }, COMPONENTS.CLIENT);
+          // 输出正在获取的分块的信息 (Output information about the chunk being fetched)
+          log('client.fetchingChunk', debug, { index: i, total: totalChunks }, COMPONENTS.CLIENT);
+          log('client.fetchingChunkProgress', true, { current: currentChunkNumber, total: totalChunks }, COMPONENTS.CLIENT);
           
           // 准备获取下一段内容的参数 (Prepare parameters for fetching next chunk)
           const nextChunkParams = {
@@ -620,7 +663,7 @@ async function main() {
           // 如果获取失败，输出错误信息并退出 (If fetch fails, output error message and exit)
           if (nextChunkResult.isError) {
             log('client.fetchChunkFailed', debug, { index: i, error: nextChunkResult.content[0].text }, COMPONENTS.CLIENT);
-            log('client.fetchChunkFailedError', true, { index: i+1, error: nextChunkResult.content[0].text }, COMPONENTS.CLIENT);
+            log('client.fetchChunkFailedError', true, { index: currentChunkNumber, error: nextChunkResult.content[0].text }, COMPONENTS.CLIENT);
             break;
           }
           
@@ -649,13 +692,30 @@ async function main() {
             nextStartCursor += (params.contentSizeLimit || 1000);
           }
           
-          // 立即输出分段内容 (Output chunk immediately)
-          log('client.chunkContent', true, { index: i+1 }, COMPONENTS.CLIENT);
-          process.stdout.write(JSON.stringify(nextChunkResult, null, 2));
-          process.stdout.write('\n');  // 添加额外的换行符，使输出更清晰 (Add extra newline for clearer output)
+          // 立即输出分块完成的信息 (Output chunk completion information immediately)
+          log('client.chunkContent', true, { index: currentChunkNumber }, COMPONENTS.CLIENT);
           
-          // 输出分隔线，使输出更清晰 (Output separator for clarity)
+          // 立即输出当前分块内容 (Output current chunk content immediately)
+          console.log(JSON.stringify(nextChunkResult, null, 2));
+          
+          // 输出分隔符，使每个分块的输出更清晰 (Output separator for clearer distinction between chunks)
+          console.log('\n');  // 添加空行使输出更清晰 (Add empty line for clearer output)
           log('client.chunkSeparator', true, {}, COMPONENTS.CLIENT);
+          
+          // 输出当前进度信息 (Output current progress information)
+          if (nextChunkResult.fetchedBytes && nextChunkResult.totalBytes) {
+            const totalFetchedBytes = (result.fetchedBytes || 0) + nextChunkResult.fetchedBytes;
+            const percent = Math.floor((totalFetchedBytes / nextChunkResult.totalBytes) * 100);
+            log('client.chunkProgress', true, { 
+              current: currentChunkNumber, 
+              total: totalChunks,
+              fetchedBytes: totalFetchedBytes,
+              totalBytes: nextChunkResult.totalBytes,
+              percent: percent
+            }, COMPONENTS.CLIENT);
+          } else {
+            log('client.chunkCompleted', true, { current: currentChunkNumber, total: totalChunks }, COMPONENTS.CLIENT);
+          }
         }
         
         // 输出所有分段内容获取完成的信息 (Output all chunks fetched message)
@@ -716,7 +776,7 @@ async function main() {
       ]
     };
     
-    process.stdout.write(JSON.stringify(errorResult, null, 2));
+    console.log(JSON.stringify(errorResult, null, 2));
   } finally {
     // 关闭客户端连接 (Close client connection)
     log('client.serverClosed', debug, {}, COMPONENTS.CLIENT);
@@ -726,9 +786,13 @@ async function main() {
 
 // 捕获未处理的异常 (Catch unhandled exceptions)
 process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
   log('client.fatalError', true, { error: error.toString() }, COMPONENTS.CLIENT);
   process.exit(1);
 });
 
 // 执行主函数 (Execute main function)
-main(); 
+main().catch(error => {
+  console.error('Error in main function:', error);
+  process.exit(1);
+}); 

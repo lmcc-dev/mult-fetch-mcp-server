@@ -72,6 +72,11 @@ export default {
   [CLIENT_KEYS.contentChunkedCount]: '\nContent is chunked: {{current}}/{{total}} chunks',
   [CLIENT_KEYS.fetchAllChunksHint]: 'To fetch all chunks, run:\n{{command}}\n',
   [CLIENT_KEYS.fetchLimitedChunksHint]: 'To fetch first {{limit}} chunks, run:\n{{command}}\n',
+  [CLIENT_KEYS.firstChunkCompleted]: '\nFirst chunk completed: {{index}}/{{total}}\n',
+  [CLIENT_KEYS.chunkProgress]: '\nChunk {{current}}/{{total}} completed, retrieved {{fetchedBytes}}/{{totalBytes}} bytes ({{percent}}%)\n',
+  [CLIENT_KEYS.chunkCompleted]: '\nChunk {{current}}/{{total}} completed\n',
+  [CLIENT_KEYS.recalculatedTotalChunks]: 'Recalculated total chunks: {{totalChunks}} (based on totalBytes: {{totalBytes}}, fetchedBytes: {{fetchedBytes}}, remainingBytes: {{remainingBytes}}, contentSizeLimit: {{contentSizeLimit}})',
+  [CLIENT_KEYS.fetchingChunksError]: 'Error occurred while fetching chunks: {{error}}',
   
   // 调试相关 (Debug related)
   [CLIENT_KEYS.debugMode]: 'Debug mode: {{enabled}}',
@@ -85,6 +90,7 @@ export default {
   [CLIENT_KEYS.statusCodeDetected]: 'Status code detected: {{code}}',
   [CLIENT_KEYS.usageInfo]: 'Usage info: {{info}}',
   [CLIENT_KEYS.exampleUsage]: 'Example usage: {{example}}',
+  [CLIENT_KEYS.alternateUsageInfo]: 'Alternative style example: {{example}}',
   [CLIENT_KEYS.invalidJson]: 'Invalid JSON: {{error}}',
   [CLIENT_KEYS.usingCommandLineProxy]: 'Using command line proxy: {{proxy}}',
   [CLIENT_KEYS.invalidProxyFormat]: 'Invalid proxy format: {{proxy}}',

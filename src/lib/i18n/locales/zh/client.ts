@@ -72,6 +72,11 @@ export default {
   [CLIENT_KEYS.contentChunkedCount]: '\n内容已分段: {{current}}/{{total}} 段 (Content is chunked: {{current}}/{{total}} chunks)',
   [CLIENT_KEYS.fetchAllChunksHint]: '获取所有分段内容，请运行: (To fetch all chunks, run:)\n{{command}}\n',
   [CLIENT_KEYS.fetchLimitedChunksHint]: '获取前 {{limit}} 段内容，请运行: (To fetch first {{limit}} chunks, run:)\n{{command}}\n',
+  [CLIENT_KEYS.firstChunkCompleted]: '\n第一段内容已完成 (First chunk completed): {{index}}/{{total}}\n',
+  [CLIENT_KEYS.chunkProgress]: '\n第 {{current}}/{{total}} 段完成，已获取 {{fetchedBytes}}/{{totalBytes}} 字节 ({{percent}}%) (Chunk {{current}}/{{total}} completed, retrieved {{fetchedBytes}}/{{totalBytes}} bytes ({{percent}}%))\n',
+  [CLIENT_KEYS.chunkCompleted]: '\n第 {{current}}/{{total}} 段完成 (Chunk {{current}}/{{total}} completed)\n',
+  [CLIENT_KEYS.recalculatedTotalChunks]: '重新计算总块数: {{totalChunks}} (基于总字节数: {{totalBytes}}, 已获取字节数: {{fetchedBytes}}, 剩余字节数: {{remainingBytes}}, 内容大小限制: {{contentSizeLimit}})',
+  [CLIENT_KEYS.fetchingChunksError]: '获取分块内容时发生错误: {{error}}',
   
   // 调试相关 (Debug related)
   [CLIENT_KEYS.debugMode]: '调试模式: {{enabled}}',
@@ -85,6 +90,7 @@ export default {
   [CLIENT_KEYS.statusCodeDetected]: '检测到状态码: {{code}}',
   [CLIENT_KEYS.usageInfo]: '使用信息: {{info}}',
   [CLIENT_KEYS.exampleUsage]: '使用示例: {{example}}',
+  [CLIENT_KEYS.alternateUsageInfo]: '参数样式使用示例: {{example}}',
   [CLIENT_KEYS.invalidJson]: '无效的 JSON: {{error}}',
   [CLIENT_KEYS.usingCommandLineProxy]: '使用命令行代理: {{proxy}}',
   [CLIENT_KEYS.invalidProxyFormat]: '无效的代理格式: {{proxy}}',

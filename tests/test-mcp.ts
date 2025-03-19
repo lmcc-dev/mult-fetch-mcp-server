@@ -83,7 +83,8 @@ async function testMCP() {
         name: 'fetch_html',
         arguments: {
           url: 'https://example.com',
-          debug: true
+          debug: true,
+          startCursor: 0
         }
       });
       
@@ -101,7 +102,8 @@ async function testMCP() {
         name: 'fetch_json',
         arguments: {
           url: 'https://jsonplaceholder.typicode.com/todos/1',
-          debug: true
+          debug: true,
+          startCursor: 0
         }
       });
       
@@ -109,6 +111,90 @@ async function testMCP() {
         console.error('获取 JSON 失败:', jsonResult.content[0].text);
       } else {
         console.log(`获取 JSON 成功，内容: ${jsonResult.content[0].text}`);
+      }
+      
+      // 测试 fetch_plaintext 方法
+      console.log('\n测试 fetch_plaintext 方法...');
+      const plaintextResult = await client.callTool({
+        name: 'fetch_plaintext',
+        arguments: {
+          url: 'https://example.com',
+          debug: true,
+          startCursor: 0
+        }
+      });
+      
+      if (plaintextResult.isError) {
+        console.error('获取纯文本失败:', plaintextResult.content[0].text);
+      } else {
+        console.log(`获取纯文本成功，内容长度: ${plaintextResult.content[0].text.length} 字节`);
+        console.log(`纯文本内容预览: ${plaintextResult.content[0].text.substring(0, 100)}...`);
+      }
+      console.log('');
+      
+      // 测试分块获取功能
+      console.log('\n测试分块获取功能...');
+      
+      // 设置较小的 contentSizeLimit 触发分块
+      const chunkTestResult = await client.callTool({
+        name: 'fetch_html',
+        arguments: {
+          url: 'https://example.com',
+          debug: true,
+          contentSizeLimit: 2000, // 设置较小的内容大小限制来触发分块
+          startCursor: 0,
+          enableContentSplitting: true
+        }
+      });
+      
+      if (chunkTestResult.isError) {
+        console.error('分块测试失败:', chunkTestResult.content[0].text);
+      } else {
+        console.log('第一个分块获取成功:');
+        console.log(`内容长度: ${chunkTestResult.content[0].text.length} 字节`);
+        console.log(`内容预览: ${chunkTestResult.content[0].text.substring(0, 100)}...`);
+        
+        // 检查是否包含系统注释，表示有更多分块
+        const systemNoteMatch = chunkTestResult.content[0].text.match(/===\s*SYSTEM\s*NOTE\s*===.*?====================/s);
+        if (systemNoteMatch) {
+          console.log('检测到系统注释，表示有更多分块可用');
+          console.log(systemNoteMatch[0]);
+          
+          // 提取 chunkId 和 fetchedBytes
+          const chunkIdMatch = systemNoteMatch[0].match(/chunkId:\s*"([^"]+)"/);
+          const fetchedBytesMatch = systemNoteMatch[0].match(/fetchedBytes:\s*(\d+)/);
+          
+          if (chunkIdMatch && fetchedBytesMatch) {
+            const chunkId = chunkIdMatch[1];
+            const fetchedBytes = parseInt(fetchedBytesMatch[1]);
+            
+            console.log(`获取到 chunkId: ${chunkId}, fetchedBytes: ${fetchedBytes}`);
+            
+            // 获取下一个分块
+            console.log('\n获取下一个分块...');
+            const nextChunkResult = await client.callTool({
+              name: 'fetch_html',
+              arguments: {
+                url: 'https://example.com',
+                debug: true,
+                chunkId: chunkId,
+                startCursor: fetchedBytes,
+                contentSizeLimit: 2000,
+                enableContentSplitting: true
+              }
+            });
+            
+            if (nextChunkResult.isError) {
+              console.error('获取下一个分块失败:', nextChunkResult.content[0].text);
+            } else {
+              console.log('下一个分块获取成功:');
+              console.log(`内容长度: ${nextChunkResult.content[0].text.length} 字节`);
+              console.log(`内容预览: ${nextChunkResult.content[0].text.substring(0, 100)}...`);
+            }
+          }
+        } else {
+          console.log('没有检测到更多分块，内容可能小于设置的限制或分块功能未正确工作');
+        }
       }
       
       // 关闭浏览器实例（如果有的话）
@@ -119,7 +205,8 @@ async function testMCP() {
           url: 'about:blank',
           debug: true,
           useBrowser: true,
-          closeBrowser: true
+          closeBrowser: true,
+          startCursor: 0
         }
       });
       
