@@ -143,6 +143,8 @@ export class ContentSizeManager {
     
     log('contentSize.splitIntoChunks', debug, { 
       totalChunks: rawChunks.length, 
+      chunkCount: rawChunks.length,
+      chunkSize: effectiveChunkSize,
       totalBytes,
       effectiveChunkSize,
       sizeLimit

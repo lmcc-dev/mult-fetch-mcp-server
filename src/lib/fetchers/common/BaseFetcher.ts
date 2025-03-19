@@ -74,7 +74,7 @@ export class BaseFetcher {
     // 如果内容大小超过限制且启用了内容分段 (If content size exceeds limit and content splitting is enabled)
     if (contentBytes > contentSizeLimit && enableContentSplitting) {
       log('fetcher.contentTooLarge', debug, { 
-        bytes: contentBytes, 
+        size: contentBytes, 
         limit: contentSizeLimit 
       }, component);
       
@@ -161,7 +161,13 @@ export class BaseFetcher {
     debug: boolean = false,
     component: string
   ): FetchResponse {
-    log('fetcher.gettingChunkBySize', debug, { chunkId, startCursor, sizeLimit }, component);
+    log('fetcher.gettingChunkBySize', debug, { 
+      chunkId, 
+      startCursor, 
+      start: startCursor,
+      end: startCursor + sizeLimit,
+      sizeLimit 
+    }, component);
     
     // 获取分段内容 (Get chunked content)
     const chunkResult = ChunkManager.getChunkBySize(chunkId, startCursor, sizeLimit, debug);

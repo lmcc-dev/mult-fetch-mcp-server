@@ -88,7 +88,7 @@ export function getSystemProxy(
   log('fetcher.checkingProxyEnv', debug, {}, component);
   for (const varName of proxyVars) {
     log('fetcher.envVarValue', debug, { 
-      envVar: varName, 
+      name: varName, 
       value: process.env[varName] || t('fetcher.notSet') 
     }, component);
   }

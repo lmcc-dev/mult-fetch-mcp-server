@@ -69,6 +69,7 @@ export class ChunkManager {
     
     log('chunkManager.storedChunks', debug, { 
       chunkId, 
+      count: chunks.length,
       totalChunks: chunks.length,
       totalBytes,
       expiresAt: new Date(expirationTime).toISOString()
@@ -146,6 +147,7 @@ export class ChunkManager {
     log('chunkManager.retrievedChunkBySize', debug, { 
       chunkId, 
       startCursor,
+      size: sizeLimit,
       bytesRequested: sizeLimit,
       bytesRetrieved: bytesActuallyFetched,
       totalFetchedBytes,
