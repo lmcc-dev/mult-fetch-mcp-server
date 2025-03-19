@@ -196,13 +196,36 @@ node dist/index.js
 npx @lmcc-dev/mult-fetch-mcp-server
 ```
 
-## Run Client
+## Client Demo Tools
+
+> **Note**: The following client.js functionality is provided for demonstration and testing purposes only. When used with Claude or other AI assistants, the MCP server is driven by the AI, which manages the chunking process automatically.
+
+### Command Line Client
+
+The project includes a command-line client for testing and development purposes:
 
 ```bash
 pnpm run client <method> <params_json>
 # example
 pnpm run client fetch_html '{"url": "https://example.com", "debug": true}'
 ```
+
+### Demo Client Chunk Control Parameters
+
+When testing with the command-line client, you can use these parameters to demonstrate content chunking capabilities:
+
+- `--all-chunks`: Command line flag to automatically fetch all chunks in sequence (demonstration purpose only)
+- `--max-chunks`: Command line flag to limit the maximum number of chunks to fetch (optional, default is 10)
+
+#### Real-time Output Demo
+
+The client.js demo tool provides real-time output capabilities:
+
+```bash
+node dist/src/client.js fetch_html '{"url":"https://example.com", "startCursor": 0, "contentSizeLimit": 500}' --all-chunks --debug
+```
+
+The demo client will automatically fetch all chunks in sequence and display them immediately, showcasing how large content can be processed in real-time.
 
 ## Run Tests
 
@@ -481,14 +504,15 @@ Each tool supports the following parameters:
 
 #### Content Size Control Parameters
 - `enableContentSplitting`: Whether to split large content into chunks (optional, default is true)
-- `contentSizeLimit`: Maximum content size in bytes before splitting (optional, default is 100000)
+- `contentSizeLimit`: Maximum content size in bytes before splitting (optional, default is 50000)
+- `startCursor`: Starting cursor position in bytes for retrieving content from a specific position (optional, default is 0)
 
 These parameters help manage large content that would exceed AI model context size limits, allowing you to retrieve web content in manageable chunks while maintaining the ability to process the complete information.
 
-#### Chunk Control Parameters
-- `chunkId`: Unique identifier for a chunk set when content is split (read-only in response metadata)
-- `chunkIndex`: Index of the current chunk (used for requesting specific chunks)
-- `totalChunks`: Total number of chunks in the content (read-only in response metadata)
+#### Chunk Management
+- `chunkId`: Unique identifier for a chunk set when content is split (used for requesting subsequent chunks)
+
+When content is split into chunks, the response includes metadata that allows the AI to request subsequent chunks using the `chunkId` and `startCursor` parameters. The system uses byte-level chunk management to provide precise control over content retrieval, enabling seamless processing of content from any position.
 
 #### Mode Control Parameters
 - `useBrowser`: Whether to use browser mode (optional, default is false)

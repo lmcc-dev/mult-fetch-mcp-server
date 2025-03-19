@@ -193,13 +193,36 @@ mult-fetch-mcp-server
 npx mult-fetch-mcp-server
 ```
 
-## 运行客户端
+## 客户端演示工具
+
+> **注意**：以下 client.js 功能仅供演示和测试使用。当与 Claude 或其他 AI 助手一起使用时，MCP 服务器由 AI 驱动，它会自动管理分块处理过程。
+
+### 命令行客户端
+
+本项目包含一个命令行客户端，用于测试和开发目的：
 
 ```bash
 pnpm run client <method> <params_json>
 # 例如
 pnpm run client fetch_html '{"url": "https://example.com", "debug": true}'
 ```
+
+### 演示客户端分块控制参数
+
+在使用命令行客户端进行测试时，可以使用这些参数来演示内容分块功能：
+
+- `--all-chunks`：命令行标志，用于自动按顺序获取所有块（仅用于演示目的）
+- `--max-chunks`：命令行标志，用于限制要获取的最大块数（可选，默认为10）
+
+#### 实时输出演示
+
+client.js 演示工具提供实时输出功能：
+
+```bash
+node dist/src/client.js fetch_html '{"url":"https://example.com", "startCursor": 0, "contentSizeLimit": 500}' --all-chunks --debug
+```
+
+演示客户端将自动按顺序获取所有块并立即显示它们，展示大型内容如何能够实时处理。
 
 ## 运行测试
 
@@ -480,14 +503,15 @@ console.log('调试获取提示:', debugPrompt);
 
 #### 内容大小控制参数
 - `enableContentSplitting`: 是否将大内容分割成多个块（可选，默认为true）
-- `contentSizeLimit`: 内容分割前的最大字节数（可选，默认为100000）
+- `contentSizeLimit`: 内容分割前的最大字节数（可选，默认为50000）
+- `startCursor`: 字节级偏移量，用于从特定位置开始获取内容（可选，默认为0）
 
 这些参数有助于管理超出AI模型上下文大小限制的大型内容，允许您以可管理的块获取网页内容，同时保持处理完整信息的能力。
 
-#### 分块控制参数
-- `chunkId`: 内容分割时的块集唯一标识符（仅在响应元数据中返回）
-- `chunkIndex`: 当前块的索引（用于请求特定块）
-- `totalChunks`: 内容中的总块数（仅在响应元数据中返回）
+#### 分块管理
+- `chunkId`: 内容分割时的块集唯一标识符（用于请求后续块）
+
+当内容被分割成多个块时，响应中包含元数据，允许AI使用`chunkId`和`startCursor`参数请求后续块。系统使用字节级分块管理提供对内容检索的精确控制，实现从内容中任何位置无缝处理。
 
 #### 模式控制参数
 - `useBrowser`: 是否使用浏览器模式（可选，默认为false）
