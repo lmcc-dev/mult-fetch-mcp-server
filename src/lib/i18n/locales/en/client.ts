@@ -82,15 +82,14 @@ export default {
   [CLIENT_KEYS.debugMode]: 'Debug mode: {{enabled}}',
   [CLIENT_KEYS.debugInfo]: 'Debug info: {{info}}',
   
-  // 原有键 (Original keys)
+  // 其他键 (Other keys)
   [CLIENT_KEYS.error]: 'Error: {{error}}',
-  [CLIENT_KEYS.callTool]: 'Calling tool: {{name}}',
-  [CLIENT_KEYS.callToolSuccess]: 'Tool call successful: {{name}}',
-  [CLIENT_KEYS.callToolError]: 'Tool call error: {{name}} - {{error}}',
-  [CLIENT_KEYS.statusCodeDetected]: 'Status code detected: {{code}}',
-  [CLIENT_KEYS.usageInfo]: 'Usage info: {{info}}',
+  [CLIENT_KEYS.callTool]: 'Calling tool: {{tool}}',
+  [CLIENT_KEYS.callToolSuccess]: 'Tool call successful: {{tool}}',
+  [CLIENT_KEYS.callToolError]: 'Tool call error: {{tool}} - {{error}}',
+  [CLIENT_KEYS.statusCodeDetected]: 'Status code detected: {{statusCode}}',
+  [CLIENT_KEYS.usageInfo]: 'Usage: {{usage}}',
   [CLIENT_KEYS.exampleUsage]: 'Example usage: {{example}}',
-  [CLIENT_KEYS.alternateUsageInfo]: 'Alternative style example: {{example}}',
   [CLIENT_KEYS.invalidJson]: 'Invalid JSON: {{error}}',
   [CLIENT_KEYS.usingCommandLineProxy]: 'Using command line proxy: {{proxy}}',
   [CLIENT_KEYS.invalidProxyFormat]: 'Invalid proxy format: {{proxy}}',
@@ -99,7 +98,7 @@ export default {
   [CLIENT_KEYS.noShellProxy]: 'No shell proxy found',
   [CLIENT_KEYS.systemProxyDisabled]: 'System proxy disabled',
   [CLIENT_KEYS.usingSystemProxy]: 'Using system proxy: {{proxy}}',
-  [CLIENT_KEYS.noSystemProxy]: 'No system proxy found',
+  [CLIENT_KEYS.noSystemProxy]: 'No system proxy',
   [CLIENT_KEYS.requestFailed]: 'Request failed: {{error}}',
   [CLIENT_KEYS.fatalError]: 'Fatal error: {{error}}',
   [CLIENT_KEYS.startingServer]: 'Starting server...',
@@ -107,7 +106,7 @@ export default {
   [CLIENT_KEYS.usingMode]: 'Using {{mode}} mode',
   [CLIENT_KEYS.fetchFailed]: 'Fetch failed: {{error}}',
   [CLIENT_KEYS.fetchSuccess]: 'Fetch successful',
-  [CLIENT_KEYS.browserModeNeeded]: 'Browser mode needed for: {{url}}',
+  [CLIENT_KEYS.browserModeNeeded]: 'Browser mode needed',
   [CLIENT_KEYS.retryingWithBrowser]: 'Retrying with browser mode',
   [CLIENT_KEYS.browserModeFetchFailed]: 'Browser mode fetch failed: {{error}}',
   [CLIENT_KEYS.browserModeFetchSuccess]: 'Browser mode fetch successful',
@@ -117,7 +116,14 @@ export default {
   // 模式相关 (Mode related)
   [CLIENT_KEYS.usingStandardMode]: 'Using standard mode',
   [CLIENT_KEYS.usingBrowserMode]: 'Using browser mode',
+  [CLIENT_KEYS.switchingToBrowserMode]: 'Switching to browser mode',
   
   // 参数相关 (Parameters related)
-  [CLIENT_KEYS.sendingParameters]: 'Sending parameters to MCP: {{params}}'
+  [CLIENT_KEYS.sendingParameters]: 'Sending parameters to MCP: {{params}}',
+  [CLIENT_KEYS.invalidUrl]: 'Invalid URL: {{url}}',
+  [CLIENT_KEYS.missingUrl]: 'Missing URL parameter',
+  [CLIENT_KEYS.missingStartCursor]: 'Missing startCursor parameter',
+  
+  // 其他 (Others)
+  [CLIENT_KEYS.alternateUsageInfo]: 'For alternate formats, use --plaintext or --markdown flags'
 }; 

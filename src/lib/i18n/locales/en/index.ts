@@ -14,6 +14,7 @@ import tools from './tools.js';
 import errors from './errors.js';
 import resources from './resources.js';
 import prompts from './prompts.js';
+import url from './url.js';
 import { contentSizeEn as contentSize } from './contentSize.js';
 import { chunkManagerEn as chunkManager } from './chunkManager.js';
 import { processorEn as processor } from './processor.js';
@@ -30,6 +31,7 @@ export const enTranslation = {
   errors,
   resources,
   prompts,
+  url,
   contentSize,
   chunkManager,
   processor

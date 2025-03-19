@@ -14,5 +14,6 @@ export const contentSizeZh = {
   [CONTENT_SIZE_KEYS.truncating]: '内容大小超过限制，正在截断。原始大小: {{originalSize}}, 限制: {{limit}}',
   [CONTENT_SIZE_KEYS.truncated]: '内容已截断。最终大小: {{finalSize}}, 限制: {{limit}}',
   [CONTENT_SIZE_KEYS.splitting]: '内容大小超过限制，正在分段。原始大小: {{originalSize}}, 分段大小: {{chunkSize}}',
-  [CONTENT_SIZE_KEYS.splitComplete]: '内容分段完成。共{{chunks}}个分段，平均大小: {{avgChunkSize}}'
+  [CONTENT_SIZE_KEYS.splitComplete]: '内容分段完成。共{{chunks}}个分段，平均大小: {{avgChunkSize}}',
+  [CONTENT_SIZE_KEYS.splitIntoChunks]: '正在将内容分割成{{chunkCount}}个分块，每个分块约{{chunkSize}}字节'
 }; 

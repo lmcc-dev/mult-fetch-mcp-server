@@ -18,5 +18,6 @@ export const CONTENT_SIZE_KEYS = {
   truncating: keyGen('truncating'),
   truncated: keyGen('truncated'),
   splitting: keyGen('splitting'),
-  splitComplete: keyGen('splitComplete')
+  splitComplete: keyGen('splitComplete'),
+  splitIntoChunks: keyGen('splitIntoChunks')
 } as const; 

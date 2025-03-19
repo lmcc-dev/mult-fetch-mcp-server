@@ -119,6 +119,10 @@ export const CLIENT_KEYS = (() => {
     sendingParameters: keyGen('sendingParameters'),
     limitingChunks: keyGen('limitingChunks'),
     maxChunksUsageInfo: keyGen('maxChunksUsageInfo'),
-    alternateUsageInfo: keyGen('alternateUsageInfo')
+    alternateUsageInfo: keyGen('alternateUsageInfo'),
+    switchingToBrowserMode: keyGen('switchingToBrowserMode'),
+    invalidUrl: keyGen('invalidUrl'),
+    missingUrl: keyGen('missingUrl'),
+    missingStartCursor: keyGen('missingStartCursor')
   } as const;
 })(); 

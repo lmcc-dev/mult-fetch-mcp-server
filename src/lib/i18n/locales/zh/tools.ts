@@ -35,5 +35,10 @@ export default {
   [TOOLS_KEYS.callError]: '调用工具 {{name}} 时出错: {{error}}',
   [TOOLS_KEYS.missingUrl]: '缺少URL参数',
   [TOOLS_KEYS.fetchRequest]: '正在从URL获取{{type}}: {{url}}',
-  [TOOLS_KEYS.fetchError]: '从URL {{url}} 获取内容时出错: {{error}}'
+  [TOOLS_KEYS.fetchError]: '从URL {{url}} 获取内容时出错: {{error}}',
+  
+  // 参数相关 (Parameters related)
+  [TOOLS_KEYS.missingUrlOrChunkId]: '缺少 URL 或分块 ID',
+  [TOOLS_KEYS.missingStartCursor]: '缺少起始游标参数',
+  [TOOLS_KEYS.fetchChunkRequest]: '获取分块: {{chunkId}}，起始游标: {{startCursor}}',
 }; 

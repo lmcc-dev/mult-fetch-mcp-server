@@ -114,6 +114,9 @@ export const BROWSER_KEYS = (() => {
         startingJsonFetch: keyGen('startingJsonFetch'),
         startingTxtFetch: keyGen('startingTxtFetch'),
         startingMarkdownFetch: keyGen('startingMarkdownFetch'),
+        startingPlainTextFetch: keyGen('startingPlainTextFetch'),
+        extractingText: keyGen('extractingText'),
+        textExtracted: keyGen('textExtracted'),
         jsonParsed: keyGen('jsonParsed'),
         jsonParseError: keyGen('jsonParseError'),
         

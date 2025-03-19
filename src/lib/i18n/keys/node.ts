@@ -72,6 +72,9 @@ export const NODE_KEYS = (() => {
     creatingTurndown: keyGen('creatingTurndown'),
     convertingToMarkdown: keyGen('convertingToMarkdown'),
     markdownContentLength: keyGen('markdownContentLength'),
+    startingPlainTextFetch: keyGen('startingPlainTextFetch'),
+    extractingText: keyGen('extractingText'),
+    textExtracted: keyGen('textExtracted'),
     
     // 内容分段相关 (Content splitting related)
     contentSplit: keyGen('contentSplit'),

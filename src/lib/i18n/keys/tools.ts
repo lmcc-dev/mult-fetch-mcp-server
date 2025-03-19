@@ -40,6 +40,11 @@ export const TOOLS_KEYS = (() => {
     callError: keyGen('callError'),
     missingUrl: keyGen('missingUrl'),
     fetchRequest: keyGen('fetchRequest'),
-    fetchError: keyGen('fetchError')
+    fetchError: keyGen('fetchError'),
+    
+    // 参数相关 (Parameters related)
+    missingUrlOrChunkId: keyGen('missingUrlOrChunkId'),
+    missingStartCursor: keyGen('missingStartCursor'),
+    fetchChunkRequest: keyGen('fetchChunkRequest')
   } as const;
 })(); 

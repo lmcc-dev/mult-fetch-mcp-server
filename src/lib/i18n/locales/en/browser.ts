@@ -99,36 +99,39 @@ export default {
   [BROWSER_KEYS.browserStarted]: "Browser started",
   [BROWSER_KEYS.browserStartError]: "Browser start error: {{error}}",
   
-  // Fetch related
+  // Fetch 相关 (Fetch related)
   [BROWSER_KEYS.htmlFetchError]: "Error fetching HTML: {{error}}",
   [BROWSER_KEYS.jsonFetchError]: "Error fetching JSON: {{error}}",
   [BROWSER_KEYS.txtFetchError]: "Error fetching text: {{error}}",
   [BROWSER_KEYS.markdownFetchError]: "Error fetching Markdown: {{error}}",
-  [BROWSER_KEYS.creatingTurndown]: "Creating Turndown service",
+  [BROWSER_KEYS.creatingTurndown]: "Creating Turndown instance for Markdown conversion",
   [BROWSER_KEYS.convertingToMarkdown]: "Converting HTML to Markdown",
   [BROWSER_KEYS.markdownContentLength]: "Markdown content length: {{length}} bytes",
   [BROWSER_KEYS.startingJsonFetch]: "Starting JSON fetch",
   [BROWSER_KEYS.startingTxtFetch]: "Starting text fetch",
   [BROWSER_KEYS.startingMarkdownFetch]: "Starting Markdown fetch",
+  [BROWSER_KEYS.startingPlainTextFetch]: "Starting plain text fetch",
+  [BROWSER_KEYS.extractingText]: "Extracting text from HTML content",
+  [BROWSER_KEYS.textExtracted]: "Text extracted, length: {{length}} bytes",
   [BROWSER_KEYS.jsonParsed]: "JSON parsed successfully",
   [BROWSER_KEYS.jsonParseError]: "Error parsing JSON: {{error}}",
   
-  // Proxy related
-  [BROWSER_KEYS.proxyConnected]: "Proxy connected",
+  // 代理相关 (Proxy related)
+  [BROWSER_KEYS.proxyConnected]: "Connected to proxy: {{proxy}}",
   [BROWSER_KEYS.proxyError]: "Proxy error: {{error}}",
   
-  // Response related
+  // 响应相关 (Response related)
   [BROWSER_KEYS.responseStatus]: "Response status: {{status}}",
-  [BROWSER_KEYS.responseError]: "Response error: {{status}} {{statusText}}",
-  [BROWSER_KEYS.responseSuccess]: "Response success",
-  [BROWSER_KEYS.responseRedirect]: "Response redirect to: {{location}}",
+  [BROWSER_KEYS.responseError]: "Response error: {{error}}",
+  [BROWSER_KEYS.responseSuccess]: "Response successful",
+  [BROWSER_KEYS.responseRedirect]: "Response redirected to: {{url}}",
   [BROWSER_KEYS.responseTimeout]: "Response timeout after {{timeout}}ms",
   
-  // Error handling
-  [BROWSER_KEYS.errorResponse]: "Error response: {{status}}",
+  // 错误处理 (Error handling)
+  [BROWSER_KEYS.errorResponse]: "Error response from server: {{status}}",
   [BROWSER_KEYS.errorResponseBody]: "Error response body: {{body}}",
-  [BROWSER_KEYS.accessDenied]: "Access denied: {{error}}",
-  [BROWSER_KEYS.timeoutError]: "Timeout error: {{error}}",
+  [BROWSER_KEYS.accessDenied]: "Access denied: {{status}} - {{message}}",
+  [BROWSER_KEYS.timeoutError]: "Request timed out after {{timeout}}ms",
   [BROWSER_KEYS.networkError]: "Network error: {{error}}",
   [BROWSER_KEYS.unknownError]: "Unknown error: {{error}}"
 }; 
