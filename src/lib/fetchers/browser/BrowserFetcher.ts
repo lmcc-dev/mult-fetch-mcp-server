@@ -185,19 +185,19 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
    * @returns 获取结果 (Fetch result)
    */
   public async html(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { 
-      url, 
+    const {
+      url,
       debug = false,
       closeBrowser = false,
       contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
       enableContentSplitting = true,
       chunkId,
-      chunkIndex
+      startCursor = 0
     } = requestPayload;
     
-    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
-    if (chunkId && chunkIndex !== undefined) {
-      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
+    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
+    if (chunkId && startCursor !== undefined) {
+      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
     }
     
     log('browser.startingHtmlFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
@@ -244,18 +244,19 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
    * @returns 获取结果 (Fetch result)
    */
   public async json(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { 
-      url, 
+    const {
+      url,
       debug = false,
+      closeBrowser = false,
       contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
       enableContentSplitting = true,
       chunkId,
-      chunkIndex
+      startCursor = 0
     } = requestPayload;
     
-    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
-    if (chunkId && chunkIndex !== undefined) {
-      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
+    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
+    if (chunkId && startCursor !== undefined) {
+      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
     }
     
     log('browser.startingJsonFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
@@ -313,18 +314,19 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
    * @returns 获取结果 (Fetch result)
    */
   public async txt(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { 
-      url, 
+    const {
+      url,
       debug = false,
+      closeBrowser = false,
       contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
       enableContentSplitting = true,
       chunkId,
-      chunkIndex
+      startCursor = 0
     } = requestPayload;
     
-    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
-    if (chunkId && chunkIndex !== undefined) {
-      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
+    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
+    if (chunkId && startCursor !== undefined) {
+      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
     }
     
     log('browser.startingTxtFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
@@ -376,17 +378,19 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
    * @returns 纯文本响应 (Plain text response)
    */
   public async plainText(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { 
-      debug = false, 
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
+    const {
+      url,
+      debug = false,
+      closeBrowser = false,
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
       enableContentSplitting = true,
       chunkId,
-      chunkIndex
+      startCursor = 0
     } = requestPayload;
     
-    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
-    if (chunkId && chunkIndex !== undefined) {
-      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
+    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
+    if (chunkId && startCursor !== undefined) {
+      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
     }
     
     log('browser.startingPlainTextFetch', debug, { url: requestPayload.url }, COMPONENTS.BROWSER_FETCH);
@@ -427,17 +431,19 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
    * @returns Markdown内容 (Markdown content)
    */
   public async markdown(requestPayload: RequestPayload): Promise<FetchResponse> {
-    const { 
-      debug = false, 
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(), 
+    const {
+      url,
+      debug = false,
+      closeBrowser = false,
+      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
       enableContentSplitting = true,
       chunkId,
-      chunkIndex
+      startCursor = 0
     } = requestPayload;
     
-    // 如果提供了分段ID和索引，则从缓存中获取分段内容 (If chunk ID and index are provided, get chunk content from cache)
-    if (chunkId && chunkIndex !== undefined) {
-      return this.getChunkContent(chunkId, chunkIndex, debug, COMPONENTS.BROWSER_FETCH);
+    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
+    if (chunkId && startCursor !== undefined) {
+      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
     }
     
     log('browser.startingMarkdownFetch', debug, { url: requestPayload.url }, COMPONENTS.BROWSER_FETCH);
