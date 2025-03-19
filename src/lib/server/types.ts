@@ -15,6 +15,12 @@ export interface FetchParams {
   url: string;
   
   /**
+   * 开始游标位置，指定从哪个字节位置开始获取内容 (Start cursor position, specifies from which byte position to start fetching content)
+   * 首次请求时默认为0，后续请求时必须提供以支持断点续传 (Default is 0 for first request, must be provided for subsequent requests to support resuming)
+   */
+  startCursor?: number;
+  
+  /**
    * 请求头 (Request headers)
    */
   headers?: Record<string, string>;
@@ -83,4 +89,24 @@ export interface FetchParams {
    * 是否在获取后关闭浏览器 (Whether to close the browser after fetching)
    */
   closeBrowser?: boolean;
+  
+  /**
+   * 请求方法 (Request method)
+   */
+  method?: string;
+  
+  /**
+   * 分块ID (Chunk ID)
+   */
+  chunkId?: string;
+  
+  /**
+   * 内容大小限制(字节) (Content size limit in bytes)
+   */
+  contentSizeLimit?: number;
+  
+  /**
+   * 是否启用内容分割 (Whether to enable content splitting)
+   */
+  enableContentSplitting?: boolean;
 }

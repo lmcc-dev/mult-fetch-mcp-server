@@ -34,16 +34,16 @@ export class BaseFetcher {
   
   /**
    * 创建错误响应 (Create error response)
-   * @param error 错误信息 (Error message)
+   * @param errorMessage 错误信息 (Error message)
    * @returns 错误响应 (Error response)
    */
-  public static createErrorResponse(error: string): FetchResponse {
+  public static createErrorResponse(errorMessage: string): FetchResponse {
     return {
       isError: true,
       content: [
         {
           type: 'text',
-          text: error
+          text: errorMessage
         }
       ]
     };
@@ -68,163 +68,154 @@ export class BaseFetcher {
   ): FetchResponse | null {
     // 检查内容大小 (Check content size)
     const contentLength = content.length;
-    log('fetcher.contentLength', debug, { length: contentLength }, component);
+    const contentBytes = Buffer.byteLength(content, 'utf8');
+    log('fetcher.contentLength', debug, { length: contentLength, bytes: contentBytes }, component);
     
     // 如果内容大小超过限制且启用了内容分段 (If content size exceeds limit and content splitting is enabled)
-    if (contentLength > contentSizeLimit && enableContentSplitting) {
+    if (contentBytes > contentSizeLimit && enableContentSplitting) {
       log('fetcher.contentTooLarge', debug, { 
-        length: contentLength, 
+        bytes: contentBytes, 
         limit: contentSizeLimit 
       }, component);
       
-      // 创建分段管理器 (Create chunk manager)
-      const chunks = ContentSizeManager.splitContentIntoChunks(content, contentSizeLimit, debug);
-      const chunkId = ChunkManager.storeChunks(chunks, debug);
-      const firstChunk = ChunkManager.getChunk(chunkId, 0, debug);
-      const totalChunks = ChunkManager.getTotalChunks(chunkId, debug);
+      // 分割内容 (Split content)
+      const { chunks, totalBytes } = ContentSizeManager.splitContentIntoChunks(content, contentSizeLimit, debug, 0);
       
-      if (firstChunk === null) {
-        return BaseFetcher.createErrorResponse('Error: Failed to retrieve the first chunk after splitting');
+      // 存储分割后的内容 (Store chunked content)
+      const chunkId = ChunkManager.storeChunks(chunks, totalBytes, debug);
+      
+      // 获取第一个分片 (Get first chunk)
+      const chunkResult = ChunkManager.getChunkBySize(chunkId, 0, contentSizeLimit, debug);
+      
+      if (!chunkResult) {
+        log('fetcher.chunkRetrievalFailed', debug, { chunkId }, component);
+        return BaseFetcher.createErrorResponse("Failed to retrieve chunk content");
       }
       
-      log('fetcher.contentSplit', debug, { 
-        chunkId, 
-        totalChunks,
-        originalSize: contentLength,
-        limit: contentSizeLimit
-      }, component);
+      const { content: firstChunk, fetchedBytes, remainingBytes, totalBytes: totalSize } = chunkResult;
       
-      // 返回第一段内容，并包含分段信息 (Return first chunk with chunking information)
+      // 计算预计还需要的请求次数 (Calculate estimated number of requests needed)
+      const estimatedRequests = Math.ceil(remainingBytes / contentSizeLimit);
+      
+      // 添加分段提示 (Add chunk prompt)
+      const isFirstRequest = true;
+      const chunkWithPrompt = firstChunk + TemplateUtils.generateSizeBasedChunkPrompt(
+        fetchedBytes,
+        totalSize,
+        chunkId,
+        remainingBytes,
+        estimatedRequests,
+        contentSizeLimit,
+        isFirstRequest
+      );
+      
+      // 创建响应 (Create response)
       return {
         isError: false,
+        isChunked: true,
         content: [
           {
             type: 'text',
-            text: firstChunk
+            text: chunkWithPrompt
           }
         ],
-        isChunked: true,
         chunkId,
-        totalChunks,
-        currentChunk: 0,
-        hasMoreChunks: totalChunks > 1
+        totalBytes: totalSize,
+        fetchedBytes,
+        remainingBytes,
+        hasMoreChunks: remainingBytes > 0
       };
     }
     
     // 如果内容大小超过限制但未启用内容分段 (If content size exceeds limit but content splitting is not enabled)
-    if (contentLength > contentSizeLimit && !enableContentSplitting) {
+    if (contentBytes > contentSizeLimit && !enableContentSplitting) {
       log('fetcher.contentTruncated', debug, { 
-        originalLength: contentLength, 
+        originalBytes: contentBytes, 
         truncatedLength: contentSizeLimit 
       }, component);
       
-      // 截断内容 (Truncate content)
       const truncatedContent = content.substring(0, contentSizeLimit);
       
-      // 返回截断后的内容 (Return truncated content)
-      return {
-        isError: false,
-        content: [
-          {
-            type: 'text',
-            text: truncatedContent
-          }
-        ]
-      };
+      return BaseFetcher.createSuccessResponse(
+        truncatedContent + `\n\n${TemplateUtils.SYSTEM_NOTE.START}\nContent was too large (${contentBytes} bytes) and has been truncated to ${contentSizeLimit} bytes. Enable content splitting to view the full content.\n${TemplateUtils.SYSTEM_NOTE.END}`
+      );
     }
     
-    // 如果不需要分段或截断，返回null (If no chunking or truncation needed, return null)
+    // 如果不需要分段，返回null (If no chunking needed, return null)
     return null;
   }
   
   /**
-   * 从缓存中获取分段内容 (Get chunk content from cache)
+   * 获取分段内容 - 基于字节偏移量 (Get chunked content based on byte offset)
    * @param chunkId 分段ID (Chunk ID)
-   * @param chunkIndex 分段索引 (Chunk index)
-   * @param debug 是否启用调试输出 (Whether to enable debug output)
+   * @param startCursor 开始游标位置 (Start cursor position)
+   * @param sizeLimit 大小限制 (Size limit)
+   * @param debug 是否启用调试模式 (Whether debug mode is enabled)
    * @param component 日志组件名称 (Log component name)
-   * @returns 分段内容 (Chunk content)
+   * @returns 获取结果 (Fetch result)
    */
   protected getChunkContent(
-    chunkId: string, 
-    chunkIndex: number,
+    chunkId: string,
+    startCursor: number = 0,
+    sizeLimit: number = ContentSizeManager.getDefaultSizeLimit(),
     debug: boolean = false,
     component: string
   ): FetchResponse {
-    log('fetcher.gettingChunk', debug, { chunkId, chunkIndex }, component);
+    log('fetcher.gettingChunkBySize', debug, { chunkId, startCursor, sizeLimit }, component);
     
-    try {
-      // 获取分段内容 (Get chunk content)
-      const chunkContent = ChunkManager.getChunk(chunkId, chunkIndex, debug);
-      
-      if (chunkContent === null) {
-        log('fetcher.chunkNotFound', debug, { chunkId, chunkIndex }, component);
-        return BaseFetcher.createErrorResponse(`Chunk with ID ${chunkId} and index ${chunkIndex} not found`);
-      }
-      
-      // 获取分段总数 (Get total chunks)
-      const totalChunks = ChunkManager.getTotalChunks(chunkId, debug);
-      
-      log('fetcher.chunkRetrieved', debug, { 
-        chunkId, 
-        chunkIndex, 
-        totalChunks,
-        contentLength: chunkContent.length
-      }, component);
-      
-      // 返回分段内容 (Return chunk content)
-      return {
-        isError: false,
-        content: [
-          {
-            type: 'text',
-            text: chunkContent
-          }
-        ],
-        isChunked: true,
-        chunkId,
-        totalChunks,
-        currentChunk: chunkIndex,
-        hasMoreChunks: chunkIndex < totalChunks - 1
-      };
-    } catch (error) {
-      log('fetcher.chunkRetrievalError', debug, { 
-        chunkId, 
-        chunkIndex, 
-        error: String(error) 
-      }, component);
-      
-      return BaseFetcher.createErrorResponse(`Error retrieving chunk: ${error}`);
+    // 获取分段内容 (Get chunked content)
+    const chunkResult = ChunkManager.getChunkBySize(chunkId, startCursor, sizeLimit, debug);
+    
+    // 如果获取失败，返回错误 (If retrieval failed, return error)
+    if (!chunkResult) {
+      log('fetcher.chunkNotFound', debug, { chunkId, startCursor }, component);
+      return BaseFetcher.createErrorResponse(`Chunk with ID ${chunkId} at cursor position ${startCursor} not found`);
     }
-  }
-
-  /**
-   * 创建分段响应 (Create chunked response)
-   * @param content 内容 (Content)
-   * @param chunkId 分段ID (Chunk ID)
-   * @param totalChunks 总分段数 (Total chunks)
-   * @param currentChunk 当前分段索引 (Current chunk index)
-   * @param additionalProps 额外属性 (Additional properties)
-   * @returns 分段响应 (Chunked response)
-   */
-  public static createChunkedResponse(
-    content: string,
-    chunkId: string,
-    totalChunks: number,
-    currentChunk: number,
-    additionalProps: Record<string, any> = {}
-  ): FetchResponse {
-    const hasMoreChunks = currentChunk < totalChunks - 1;
     
+    // 获取相关信息 (Get related information)
+    const { content, fetchedBytes, remainingBytes, isLastChunk, totalBytes } = chunkResult;
+    
+    // 计算预计还需要的请求次数 (Calculate estimated number of requests needed)
+    const estimatedRequests = Math.ceil(remainingBytes / sizeLimit);
+    
+    // 添加分段提示 (Add chunk prompt)
+    let contentWithPrompt: string;
+    
+    if (isLastChunk) {
+      // 如果是最后一个分段 (If it's the last chunk)
+      contentWithPrompt = content + TemplateUtils.generateSizeBasedLastChunkPrompt(
+        fetchedBytes,
+        totalBytes,
+        startCursor === 0 // 如果startCursor为0，则为首次请求 (If startCursor is 0, it's the first request)
+      );
+    } else {
+      // 如果不是最后一个分段 (If it's not the last chunk)
+      contentWithPrompt = content + TemplateUtils.generateSizeBasedChunkPrompt(
+        fetchedBytes,
+        totalBytes,
+        chunkId,
+        remainingBytes,
+        estimatedRequests,
+        sizeLimit,
+        startCursor === 0 // 如果startCursor为0，则为首次请求 (If startCursor is 0, it's the first request)
+      );
+    }
+    
+    // 创建响应 (Create response)
     return {
-      content: [{ type: 'text', text: content }],
       isError: false,
       isChunked: true,
-      totalChunks,
-      currentChunk,
+      content: [
+        {
+          type: 'text',
+          text: contentWithPrompt
+        }
+      ],
       chunkId,
-      hasMoreChunks,
-      ...additionalProps
+      totalBytes,
+      fetchedBytes,
+      remainingBytes,
+      hasMoreChunks: !isLastChunk
     };
   }
   
@@ -234,22 +225,42 @@ export class BaseFetcher {
    * @returns 添加了提示词的响应对象 (Response object with prompt)
    */
   public static addChunkPrompt(response: FetchResponse): FetchResponse {
-    if (response.isChunked && response.hasMoreChunks && response.content[0].text) {
-      const nextChunkIndex = (response.currentChunk || 0) + 1;
-      const promptText = `\n\n=== SYSTEM NOTE ===\nContent is too long and has been split. This is part ${response.currentChunk! + 1} of ${response.totalChunks}. To view the next part, use the same tool function with parameters chunkId="${response.chunkId}" and chunkIndex=${nextChunkIndex}\n===================`;
+    // 检查是否存在字节信息并需要添加分块提示 (Check if byte information exists and need to add chunk prompt)
+    if (response.isChunked && response.hasMoreChunks && response.totalBytes && response.fetchedBytes && response.remainingBytes) {
+      const chunkId = response.chunkId || '';
+      const currentSizeLimit = response.fetchedBytes; // 假设当前大小限制与已获取字节数相同 (Assume current size limit is the same as fetched bytes)
+      const estimatedRequests = Math.ceil(response.remainingBytes / currentSizeLimit);
+      
+      // 检查内容中是否已经包含系统提示 (Check if content already contains system note)
+      if (TemplateUtils.hasSystemPrompt(response.content[0].text || '')) {
+        // 已存在提示，直接返回原始响应 (Note already exists, return original response)
+        return response;
+      }
+      
+      // 使用基于字节的提示 (Use byte-based prompt)
+      const promptText = TemplateUtils.generateSizeBasedChunkPrompt(
+        response.fetchedBytes,
+        response.totalBytes,
+        chunkId,
+        response.remainingBytes,
+        estimatedRequests,
+        currentSizeLimit,
+        false // 设置为false表示这不是首次请求 (Set to false indicating this is not the first request)
+      );
       
       // 创建新的响应对象，避免修改原始对象 (Create new response object to avoid modifying the original)
       return {
         ...response,
         content: [
-          { 
-            type: response.content[0].type || 'text', 
-            text: response.content[0].text + promptText 
+          {
+            type: 'text',
+            text: (response.content[0].text || '') + promptText
           }
         ]
       };
     }
     
+    // 如果不需要添加提示，返回原始响应 (If no prompt needed, return original response)
     return response;
   }
 } 

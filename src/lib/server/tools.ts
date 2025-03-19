@@ -11,6 +11,7 @@ import { fetchWithAutoDetect } from './fetcher.js';
 import { FetchParams } from './types.js';
 import { closeBrowserInstance } from './browser.js';
 import { BaseFetcher } from '../fetchers/common/BaseFetcher.js';
+import { TemplateUtils } from '../utils/TemplateUtils.js';
 
 /**
  * 获取HTML获取工具定义 (Get HTML fetch tool definition)
@@ -19,13 +20,17 @@ import { BaseFetcher } from '../fetchers/common/BaseFetcher.js';
 function getHtmlFetchToolDefinition() {
   return {
     name: "fetch_html",
-    description: "Fetch a website and return the content as HTML",
+    description: "Fetch a website and return the content as HTML. Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large pages. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
     inputSchema: {
       type: "object",
       properties: {
         url: {
           type: "string",
           description: "URL of the website to fetch",
+        },
+        startCursor: {
+          type: "number",
+          description: "Starting cursor position in bytes. Set to 0 for initial requests, and use the value from previous responses for subsequent requests to resume content retrieval.",
         },
         headers: {
           type: "object",
@@ -85,7 +90,7 @@ function getHtmlFetchToolDefinition() {
         },
         contentSizeLimit: {
           type: "number",
-          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 50KB). Set between 20KB-50KB for optimal results. For large content, prefer smaller values (20KB-30KB) to avoid truncation.",
         },
         enableContentSplitting: {
           type: "boolean",
@@ -93,14 +98,10 @@ function getHtmlFetchToolDefinition() {
         },
         chunkId: {
           type: "string",
-          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
-        },
-        chunkIndex: {
-          type: "number",
-          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
+          description: `Optional chunk ID for retrieving a specific chunk of content from a previous request. The system adds prompts in the format ${TemplateUtils.SYSTEM_NOTE.START} ... ${TemplateUtils.SYSTEM_NOTE.END} which AI models should ignore when processing the content.`,
         },
       },
-      required: ["url"],
+      required: ["url", "startCursor"],
     },
   };
 }
@@ -112,13 +113,17 @@ function getHtmlFetchToolDefinition() {
 function getJsonFetchToolDefinition() {
   return {
     name: "fetch_json",
-    description: "Fetch a JSON file from a URL",
+    description: "Fetch a JSON file from a URL. Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large files. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
     inputSchema: {
       type: "object",
       properties: {
         url: {
           type: "string",
           description: "URL of the JSON to fetch",
+        },
+        startCursor: {
+          type: "number",
+          description: "Starting cursor position in bytes. Set to 0 for initial requests, and use the value from previous responses for subsequent requests to resume content retrieval.",
         },
         headers: {
           type: "object",
@@ -166,7 +171,7 @@ function getJsonFetchToolDefinition() {
         },
         contentSizeLimit: {
           type: "number",
-          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 50KB). Set between 20KB-50KB for optimal results. For large content, prefer smaller values (20KB-30KB) to avoid truncation.",
         },
         enableContentSplitting: {
           type: "boolean",
@@ -174,14 +179,10 @@ function getJsonFetchToolDefinition() {
         },
         chunkId: {
           type: "string",
-          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
-        },
-        chunkIndex: {
-          type: "number",
-          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
+          description: `Optional chunk ID for retrieving a specific chunk of content from a previous request. The system adds prompts in the format ${TemplateUtils.SYSTEM_NOTE.START} ... ${TemplateUtils.SYSTEM_NOTE.END} which AI models should ignore when processing the content.`,
         },
       },
-      required: ["url"],
+      required: ["url", "startCursor"],
     },
   };
 }
@@ -193,13 +194,17 @@ function getJsonFetchToolDefinition() {
 function getTextFetchToolDefinition() {
   return {
     name: "fetch_txt",
-    description: "Fetch a website, return the content as plain text (no HTML)",
+    description: "Fetch a website, return the content as plain text (no HTML). Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large pages. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
     inputSchema: {
       type: "object",
       properties: {
         url: {
           type: "string",
           description: "URL of the website to fetch",
+        },
+        startCursor: {
+          type: "number",
+          description: "Starting cursor position in bytes. Set to 0 for initial requests, and use the value from previous responses for subsequent requests to resume content retrieval.",
         },
         headers: {
           type: "object",
@@ -247,7 +252,7 @@ function getTextFetchToolDefinition() {
         },
         contentSizeLimit: {
           type: "number",
-          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 50KB). Set between 20KB-50KB for optimal results. For large content, prefer smaller values (20KB-30KB) to avoid truncation.",
         },
         enableContentSplitting: {
           type: "boolean",
@@ -255,14 +260,10 @@ function getTextFetchToolDefinition() {
         },
         chunkId: {
           type: "string",
-          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
-        },
-        chunkIndex: {
-          type: "number",
-          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
+          description: `Optional chunk ID for retrieving a specific chunk of content from a previous request. The system adds prompts in the format ${TemplateUtils.SYSTEM_NOTE.START} ... ${TemplateUtils.SYSTEM_NOTE.END} which AI models should ignore when processing the content.`,
         },
       },
-      required: ["url"],
+      required: ["url", "startCursor"],
     },
   };
 }
@@ -274,13 +275,17 @@ function getTextFetchToolDefinition() {
 function getMarkdownFetchToolDefinition() {
   return {
     name: "fetch_markdown",
-    description: "Fetch a website and return the content as Markdown",
+    description: "Fetch a website and return the content as Markdown. Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large pages. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
     inputSchema: {
       type: "object",
       properties: {
         url: {
           type: "string",
           description: "URL of the website to fetch",
+        },
+        startCursor: {
+          type: "number",
+          description: "Starting cursor position in bytes. Set to 0 for initial requests, and use the value from previous responses for subsequent requests to resume content retrieval.",
         },
         headers: {
           type: "object",
@@ -328,7 +333,7 @@ function getMarkdownFetchToolDefinition() {
         },
         contentSizeLimit: {
           type: "number",
-          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 50KB). Set between 20KB-50KB for optimal results. For large content, prefer smaller values (20KB-30KB) to avoid truncation.",
         },
         enableContentSplitting: {
           type: "boolean",
@@ -336,14 +341,10 @@ function getMarkdownFetchToolDefinition() {
         },
         chunkId: {
           type: "string",
-          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
-        },
-        chunkIndex: {
-          type: "number",
-          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
+          description: `Optional chunk ID for retrieving a specific chunk of content from a previous request. The system adds prompts in the format ${TemplateUtils.SYSTEM_NOTE.START} ... ${TemplateUtils.SYSTEM_NOTE.END} which AI models should ignore when processing the content.`,
         },
       },
-      required: ["url"],
+      required: ["url", "startCursor"],
     },
   };
 }
@@ -355,13 +356,17 @@ function getMarkdownFetchToolDefinition() {
 function getPlainTextFetchToolDefinition() {
   return {
     name: "fetch_plaintext",
-    description: "Fetch a website and return the content as plain text with HTML tags removed",
+    description: "Fetch a website and return the content as plain text with HTML tags removed. Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large pages. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
     inputSchema: {
       type: "object",
       properties: {
         url: {
           type: "string",
           description: "URL of the website to fetch",
+        },
+        startCursor: {
+          type: "number",
+          description: "Starting cursor position in bytes. Set to 0 for initial requests, and use the value from previous responses for subsequent requests to resume content retrieval.",
         },
         headers: {
           type: "object",
@@ -421,7 +426,7 @@ function getPlainTextFetchToolDefinition() {
         },
         contentSizeLimit: {
           type: "number",
-          description: "Optional maximum content size in bytes before splitting into chunks (default: 100KB)",
+          description: "Optional maximum content size in bytes before splitting into chunks (default: 50KB). Set between 20KB-50KB for optimal results. For large content, prefer smaller values (20KB-30KB) to avoid truncation.",
         },
         enableContentSplitting: {
           type: "boolean",
@@ -429,14 +434,10 @@ function getPlainTextFetchToolDefinition() {
         },
         chunkId: {
           type: "string",
-          description: "Optional chunk ID for retrieving a specific chunk of content from a previous request",
+          description: `Optional chunk ID for retrieving a specific chunk of content from a previous request. The system adds prompts in the format ${TemplateUtils.SYSTEM_NOTE.START} ... ${TemplateUtils.SYSTEM_NOTE.END} which AI models should ignore when processing the content.`,
         },
-        chunkIndex: {
-          type: "number",
-          description: "Optional chunk index for retrieving a specific chunk of content from a previous request",
-        }
       },
-      required: []
+      required: ["url", "startCursor"],
     },
   };
 }
@@ -521,11 +522,18 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
     return BaseFetcher.createErrorResponse("Either URL or chunkId parameter is required");
   }
   
+  // 验证startCursor参数 (Validate startCursor parameter)
+  if (args.startCursor === undefined) {
+    log('tools.missingStartCursor', debug, {}, COMPONENTS.SERVER);
+    
+    return BaseFetcher.createErrorResponse("startCursor parameter is required. Use 0 for initial requests.");
+  }
+  
   // 记录请求 (Log request)
   if (args.chunkId) {
-    log('tools.fetchChunkRequest', debug, { chunkId: args.chunkId, chunkIndex: args.chunkIndex, type: name }, COMPONENTS.SERVER);
+    log('tools.fetchChunkRequest', debug, { chunkId: args.chunkId, startCursor: args.startCursor, type: name }, COMPONENTS.SERVER);
   } else {
-    log('tools.fetchRequest', debug, { url: args.url, type: name }, COMPONENTS.SERVER);
+    log('tools.fetchRequest', debug, { url: args.url, startCursor: args.startCursor, type: name }, COMPONENTS.SERVER);
   }
   
   // 执行获取请求 (Execute fetch request)
@@ -568,8 +576,12 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
       
       // 如果内容是分段的，添加提示词 (If content is chunked, add prompt)
       if (result.isChunked && result.hasMoreChunks) {
-        // 使用BaseFetcher的addChunkPrompt方法添加提示词 (Use BaseFetcher's addChunkPrompt method to add prompt)
-        result = BaseFetcher.addChunkPrompt(result);
+        // 检查内容中是否已经包含系统提示，避免重复添加
+        // Check if content already contains system note to avoid duplicate
+        if (!TemplateUtils.hasSystemPrompt(result.content[0].text || '')) {
+          // 使用BaseFetcher的addChunkPrompt方法添加提示词 (Use BaseFetcher's addChunkPrompt method to add prompt)
+          result = BaseFetcher.addChunkPrompt(result);
+        }
       }
     }
     
