@@ -55,7 +55,7 @@ export function getDomain(url: string): string {
   try {
     const urlObj = new URL(url);
     return urlObj.hostname;
-  } catch (error) {
+  } catch (_error) {
     return '';
   }
 }
@@ -68,8 +68,8 @@ export function getDomain(url: string): string {
  * @returns 系统代理URL或undefined (System proxy URL or undefined)
  */
 export function getSystemProxy(
-  useSystemProxy: boolean = true, 
-  debug: boolean = false, 
+  useSystemProxy: boolean = true,
+  debug: boolean = false,
   component: string = COMPONENTS.NODE_FETCH
 ): string | undefined {
   // 如果不使用系统代理，直接返回undefined (If not using system proxy, return undefined directly)
@@ -77,32 +77,32 @@ export function getSystemProxy(
     log('fetcher.systemProxyDisabled', debug, {}, component);
     return undefined;
   }
-  
+
   // 检查所有可能的代理环境变量 (Check all possible proxy environment variables)
   const proxyVars = [
-    'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 
+    'HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy',
     'ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy'
   ];
-  
+
   // 输出所有环境变量的值，帮助调试 (Output all environment variable values to help debugging)
   log('fetcher.checkingProxyEnv', debug, {}, component);
   for (const varName of proxyVars) {
-    log('fetcher.envVarValue', debug, { 
-      name: varName, 
-      value: process.env[varName] || t('fetcher.notSet') 
+    log('fetcher.envVarValue', debug, {
+      name: varName,
+      value: process.env[varName] || t('fetcher.notSet')
     }, component);
   }
-  
+
   // 尝试获取代理设置 (Try to get proxy settings)
-  const proxyUrl = process.env.HTTP_PROXY || process.env.HTTPS_PROXY || 
-                   process.env.http_proxy || process.env.https_proxy || 
-                   process.env.ALL_PROXY || process.env.all_proxy;
-  
+  const proxyUrl = process.env.HTTP_PROXY || process.env.HTTPS_PROXY ||
+    process.env.http_proxy || process.env.https_proxy ||
+    process.env.ALL_PROXY || process.env.all_proxy;
+
   if (proxyUrl) {
     log('fetcher.foundSystemProxy', debug, { proxy: proxyUrl }, component);
     return proxyUrl;
   }
-  
+
   // 尝试从系统命令获取代理设置
   try {
     let shellOutput = '';
@@ -126,10 +126,10 @@ export function getSystemProxy(
         log('fetcher.errorGettingUnixEnvVars', debug, { error: unixError.toString() }, component);
       }
     }
-    
+
     if (shellOutput.trim()) {
       log('fetcher.systemCommandProxySettings', debug, { output: shellOutput.trim() }, component);
-      
+
       // 解析输出找到代理 URL
       const proxyMatch = shellOutput.match(/(?:HTTP_PROXY|HTTPS_PROXY|http_proxy|https_proxy)=([^\s]+)/i);
       if (proxyMatch && proxyMatch[1]) {
@@ -143,12 +143,12 @@ export function getSystemProxy(
   } catch (error) {
     log('fetcher.errorGettingSystemEnvVars', debug, { error: error.toString() }, component);
   }
-  
+
   // 检查是否设置了 NO_PROXY
   const noProxy = process.env.NO_PROXY || process.env.no_proxy;
   if (noProxy) {
     log('fetcher.foundNoProxy', debug, { noProxy: noProxy }, component);
   }
-  
+
   return undefined;
 } 

@@ -4,11 +4,11 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { RequestPayload, FetchResponse } from "./types.js";
-import { log } from "../../logger.js";
-import { ContentSizeManager } from "../../utils/ContentSizeManager.js";
-import { ChunkManager } from "../../utils/ChunkManager.js";
-import { TemplateUtils } from "../../utils/TemplateUtils.js";
+import { FetchResponse } from './types.js';
+import { log } from '../../logger.js';
+import { ChunkManager } from '../../utils/ChunkManager.js';
+import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
+import { TemplateUtils } from '../../utils/TemplateUtils.js';
 
 /**
  * 基础获取器类 (Base fetcher class)
@@ -31,7 +31,7 @@ export class BaseFetcher {
       ]
     };
   }
-  
+
   /**
    * 创建错误响应 (Create error response)
    * @param errorMessage 错误信息 (Error message)
@@ -48,7 +48,7 @@ export class BaseFetcher {
       ]
     };
   }
-  
+
   /**
    * 处理内容分段 (Handle content chunking)
    * 如果内容超过大小限制，则进行分段处理 (If content exceeds size limit, chunk it)
@@ -60,7 +60,7 @@ export class BaseFetcher {
    * @returns 分段处理结果，如果不需要分段则返回null (Chunking result, or null if no chunking needed)
    */
   protected handleContentChunking(
-    content: string, 
+    content: string,
     contentSizeLimit: number = ContentSizeManager.getDefaultSizeLimit(),
     enableContentSplitting: boolean = true,
     debug: boolean = false,
@@ -70,33 +70,33 @@ export class BaseFetcher {
     const contentLength = content.length;
     const contentBytes = Buffer.byteLength(content, 'utf8');
     log('fetcher.contentLength', debug, { length: contentLength, bytes: contentBytes }, component);
-    
+
     // 如果内容大小超过限制且启用了内容分段 (If content size exceeds limit and content splitting is enabled)
     if (contentBytes > contentSizeLimit && enableContentSplitting) {
-      log('fetcher.contentTooLarge', debug, { 
-        size: contentBytes, 
-        limit: contentSizeLimit 
+      log('fetcher.contentTooLarge', debug, {
+        size: contentBytes,
+        limit: contentSizeLimit
       }, component);
-      
+
       // 分割内容 (Split content)
       const { chunks, totalBytes } = ContentSizeManager.splitContentIntoChunks(content, contentSizeLimit, debug, 0);
-      
+
       // 存储分割后的内容 (Store chunked content)
       const chunkId = ChunkManager.storeChunks(chunks, totalBytes, debug);
-      
+
       // 获取第一个分片 (Get first chunk)
       const chunkResult = ChunkManager.getChunkBySize(chunkId, 0, contentSizeLimit, debug);
-      
+
       if (!chunkResult) {
         log('fetcher.chunkRetrievalFailed', debug, { chunkId }, component);
         return BaseFetcher.createErrorResponse("Failed to retrieve chunk content");
       }
-      
+
       const { content: firstChunk, fetchedBytes, remainingBytes, totalBytes: totalSize } = chunkResult;
-      
+
       // 计算预计还需要的请求次数 (Calculate estimated number of requests needed)
       const estimatedRequests = Math.ceil(remainingBytes / contentSizeLimit);
-      
+
       // 添加分段提示 (Add chunk prompt)
       const isFirstRequest = true;
       const chunkWithPrompt = firstChunk + TemplateUtils.generateSizeBasedChunkPrompt(
@@ -108,7 +108,7 @@ export class BaseFetcher {
         contentSizeLimit,
         isFirstRequest
       );
-      
+
       // 创建响应 (Create response)
       return {
         isError: false,
@@ -126,25 +126,25 @@ export class BaseFetcher {
         hasMoreChunks: remainingBytes > 0
       };
     }
-    
+
     // 如果内容大小超过限制但未启用内容分段 (If content size exceeds limit but content splitting is not enabled)
     if (contentBytes > contentSizeLimit && !enableContentSplitting) {
-      log('fetcher.contentTruncated', debug, { 
-        originalBytes: contentBytes, 
-        truncatedLength: contentSizeLimit 
+      log('fetcher.contentTruncated', debug, {
+        originalBytes: contentBytes,
+        truncatedLength: contentSizeLimit
       }, component);
-      
+
       const truncatedContent = content.substring(0, contentSizeLimit);
-      
+
       return BaseFetcher.createSuccessResponse(
         truncatedContent + `\n\n${TemplateUtils.SYSTEM_NOTE.START}\nContent was too large (${contentBytes} bytes) and has been truncated to ${contentSizeLimit} bytes. Enable content splitting to view the full content.\n${TemplateUtils.SYSTEM_NOTE.END}`
       );
     }
-    
+
     // 如果不需要分段，返回null (If no chunking needed, return null)
     return null;
   }
-  
+
   /**
    * 获取分段内容 - 基于字节偏移量 (Get chunked content based on byte offset)
    * @param chunkId 分段ID (Chunk ID)
@@ -161,32 +161,32 @@ export class BaseFetcher {
     debug: boolean = false,
     component: string
   ): FetchResponse {
-    log('fetcher.gettingChunkBySize', debug, { 
-      chunkId, 
-      startCursor, 
+    log('fetcher.gettingChunkBySize', debug, {
+      chunkId,
+      startCursor,
       start: startCursor,
       end: startCursor + sizeLimit,
-      sizeLimit 
+      sizeLimit
     }, component);
-    
+
     // 获取分段内容 (Get chunked content)
     const chunkResult = ChunkManager.getChunkBySize(chunkId, startCursor, sizeLimit, debug);
-    
+
     // 如果获取失败，返回错误 (If retrieval failed, return error)
     if (!chunkResult) {
       log('fetcher.chunkNotFound', debug, { chunkId, startCursor }, component);
       return BaseFetcher.createErrorResponse(`Chunk with ID ${chunkId} at cursor position ${startCursor} not found`);
     }
-    
+
     // 获取相关信息 (Get related information)
     const { content, fetchedBytes, remainingBytes, isLastChunk, totalBytes } = chunkResult;
-    
+
     // 计算预计还需要的请求次数 (Calculate estimated number of requests needed)
     const estimatedRequests = Math.ceil(remainingBytes / sizeLimit);
-    
+
     // 添加分段提示 (Add chunk prompt)
     let contentWithPrompt: string;
-    
+
     if (isLastChunk) {
       // 如果是最后一个分段 (If it's the last chunk)
       contentWithPrompt = content + TemplateUtils.generateSizeBasedLastChunkPrompt(
@@ -206,7 +206,7 @@ export class BaseFetcher {
         startCursor === 0 // 如果startCursor为0，则为首次请求 (If startCursor is 0, it's the first request)
       );
     }
-    
+
     // 创建响应 (Create response)
     return {
       isError: false,
@@ -224,7 +224,7 @@ export class BaseFetcher {
       hasMoreChunks: !isLastChunk
     };
   }
-  
+
   /**
    * 添加分段提示词 (Add chunk prompt)
    * @param response 响应对象 (Response object)
@@ -236,13 +236,13 @@ export class BaseFetcher {
       const chunkId = response.chunkId || '';
       const currentSizeLimit = response.fetchedBytes; // 假设当前大小限制与已获取字节数相同 (Assume current size limit is the same as fetched bytes)
       const estimatedRequests = Math.ceil(response.remainingBytes / currentSizeLimit);
-      
+
       // 检查内容中是否已经包含系统提示 (Check if content already contains system note)
       if (TemplateUtils.hasSystemPrompt(response.content[0].text || '')) {
         // 已存在提示，直接返回原始响应 (Note already exists, return original response)
         return response;
       }
-      
+
       // 使用基于字节的提示 (Use byte-based prompt)
       const promptText = TemplateUtils.generateSizeBasedChunkPrompt(
         response.fetchedBytes,
@@ -253,7 +253,7 @@ export class BaseFetcher {
         currentSizeLimit,
         false // 设置为false表示这不是首次请求 (Set to false indicating this is not the first request)
       );
-      
+
       // 创建新的响应对象，避免修改原始对象 (Create new response object to avoid modifying the original)
       return {
         ...response,
@@ -265,7 +265,7 @@ export class BaseFetcher {
         ]
       };
     }
-    
+
     // 如果不需要添加提示，返回原始响应 (If no prompt needed, return original response)
     return response;
   }

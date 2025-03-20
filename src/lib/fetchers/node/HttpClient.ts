@@ -25,14 +25,14 @@ export class HttpClient {
    */
   private static prepareHeaders(headers: Record<string, string> = {}, debug: boolean): Record<string, string> {
     const requestHeaders: Record<string, string> = { ...headers };
-    
+
     // 添加随机User-Agent (Add random User-Agent)
     if (!requestHeaders['User-Agent']) {
       const userAgent = getRandomUserAgent();
       requestHeaders['User-Agent'] = userAgent;
       log('node.usingUserAgent', debug, { userAgent }, COMPONENTS.NODE_FETCH);
     }
-    
+
     return requestHeaders;
   }
 
@@ -45,9 +45,9 @@ export class HttpClient {
    */
   private static setupProxy(url: string, proxy: string | undefined, debug: boolean): Agent | undefined {
     if (!proxy) return undefined;
-    
+
     let agent: Agent | undefined = undefined;
-    
+
     if (url.startsWith('https://')) {
       agent = new HttpsProxyAgent(proxy);
       log('node.usingHttpsProxy', debug, {}, COMPONENTS.NODE_FETCH);
@@ -55,7 +55,7 @@ export class HttpClient {
       agent = new HttpProxyAgent(proxy);
       log('node.usingHttpProxy', debug, {}, COMPONENTS.NODE_FETCH);
     }
-    
+
     return agent;
   }
 
@@ -67,6 +67,7 @@ export class HttpClient {
    */
   private static async handleDelay(noDelay: boolean | undefined, isRedirect: boolean, debug: boolean): Promise<void> {
     if (!noDelay && isRedirect) {
+      log('node.addingRandomDelay', debug, {}, COMPONENTS.NODE_FETCH);
       await randomDelay();
     }
   }
@@ -80,14 +81,14 @@ export class HttpClient {
    */
   private static buildRedirectUrl(location: string, currentUrl: string, debug: boolean): string {
     let redirectUrl = location;
-    
+
     if (location.startsWith('/')) {
       const urlObj = new URL(currentUrl);
       redirectUrl = `${urlObj.protocol}//${urlObj.host}${location}`;
     } else if (!location.startsWith('http')) {
       redirectUrl = new URL(location, currentUrl).toString();
     }
-    
+
     log('node.constructedFullRedirectUrl', debug, { redirectUrl }, COMPONENTS.NODE_FETCH);
     return redirectUrl;
   }
@@ -100,7 +101,7 @@ export class HttpClient {
    */
   private static async handleErrorResponse(response: any, debug: boolean): Promise<never> {
     log('node.errorResponse', debug, { status: response.status, statusText: response.statusText }, COMPONENTS.NODE_FETCH);
-    
+
     // 尝试读取错误响应体 (Try to read error response body)
     let errorText = '';
     try {
@@ -109,13 +110,13 @@ export class HttpClient {
     } catch (textError) {
       log('node.errorReadingBody', debug, { error: String(textError) }, COMPONENTS.NODE_FETCH);
     }
-    
+
     // 创建错误对象 (Create error object)
     const error = new Error(`HTTP Error ${response.status}: ${response.statusText}`);
     (error as any).status = response.status;
     (error as any).statusText = response.statusText;
     (error as any).body = errorText;
-    
+
     throw error;
   }
 
@@ -130,16 +131,16 @@ export class HttpClient {
    * @returns Promise<never> 抛出错误 (Throws error)
    */
   private static handleRequestError(
-    error: any, 
-    fetchStart: number, 
-    timeout: number, 
-    redirectCount: number, 
-    maxRedirects: number, 
+    error: any,
+    fetchStart: number,
+    timeout: number,
+    redirectCount: number,
+    maxRedirects: number,
     debug: boolean
   ): never {
     // 记录错误 (Log error)
     log('node.fetchError', debug, { error: String(error) }, COMPONENTS.NODE_FETCH);
-    
+
     // 处理超时错误 (Handle timeout error)
     if (error.name === 'AbortError') {
       log('node.requestAborted', debug, { duration: Date.now() - fetchStart }, COMPONENTS.NODE_FETCH);
@@ -148,7 +149,7 @@ export class HttpClient {
       (timeoutError as any).timeout = timeout;
       throw timeoutError;
     }
-    
+
     // 处理网络错误 (Handle network error)
     if (error.code) {
       log('node.networkError', debug, { code: error.code || error.name }, COMPONENTS.NODE_FETCH);
@@ -157,7 +158,7 @@ export class HttpClient {
       (networkError as any).originalError = error;
       throw networkError;
     }
-    
+
     // 处理重定向错误 (Handle redirect error)
     if (redirectCount >= maxRedirects) {
       log('node.tooManyRedirects', debug, { redirects: maxRedirects }, COMPONENTS.NODE_FETCH);
@@ -166,7 +167,7 @@ export class HttpClient {
       (redirectError as any).redirects = redirectCount;
       throw redirectError;
     }
-    
+
     // 重新抛出其他错误 (Rethrow other errors)
     throw error;
   }
@@ -186,40 +187,40 @@ export class HttpClient {
     debug = false, // 是否启用调试模式
   }: RequestPayload): Promise<any> {
     log('node.fetchingUrl', debug, { url }, COMPONENTS.NODE_FETCH);
-    
+
     // 处理代理设置 (Handle proxy settings)
     const systemProxy = getSystemProxy(useSystemProxy, debug, COMPONENTS.NODE_FETCH);
     const finalProxy = proxy || systemProxy;
-    
+
     if (finalProxy) {
       log('node.usingProxy', debug, { proxy: finalProxy }, COMPONENTS.NODE_FETCH);
     }
-    
+
     // 初始化重定向计数器 (Initialize redirect counter)
     let redirectCount = 0;
     let currentUrl = url;
-    
+
     // 记录请求开始时间 (Record request start time)
     const fetchStart = Date.now();
-    
+
     // 创建AbortController用于超时控制 (Create AbortController for timeout control)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
-    
+
     try {
       // 处理重定向循环 (Handle redirect loop)
       while (redirectCount < maxRedirects) {
         log('node.fetchingUrl', debug, { url: currentUrl, redirect: redirectCount }, COMPONENTS.NODE_FETCH);
-        
+
         // 处理延迟 (Handle delay)
         await this.handleDelay(noDelay, redirectCount > 0, debug);
-        
+
         // 准备请求头 (Prepare request headers)
         const requestHeaders = this.prepareHeaders(headers, debug);
-        
+
         // 设置代理 (Set proxy)
         const agent = this.setupProxy(currentUrl, finalProxy, debug);
-        
+
         // 准备请求选项 (Prepare request options)
         const fetchOptions: any = {
           method: 'GET',
@@ -227,11 +228,11 @@ export class HttpClient {
           timeout,
           signal: controller.signal,
         };
-        
+
         if (agent) {
           fetchOptions.agent = agent;
         }
-        
+
         // 记录请求详情 (Log request details)
         log('node.requestDetails', debug, {
           url: currentUrl,
@@ -240,48 +241,74 @@ export class HttpClient {
           proxy: finalProxy,
           timeout,
         }, COMPONENTS.NODE_FETCH);
-        
+
         // 执行请求 (Execute request)
         const response = await fetch(currentUrl, fetchOptions);
-        
+
         // 记录响应状态 (Log response status)
         log('node.responseStatus', debug, {
           status: response.status,
           statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
+          duration: Date.now() - fetchStart,
         }, COMPONENTS.NODE_FETCH);
-        
-        // 处理重定向 (Handle redirects)
+
+        // 处理错误响应 (Handle error response)
+        if (response.status >= 400) {
+          await this.handleErrorResponse(response, debug);
+        }
+
+        // 检查是否需要重定向 (Check if redirect is needed)
         if (response.status >= 300 && response.status < 400 && response.headers.has('location')) {
-          redirectCount++;
-          
           // 获取重定向URL (Get redirect URL)
           const location = response.headers.get('location') as string;
-          log('node.redirectingTo', debug, { location }, COMPONENTS.NODE_FETCH);
-          
-          // 构建完整的重定向URL (Build complete redirect URL)
           currentUrl = this.buildRedirectUrl(location, currentUrl, debug);
+
+          // 增加重定向计数 (Increase redirect count)
+          redirectCount++;
+
+          // 记录重定向 (Log redirect)
+          log('node.redirecting', debug, {
+            to: currentUrl,
+            redirectCount,
+          }, COMPONENTS.NODE_FETCH);
+
+          // 关闭body读取器 (Close body reader)
+          await response.text();
           continue;
         }
-        
-        // 如果响应成功，返回响应 (If response is successful, return response)
-        if (response.ok) {
-          log('node.requestSuccess', debug, {}, COMPONENTS.NODE_FETCH);
-          return response;
-        } else {
-          // 处理错误响应 (Handle error response)
-          return await this.handleErrorResponse(response, debug);
-        }
+
+        // 返回成功响应 (Return successful response)
+        clearTimeout(timeoutId);
+        return response;
       }
-      
-      // 如果达到最大重定向次数，抛出错误 (If maximum redirects reached, throw error)
-      throw new Error(`Too many redirects (${maxRedirects})`);
-    } catch (error: any) {
-      // 处理请求错误 (Handle request error)
-      this.handleRequestError(error, fetchStart, timeout, redirectCount, maxRedirects, debug);
-    } finally {
-      // 清除超时定时器 (Clear timeout timer)
+
+      // 重定向次数超过限制 (Redirect count exceeds limit)
+      const error = new Error(`Too many redirects (${maxRedirects})`);
+      (error as any).code = 'EMAXREDIRECTS';
+      throw error;
+    } catch (error) {
       clearTimeout(timeoutId);
+      return this.handleRequestError(error, fetchStart, timeout, redirectCount, maxRedirects, debug);
     }
+  }
+
+  /**
+   * 计算代理通道等待时间 (Calculate proxy channel wait time)
+   * @param proxyType 代理类型 (Proxy type)
+   * @param proxy 代理服务器 (Proxy server)
+   * @param _debug 调试模式 (Debug mode)
+   * @returns 等待时间（毫秒） (Wait time in milliseconds)
+   */
+  public static calculateProxyDelay(proxyType: string, proxy: string, _debug: boolean): number {
+    // 根据代理类型和代理服务器地址计算合适的延迟时间
+    if (!proxy) return 0;
+
+    // 基础延迟根据代理类型不同
+    const baseDelay = proxyType === 'http' ? 2000 : 3000;
+
+    // 计算延迟变量 (0-1000ms)
+    const variableDelay = Math.floor(Math.random() * 1000);
+
+    return baseDelay + variableDelay;
   }
 } 
