@@ -82,7 +82,7 @@ describe('ChunkManager 测试 (ChunkManager Tests)', () => {
     // @ts-ignore - 访问私有属性用于测试
     ChunkManager['chunks'].set(chunkId, chunks);
     // @ts-ignore - 访问私有属性用于测试
-    ChunkManager['sizeInfo'].set(chunkId, {totalBytes, fetchedBytes});
+    ChunkManager['sizeInfo'].set(chunkId, { totalBytes, fetchedBytes });
     // @ts-ignore - 访问私有属性用于测试
     ChunkManager['expirations'].set(chunkId, Date.now() + 60000); // 设置为未过期
     
@@ -123,7 +123,7 @@ describe('ChunkManager 测试 (ChunkManager Tests)', () => {
     // @ts-ignore - 访问私有属性用于测试
     ChunkManager['chunks'].set(chunkId, chunks);
     // @ts-ignore - 访问私有属性用于测试
-    ChunkManager['sizeInfo'].set(chunkId, {totalBytes, fetchedBytes});
+    ChunkManager['sizeInfo'].set(chunkId, { totalBytes, fetchedBytes });
     // @ts-ignore - 访问私有属性用于测试
     ChunkManager['expirations'].set(chunkId, Date.now() + 60000); // 设置为未过期
     
@@ -142,7 +142,7 @@ describe('ChunkManager 测试 (ChunkManager Tests)', () => {
     
     // 设置内部状态
     // @ts-ignore - 访问私有属性用于测试
-    ChunkManager['sizeInfo'].set(chunkId, {totalBytes, fetchedBytes});
+    ChunkManager['sizeInfo'].set(chunkId, { totalBytes, fetchedBytes });
     
     // 获取大小信息
     const sizeInfo = ChunkManager.getSizeInfo(chunkId);
@@ -162,7 +162,7 @@ describe('ChunkManager 测试 (ChunkManager Tests)', () => {
     // @ts-ignore - 访问私有属性用于测试
     ChunkManager['chunks'].set(expiredChunkId, ['expired-chunk']);
     // @ts-ignore - 访问私有属性用于测试
-    ChunkManager['sizeInfo'].set(expiredChunkId, {totalBytes: 100, fetchedBytes: [100]});
+    ChunkManager['sizeInfo'].set(expiredChunkId, { totalBytes: 100, fetchedBytes: [100] });
     // @ts-ignore - 设置为过期时间（过去的时间）
     ChunkManager['expirations'].set(expiredChunkId, Date.now() - 1000);
     
@@ -171,7 +171,7 @@ describe('ChunkManager 测试 (ChunkManager Tests)', () => {
     // @ts-ignore - 访问私有属性用于测试
     ChunkManager['chunks'].set(validChunkId, ['valid-chunk']);
     // @ts-ignore - 访问私有属性用于测试
-    ChunkManager['sizeInfo'].set(validChunkId, {totalBytes: 200, fetchedBytes: [200]});
+    ChunkManager['sizeInfo'].set(validChunkId, { totalBytes: 200, fetchedBytes: [200] });
     // @ts-ignore - 设置为未过期时间（未来的时间）
     ChunkManager['expirations'].set(validChunkId, Date.now() + 60000);
     

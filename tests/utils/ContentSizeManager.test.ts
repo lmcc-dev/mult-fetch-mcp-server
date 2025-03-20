@@ -135,7 +135,7 @@ describe('ContentSizeManager 测试 (ContentSizeManager Tests)', () => {
     const originalByteLength = Buffer.byteLength;
     global.Buffer.byteLength = vi.fn()
       .mockReturnValueOnce(13)  // 整个content
-      .mockReturnValueOnce(1)   // 每个字符都是1字节
+      .mockReturnValueOnce(1);   // 每个字符都是1字节
       // ... 以此类推
 
     // 调用被测试方法
@@ -159,7 +159,7 @@ describe('ContentSizeManager 测试 (ContentSizeManager Tests)', () => {
     global.Buffer.byteLength = vi.fn()
       .mockReturnValueOnce(300)  // 整个content的字节数
       .mockReturnValueOnce(50)   // 示例提示的字节数
-      .mockReturnValueOnce(1)    // 每个字符 'a' 的字节数
+      .mockReturnValueOnce(1);    // 每个字符 'a' 的字节数
       // ... 以此类推
 
     // 模拟splitContentIntoRawChunks的行为
@@ -192,7 +192,7 @@ describe('ContentSizeManager 测试 (ContentSizeManager Tests)', () => {
     const originalByteLength = Buffer.byteLength;
     global.Buffer.byteLength = vi.fn()
       .mockReturnValueOnce(13)  // 整个content的字节数
-      .mockReturnValueOnce(50)  // 示例提示的字节数
+      .mockReturnValueOnce(50);  // 示例提示的字节数
 
     // 模拟splitContentIntoRawChunks返回单个分块
     vi.spyOn(ContentSizeManager, 'splitContentIntoRawChunks').mockReturnValue([content]);

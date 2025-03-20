@@ -118,7 +118,7 @@ const mockClientModule = {
     }
 
     const method = process.argv[2];
-    let paramsJson = process.argv[3];
+    const paramsJson = process.argv[3];
     
     try {
       JSON.parse(paramsJson);
