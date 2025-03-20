@@ -4,13 +4,25 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "./dist",
-    "rootDirs": ["./", "./src", "./tests"],
+    "rootDirs": [
+      "./",
+      "./src",
+      "./tests"
+    ],
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noImplicitAny": false,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "*.ts", "src/lib/i18n/keys.ts3"],
-  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "eslint.config.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts"
+  ]
 }

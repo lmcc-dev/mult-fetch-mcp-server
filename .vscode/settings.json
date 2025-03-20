@@ -6,6 +6,5 @@
   "eslint.validate": [
     "typescript"
   ],
-  "typescript.tsdk": "node_modules/typescript/lib",
-  "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  "typescript.tsdk": "node_modules/typescript/lib"
 }
