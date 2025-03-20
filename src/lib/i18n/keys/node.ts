@@ -18,7 +18,7 @@ export const NODE_KEYS = (() => {
     usingProxy: keyGen('usingProxy'),
     usingHttpsProxy: keyGen('usingHttpsProxy'),
     usingHttpProxy: keyGen('usingHttpProxy'),
-    
+
     // 系统代理相关 (System proxy related)
     checkingProxyEnv: keyGen('checkingProxyEnv'),
     envVarValue: keyGen('envVarValue'),
@@ -33,20 +33,22 @@ export const NODE_KEYS = (() => {
     noSystemProxyFound: keyGen('noSystemProxyFound'),
     errorGettingSystemEnvVars: keyGen('errorGettingSystemEnvVars'),
     foundNoProxy: keyGen('foundNoProxy'),
-    
+
     // 请求相关 (Request related)
     usingUserAgent: keyGen('usingUserAgent'),
     requestDetails: keyGen('requestDetails'),
     requestOptions: keyGen('requestOptions'),
     startingFetch: keyGen('startingFetch'),
     fetchingUrl: keyGen('fetchingUrl'),
-    
+    addingRandomDelay: keyGen('addingRandomDelay'),
+
     // 响应相关 (Response related)
     responseStatus: keyGen('responseStatus'),
     redirectingTo: keyGen('redirectingTo'),
+    redirecting: keyGen('redirecting'),
     constructedFullRedirectUrl: keyGen('constructedFullRedirectUrl'),
     requestSuccess: keyGen('requestSuccess'),
-    
+
     // 错误相关 (Error related)
     errorResponse: keyGen('errorResponse'),
     errorResponseBody: keyGen('errorResponseBody'),
@@ -55,7 +57,7 @@ export const NODE_KEYS = (() => {
     requestAborted: keyGen('requestAborted'),
     networkError: keyGen('networkError'),
     tooManyRedirects: keyGen('tooManyRedirects'),
-    
+
     // 内容类型相关 (Content type related)
     startingHtmlFetch: keyGen('startingHtmlFetch'),
     readingText: keyGen('readingText'),
@@ -75,7 +77,7 @@ export const NODE_KEYS = (() => {
     startingPlainTextFetch: keyGen('startingPlainTextFetch'),
     extractingText: keyGen('extractingText'),
     textExtracted: keyGen('textExtracted'),
-    
+
     // 内容分段相关 (Content splitting related)
     contentSplit: keyGen('contentSplit'),
     gettingChunk: keyGen('gettingChunk')
