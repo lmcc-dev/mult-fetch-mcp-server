@@ -177,15 +177,17 @@ function _parseChunkInfo(result: any): any {
   }
 
   const content = result.content[0].text;
-  const chunkIdMatch = content.match(/chunkId="([^"]+)"/);
 
-  // 更新正则表达式，识别新的基于字节的分块信息 (Update regex to identify new byte-based chunking info)
-  const byteInfoMatch = content.match(/(\d+) bytes retrieved \((\d+)% of total (\d+) bytes\)/);
-  const remainingBytesMatch = content.match(/(\d+) bytes remaining/);
+  // 首先检查API直接返回的isLastChunk标识
+  const isLastChunk = result.isLastChunk === true;
 
-  // 存在chunkId但找不到分块信息，可能是老的格式 (ChunkId exists but no chunking info, might be old format)
-  const partMatch = content.match(/This is part (\d+) of (\d+)/);
+  // 支持多种分块ID匹配模式 (Support multiple chunking ID matching patterns)
+  const systemNoteMatch = content.match(/=== SYSTEM NOTE ===\s*([\s\S]*?)\s*={19}/);
+  const chunkIdMatch = systemNoteMatch ?
+    systemNoteMatch[1].match(/chunkId(?:=|\s*[:=]\s*|\s*)?["']?([^"',\s]+)["']?/i) :
+    content.match(/chunkId="([^"]+)"/);
 
+  // 如果没有找到分块ID，返回原始结果 (If no chunk ID found, return original result)
   if (!chunkIdMatch) {
     return result;
   }
@@ -198,20 +200,43 @@ function _parseChunkInfo(result: any): any {
   let totalBytes = 0;
   let remainingBytes = 0;
 
+  // 查找字节级分块信息 (Look for byte-level chunking information)
+  const byteInfoMatch = systemNoteMatch ?
+    systemNoteMatch[1].match(/(\d+(?:,\d+)*)\s*bytes\s*(?:retrieved|fetched).*?(\d+)%\s*of\s*(?:the\s*)?total\s*(\d+(?:,\d+)*)\s*bytes/) :
+    content.match(/retrieved ([,\d]+) bytes \((\d+)% of total ([,\d]+) bytes\)/);
+
+  const remainingBytesMatch = systemNoteMatch ?
+    systemNoteMatch[1].match(/(\d+(?:,\d+)*)\s*bytes\s*(?:are\s*)?remaining/) :
+    content.match(/([,\d]+) bytes remaining/);
+
+  // 查找旧版分块信息 (Look for old version chunking information)
+  const partMatch = systemNoteMatch ?
+    systemNoteMatch[1].match(/This is part (\d+) of (\d+)/) :
+    content.match(/This is part (\d+) of (\d+)/);
+
+  // 检查是否有"最后一部分"的提示 (Check if there's a "last part" hint)
+  const lastPartMatch = systemNoteMatch ?
+    systemNoteMatch[1].match(/(?:this|the) (?:is|last|final) (?:the|last|final)? part/i) :
+    content.match(/(?:this|the) (?:is|last|final) (?:the|last|final)? part/i);
+
+  // 如果有直接指示这是最后一部分的消息，设置isLastChunk为true (If there's a message directly indicating this is the last part, set isLastChunk to true)
+  const contentIndicatesLastChunk = !!lastPartMatch || content.includes("No further requests needed");
+
   // 检查是否包含字节级分块信息 (Check if contains byte-level chunking info)
   if (byteInfoMatch) {
-    fetchedBytes = parseInt(byteInfoMatch[1], 10);
+    // 移除千位分隔符逗号 (Remove thousands separator commas)
+    fetchedBytes = parseInt(byteInfoMatch[1].replace(/,/g, ''), 10);
     const _percentage = parseInt(byteInfoMatch[2], 10);
-    totalBytes = parseInt(byteInfoMatch[3], 10);
+    totalBytes = parseInt(byteInfoMatch[3].replace(/,/g, ''), 10);
 
     if (remainingBytesMatch) {
-      remainingBytes = parseInt(remainingBytesMatch[1], 10);
+      remainingBytes = parseInt(remainingBytesMatch[1].replace(/,/g, ''), 10);
     } else {
       remainingBytes = totalBytes - fetchedBytes;
     }
 
-    // 如果还有剩余字节，表示有更多分块 (If there are remaining bytes, indicates more chunks)
-    hasMoreChunks = remainingBytes > 0;
+    // 如果有明确的isLastChunk标识或内容中有指示，或者剩余字节为0，表示没有更多分块
+    hasMoreChunks = !(isLastChunk || contentIndicatesLastChunk || remainingBytes <= 0);
 
     // 估算总分块数 (Estimate total chunks)
     if (fetchedBytes > 0) {
@@ -225,7 +250,8 @@ function _parseChunkInfo(result: any): any {
   else if (partMatch) {
     currentChunk = parseInt(partMatch[1], 10) - 1; // 转换为0索引 (Convert to 0-based index)
     totalChunks = parseInt(partMatch[2], 10);
-    hasMoreChunks = currentChunk < totalChunks - 1;
+    // 如果有明确的isLastChunk标识或内容中有指示，或者当前是最后一块，表示没有更多分块
+    hasMoreChunks = !(isLastChunk || contentIndicatesLastChunk || currentChunk >= totalChunks - 1);
   }
 
   return {
@@ -237,7 +263,9 @@ function _parseChunkInfo(result: any): any {
     totalChunks,
     fetchedBytes,
     totalBytes,
-    remainingBytes
+    remainingBytes,
+    // 合并所有最后分块的判断条件
+    isLastChunk: isLastChunk || contentIndicatesLastChunk || remainingBytes <= 0 || (partMatch && currentChunk >= totalChunks - 1)
   };
 }
 
@@ -497,33 +525,25 @@ async function main() {
     }
 
     // 从响应内容中解析分段信息 (Parse chunk information from response content)
-    let chunkId: string | undefined;
-    let currentChunk = 0;
-    let totalChunks = 1;
     let hasMoreChunks = false;
+    let chunkId = '';
+    let totalChunks = 1;
+    let currentChunk = 0;
 
+    // 检查是否有明确的最后分块标识
+    const isLastChunk = result.isLastChunk === true;
+
+    // 解析响应内容中的分段信息 (Parse chunk information from response content)
     if (result.content && result.content[0] && result.content[0].text) {
       const content = result.content[0].text;
-      // Update regex to match chunk information in system notes
-      const systemNoteMatch = content.match(/=== SYSTEM NOTE ===\s*([\s\S]*?)\s*={19}/);
-      const chunkIdMatch = systemNoteMatch ? systemNoteMatch[1].match(/chunkId(?:=|\s*[:=]\s*|\s*)?["']?([^"',\s]+)["']?/i) : null;
+      const chunkIdMatch = content.match(/chunkId="([^"]+)"/);
+      const startCursorMatch = content.match(/startCursor=(\d+)/);
+      const bytesRetrievedMatch = content.match(/retrieved ([,\d]+) bytes \((\d+)% of total ([,\d]+) bytes\)/);
+      const remainingBytesMatch = content.match(/([,\d]+) bytes remaining/);
+      const moreRequestsMatch = content.match(/approximately (\d+) more requests needed/);
+      const partMatch = content.match(/This is part (\d+) of (\d+)/);
 
-      // 匹配字节级分块信息 (Match byte-level chunking information)
-      // 更新正则表达式来适应新的系统注释格式 (Update regex to adapt to new system note format)
-      const bytesRetrievedMatch = systemNoteMatch ?
-        systemNoteMatch[1].match(/(?:You'?(?:ve|have))?\s*retrieved\s*(\d+(?:,\d+)*)\s*bytes\s*\((\d+)%\s*of\s*(?:the\s*)?total\s*(\d+(?:,\d+)*)\s*bytes\)/) : null;
-
-      // 尝试兼容新旧两种格式 (Try to be compatible with both new and old formats)
-      const remainingBytesMatch = systemNoteMatch ?
-        systemNoteMatch[1].match(/(\d+(?:,\d+)*)\s*bytes\s*(?:are\s*)?remaining/) : null;
-
-      const moreRequestsMatch = systemNoteMatch ?
-        systemNoteMatch[1].match(/(?:a|ap)proximately\s*(\d+)\s*more\s*requests?\s*(?:are\s*)?needed/) : null;
-
-      // 旧版分块信息匹配 (Old version chunking information matching)
-      const partMatch = systemNoteMatch ?
-        systemNoteMatch[1].match(/This is part (\d+) of (\d+)/) : null;
-
+      // 如果找到了分块ID匹配 (If chunk ID match found)
       if (chunkIdMatch) {
         chunkId = chunkIdMatch[1];
 
@@ -544,8 +564,8 @@ async function main() {
             remainingBytes = totalBytes - fetchedBytes;
           }
 
-          // 如果还有剩余字节，表示有更多分块 (If there are remaining bytes, indicates more chunks)
-          hasMoreChunks = remainingBytes > 0;
+          // 如果使用isLastChunk标识，优先使用它；否则基于remainingBytes计算
+          hasMoreChunks = isLastChunk ? false : remainingBytes > 0;
 
           // 估算剩余的请求次数 (Estimate remaining requests)
           let estimatedRemainingRequests = 0;
@@ -564,42 +584,53 @@ async function main() {
           result.fetchedBytes = fetchedBytes;
           result.totalBytes = totalBytes;
           result.remainingBytes = remainingBytes;
-
-          // 调试输出，查看解析后的分段信息 (Debug output, check parsed chunk information)
-          if (debug) {
-            log('client.parsedByteChunkInfo', debug, {
-              chunkId,
-              fetchedBytes,
-              totalBytes,
-              remainingBytes,
-              estimatedRemainingRequests
-            }, COMPONENTS.CLIENT);
-          }
+          // 如果服务器返回了isLastChunk属性，使用它；否则基于remainingBytes计算
+          result.isLastChunk = isLastChunk || remainingBytes <= 0;
+          result.hasMoreChunks = hasMoreChunks;
         }
-        // 尝试匹配旧版的分块格式 (Try to match old version chunking format)
+        // 如果没有字节级信息，则使用分块匹配 (If no byte-level info, use chunk matching)
         else if (partMatch) {
-          currentChunk = parseInt(partMatch[1], 10) - 1; // 转换为0索引 (Convert to 0-based index)
+          currentChunk = parseInt(partMatch[1], 10) - 1;
           totalChunks = parseInt(partMatch[2], 10);
-          hasMoreChunks = currentChunk < totalChunks - 1;
-
-          // 调试输出，查看解析后的分段信息 (Debug output, check parsed chunk information)
-          if (debug) {
-            log('client.parsedChunkInfo', debug, {
-              chunkId,
-              currentChunk,
-              totalChunks,
-              hasMoreChunks
-            }, COMPONENTS.CLIENT);
-          }
+          hasMoreChunks = isLastChunk ? false : currentChunk < totalChunks - 1;
         }
+        // 如果有启动游标信息，这表明还有更多分块 (If start cursor info exists, indicates more chunks)
+        else if (startCursorMatch) {
+          hasMoreChunks = !isLastChunk && true;
+        }
+
+        // 使用解析出的分段信息 (Use parsed chunk information)
+        result.isChunked = hasMoreChunks;
+        result.hasMoreChunks = hasMoreChunks;
+        result.chunkId = chunkId;
+        result.currentChunk = currentChunk;
+        result.totalChunks = totalChunks;
+
+        // 保存分段信息到临时文件 (Save chunk information to temporary file)
+        _saveChunkInfo(result, params, debug);
       }
     }
 
-    // 输出第一段内容 (Output first chunk)
+    // 调试输出，查看解析后的分段信息 (Debug output, check parsed chunk information)
+    if (debug) {
+      log('client.chunkInfoParsed', debug, {
+        isChunked: result.isChunked,
+        hasMoreChunks,
+        isLastChunk,
+        chunkId,
+        currentChunk,
+        totalChunks,
+        fetchedBytes: result.fetchedBytes,
+        totalBytes: result.totalBytes,
+        remainingBytes: result.remainingBytes
+      }, COMPONENTS.CLIENT);
+    }
+
+    // 输出结果 (Output result)
     console.log(JSON.stringify(result, null, 2));
 
     // 如果启用了获取所有分段内容，并且结果包含分段信息 (If all chunks mode is enabled and result contains chunk information)
-    if (allChunksFlag && hasMoreChunks && chunkId) {
+    if (allChunksFlag && hasMoreChunks && chunkId && !isLastChunk) {
       try {
         // 确保totalChunks的计算正确 (Ensure totalChunks calculation is correct)
         if (result.totalBytes && result.fetchedBytes) {
@@ -733,7 +764,7 @@ async function main() {
       }
     }
     // 如果结果包含分段信息，但没有启用获取所有分段内容 (If result contains chunk information but all chunks mode is not enabled)
-    else if (hasMoreChunks && chunkId) {
+    else if (hasMoreChunks && chunkId && !isLastChunk) {
       log('client.hasMoreChunks', debug, {
         current: currentChunk,
         total: totalChunks,
