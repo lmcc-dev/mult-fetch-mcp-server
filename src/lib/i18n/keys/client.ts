@@ -18,18 +18,18 @@ export const CLIENT_KEYS = (() => {
     connectionFailed: keyGen('connectionFailed'),
     disconnected: keyGen('disconnected'),
     reconnecting: keyGen('reconnecting'),
-    
+
     // 错误相关 (Error related)
     clientError: keyGen('clientError'),
     transportError: keyGen('transportError'),
     requestError: keyGen('requestError'),
     fetchError: keyGen('fetchError'),
-    
+
     // 请求相关 (Request related)
     requestStarted: keyGen('requestStarted'),
     requestCompleted: keyGen('requestCompleted'),
     requestCancelled: keyGen('requestCancelled'),
-    
+
     // 内容相关 (Content related)
     fetchingHtml: keyGen('fetchingHtml'),
     fetchingJson: keyGen('fetchingJson'),
@@ -37,7 +37,7 @@ export const CLIENT_KEYS = (() => {
     fetchingMarkdown: keyGen('fetchingMarkdown'),
     fetchSuccessful: keyGen('fetchSuccessful'),
     contentLength: keyGen('contentLength'),
-    
+
     // 分段内容相关 (Chunked content related)
     hasMoreChunks: keyGen('hasMoreChunks'),
     nextChunkCommand: keyGen('nextChunkCommand'),
@@ -60,6 +60,7 @@ export const CLIENT_KEYS = (() => {
     responseStructure: keyGen('responseStructure'),
     parsedByteChunkInfo: keyGen('parsedByteChunkInfo'),
     parsedChunkInfo: keyGen('parsedChunkInfo'),
+    chunkInfoParsed: keyGen('chunkInfoParsed'),
     chunkLimitNotice: keyGen('chunkLimitNotice'),
     chunkLimitHint: keyGen('chunkLimitHint'),
     fetchingChunkProgress: keyGen('fetchingChunkProgress'),
@@ -78,7 +79,7 @@ export const CLIENT_KEYS = (() => {
     chunkCompleted: keyGen('chunkCompleted'),
     recalculatedTotalChunks: keyGen('recalculatedTotalChunks'),
     fetchingChunksError: keyGen('fetchingChunksError'),
-    
+
     // 调试相关 (Debug related)
     debugMode: keyGen('debugMode'),
     debugInfo: keyGen('debugInfo'),
@@ -114,7 +115,7 @@ export const CLIENT_KEYS = (() => {
     // 模式相关 (Mode related)
     usingStandardMode: keyGen('usingStandardMode'),
     usingBrowserMode: keyGen('usingBrowserMode'),
-    
+
     // 参数相关 (Parameters related)
     sendingParameters: keyGen('sendingParameters'),
     limitingChunks: keyGen('limitingChunks'),

@@ -14,18 +14,18 @@ export default {
   [CLIENT_KEYS.connectionFailed]: 'Failed to connect to MCP server: {{error}}',
   [CLIENT_KEYS.disconnected]: 'Disconnected from MCP server',
   [CLIENT_KEYS.reconnecting]: 'Reconnecting to MCP server...',
-  
+
   // 错误相关 (Error related)
   [CLIENT_KEYS.clientError]: 'Client error: {{error}}',
   [CLIENT_KEYS.transportError]: 'Transport error: {{error}}',
   [CLIENT_KEYS.requestError]: 'Request error: {{error}}',
   [CLIENT_KEYS.fetchError]: 'Fetch error: {{error}}',
-  
+
   // 请求相关 (Request related)
   [CLIENT_KEYS.requestStarted]: 'Request started: {{id}}',
   [CLIENT_KEYS.requestCompleted]: 'Request completed: {{id}}',
   [CLIENT_KEYS.requestCancelled]: 'Request cancelled: {{id}}',
-  
+
   // 内容相关 (Content related)
   [CLIENT_KEYS.fetchingHtml]: 'Fetching HTML from {{url}}',
   [CLIENT_KEYS.fetchingJson]: 'Fetching JSON from {{url}}',
@@ -33,7 +33,7 @@ export default {
   [CLIENT_KEYS.fetchingMarkdown]: 'Fetching Markdown from {{url}}',
   [CLIENT_KEYS.fetchSuccessful]: 'Fetch successful',
   [CLIENT_KEYS.contentLength]: 'Content length: {{length}} bytes',
-  
+
   // 分段内容相关 (Chunked content related)
   [CLIENT_KEYS.hasMoreChunks]: 'Content is chunked: {{current}}/{{total}} chunks',
   [CLIENT_KEYS.nextChunkCommand]: 'To fetch the next chunk, run: {{command}}',
@@ -54,11 +54,12 @@ export default {
   [CLIENT_KEYS.allChunksUsageInfo]: 'Use --all-chunks to fetch all chunks in a single command',
   [CLIENT_KEYS.limitingChunks]: 'Limiting chunks to {{limit}} (total: {{total}})',
   [CLIENT_KEYS.maxChunksUsageInfo]: 'Use --max-chunks=N to limit the number of chunks to fetch (default: {{default}})',
-  
+
   // 新增的分段内容相关键 (New chunked content related keys)
   [CLIENT_KEYS.responseStructure]: '\n--- Response structure ---\n{{structure}}\n--- End of response structure ---\n',
   [CLIENT_KEYS.parsedByteChunkInfo]: '\n--- Parsed byte-level chunk information ---\nchunkId: {{chunkId}}\nfetchedBytes: {{fetchedBytes}}\ntotalBytes: {{totalBytes}}\nremainingBytes: {{remainingBytes}}\nestimatedRemainingRequests: {{estimatedRemainingRequests}}\n--- End of parsed byte-level chunk information ---\n',
   [CLIENT_KEYS.parsedChunkInfo]: '\n--- Parsed chunk information ---\nchunkId: {{chunkId}}\ncurrentChunk: {{currentChunk}}\ntotalChunks: {{totalChunks}}\nhasMoreChunks: {{hasMoreChunks}}\n--- End of parsed chunk information ---\n',
+  [CLIENT_KEYS.chunkInfoParsed]: 'Parsed chunk information: isChunked={{isChunked}}, hasMoreChunks={{hasMoreChunks}}, isLastChunk={{isLastChunk}}, chunkId={{chunkId}}, currentChunk={{currentChunk}}, totalChunks={{totalChunks}}, fetchedBytes={{fetchedBytes}}, totalBytes={{totalBytes}}, remainingBytes={{remainingBytes}}',
   [CLIENT_KEYS.chunkLimitNotice]: '\nNote: Content has {{total}} chunks, but only fetching first {{fetching}} chunks',
   [CLIENT_KEYS.chunkLimitHint]: 'To fetch more chunks, use --max-chunks=N parameter\n',
   [CLIENT_KEYS.fetchingChunkProgress]: '\nFetching chunk {{current}}/{{total}}...',
@@ -77,11 +78,11 @@ export default {
   [CLIENT_KEYS.chunkCompleted]: '\nChunk {{current}}/{{total}} completed\n',
   [CLIENT_KEYS.recalculatedTotalChunks]: 'Recalculated total chunks: {{totalChunks}} (based on totalBytes: {{totalBytes}}, fetchedBytes: {{fetchedBytes}}, remainingBytes: {{remainingBytes}}, contentSizeLimit: {{contentSizeLimit}})',
   [CLIENT_KEYS.fetchingChunksError]: 'Error occurred while fetching chunks: {{error}}',
-  
+
   // 调试相关 (Debug related)
   [CLIENT_KEYS.debugMode]: 'Debug mode: {{enabled}}',
   [CLIENT_KEYS.debugInfo]: 'Debug info: {{info}}',
-  
+
   // 其他键 (Other keys)
   [CLIENT_KEYS.error]: 'Error: {{error}}',
   [CLIENT_KEYS.callTool]: 'Calling tool: {{tool}}',
@@ -112,18 +113,18 @@ export default {
   [CLIENT_KEYS.browserModeFetchSuccess]: 'Browser mode fetch successful',
   [CLIENT_KEYS.serverClosed]: 'Server closed',
   [CLIENT_KEYS.proxySet]: 'Proxy set: {{proxy}}',
-  
+
   // 模式相关 (Mode related)
   [CLIENT_KEYS.usingStandardMode]: 'Using standard mode',
   [CLIENT_KEYS.usingBrowserMode]: 'Using browser mode',
   [CLIENT_KEYS.switchingToBrowserMode]: 'Switching to browser mode',
-  
+
   // 参数相关 (Parameters related)
   [CLIENT_KEYS.sendingParameters]: 'Sending parameters to MCP: {{params}}',
   [CLIENT_KEYS.invalidUrl]: 'Invalid URL: {{url}}',
   [CLIENT_KEYS.missingUrl]: 'Missing URL parameter',
   [CLIENT_KEYS.missingStartCursor]: 'Missing startCursor parameter',
-  
+
   // 其他 (Others)
   [CLIENT_KEYS.alternateUsageInfo]: 'For alternate formats, use --plaintext or --markdown flags'
 }; 
