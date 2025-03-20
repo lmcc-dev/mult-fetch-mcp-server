@@ -80,7 +80,7 @@ export function registerPrompts(server: Server): void {
   server.setRequestHandler(ListPromptsRequestSchema, async (request) => {
     const debug = request.params?.debug === true;
     log('prompts.list.request', debug, { params: request.params }, COMPONENTS.PROMPTS);
-    
+
     return {
       prompts: Object.values(PROMPTS)
     };
@@ -91,30 +91,30 @@ export function registerPrompts(server: Server): void {
     const promptName = request.params.name;
     const args = request.params.arguments || {};
     const debug = typeof args.debug === 'boolean' ? args.debug : false;
-    
+
     log('prompts.get.request', debug, { promptName, args }, COMPONENTS.PROMPTS);
-    
+
     // 检查提示是否存在
     if (!PROMPTS[promptName]) {
       throw new Error(t('prompts.notFound') + `: ${promptName}`);
     }
-    
+
     // 检查必需参数
     const prompt = PROMPTS[promptName];
     const requiredArgs = prompt.arguments?.filter(arg => arg.required) || [];
-    
+
     for (const arg of requiredArgs) {
       if (args[arg.name] === undefined) {
         throw new Error(t('prompts.missingRequiredArg') + `: ${arg.name}`);
       }
     }
-    
+
     // 根据提示名称和参数生成消息
     if (promptName === "mult-fetch-mcp:prompt:fetch-website") {
       const url = args.url;
       const format = args.format || "html";
       let useBrowser = false;
-      
+
       if (args.useBrowser !== undefined) {
         if (typeof args.useBrowser === 'boolean') {
           useBrowser = args.useBrowser;
@@ -125,14 +125,14 @@ export function registerPrompts(server: Server): void {
           useBrowser = args.useBrowser !== 0;
         }
       }
-      
+
       log('prompts.useBrowserValue', debug, { original: args.useBrowser, parsed: useBrowser }, COMPONENTS.PROMPTS);
-      
-      let toolName = "fetch_html";
-      if (format === "json") toolName = "fetch_json";
-      if (format === "text") toolName = "fetch_txt";
-      if (format === "markdown") toolName = "fetch_markdown";
-      
+
+      let _toolName = "fetch_html";
+      if (format === "json") _toolName = "fetch_json";
+      if (format === "text") _toolName = "fetch_txt";
+      if (format === "markdown") _toolName = "fetch_markdown";
+
       return {
         description: t('prompts.fetchWebsite.result'),
         messages: [
@@ -155,8 +155,8 @@ export function registerPrompts(server: Server): void {
             content: {
               type: "text",
               text: `${t('prompts.fetchWebsite.instruction')}: ${url}\n\n` +
-                   `${t('prompts.fetchWebsite.formatInstruction')}: ${format}\n\n` +
-                   `${t('prompts.fetchWebsite.browserInstruction')}: ${useBrowser ? t('prompts.yes') : t('prompts.no')}`
+                `${t('prompts.fetchWebsite.formatInstruction')}: ${format}\n\n` +
+                `${t('prompts.fetchWebsite.browserInstruction')}: ${useBrowser ? t('prompts.yes') : t('prompts.no')}`
             }
           }
         ]
@@ -165,7 +165,7 @@ export function registerPrompts(server: Server): void {
       const url = args.url;
       const selector = args.selector || "main";
       const dataType = args.dataType || "text";
-      
+
       return {
         description: t('prompts.extractContent.result'),
         messages: [
@@ -174,8 +174,8 @@ export function registerPrompts(server: Server): void {
             content: {
               type: "text",
               text: `${t('prompts.extractContent.message')}: ${url}\n\n` +
-                   `${t('prompts.extractContent.selectorInstruction')}: ${selector}\n\n` +
-                   `${t('prompts.extractContent.dataTypeInstruction')}: ${dataType}`
+                `${t('prompts.extractContent.selectorInstruction')}: ${selector}\n\n` +
+                `${t('prompts.extractContent.dataTypeInstruction')}: ${dataType}`
             }
           }
         ]
@@ -183,7 +183,7 @@ export function registerPrompts(server: Server): void {
     } else if (promptName === "mult-fetch-mcp:prompt:debug-fetch") {
       const url = args.url;
       const error = args.error;
-      
+
       return {
         description: t('prompts.debugFetch.result'),
         messages: [
@@ -192,14 +192,14 @@ export function registerPrompts(server: Server): void {
             content: {
               type: "text",
               text: `${t('prompts.debugFetch.message')}: ${url}\n\n` +
-                   `${t('prompts.debugFetch.errorDetails')}: ${error}\n\n` +
-                   `${t('prompts.debugFetch.instruction')}`
+                `${t('prompts.debugFetch.errorDetails')}: ${error}\n\n` +
+                `${t('prompts.debugFetch.instruction')}`
             }
           }
         ]
       };
     }
-    
+
     // 默认情况下返回一个通用消息
     return {
       description: t('prompts.generic.result'),
@@ -209,7 +209,7 @@ export function registerPrompts(server: Server): void {
           content: {
             type: "text",
             text: `${t('prompts.generic.message')}: ${promptName}\n\n` +
-                 `${t('prompts.generic.args')}: ${JSON.stringify(args, null, 2)}`
+              `${t('prompts.generic.args')}: ${JSON.stringify(args, null, 2)}`
           }
         }
       ]

@@ -8,7 +8,6 @@ import { Fetcher } from '../fetch.js';
 import { FetchParams } from './types.js';
 import { log, COMPONENTS } from '../logger.js';
 import { initializeBrowser, closeBrowserInstance, shouldSwitchToBrowser } from './browser.js';
-import { BaseFetcher } from '../fetchers/common/BaseFetcher.js';
 
 /**
  * 辅助函数：根据类型和参数自动选择合适的获取方法 (Helper function: automatically select appropriate fetching method based on type and parameters)
@@ -21,10 +20,10 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
   const useBrowser = params.useBrowser === true;
   const autoDetectMode = params.autoDetectMode !== false; // 除非明确设置为 false，否则默认为 true (Unless explicitly set to false, default to true)
   const closeBrowserAfterFetch = params.closeBrowser === true; // 是否在获取后关闭浏览器 (Whether to close the browser after fetching)
-  
+
   // 严格从调用参数中获取debug值
   const debug = params.debug === true;
-  
+
   try {
     if (useBrowser) {
       // 如果使用浏览器模式，确保浏览器已初始化 (If using browser mode, ensure browser is initialized)
@@ -32,10 +31,10 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
       if (debug) {
         log('server.usingBrowserMode', debug, { type, url: params.url }, COMPONENTS.SERVER);
       }
-      
+
       // 确保params中包含debug参数 (Ensure params contains debug parameter)
       params.debug = debug;
-      
+
       // 根据类型选择合适的浏览器获取方法 (Choose appropriate browser fetching method based on type)
       switch (type) {
         case 'html':
@@ -56,7 +55,7 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
       if (debug) {
         log('server.usingAutoDetectMode', debug, { type, url: params.url }, COMPONENTS.SERVER);
       }
-      
+
       try {
         // 根据类型选择合适的标准获取方法 (Choose appropriate standard fetching method based on type)
         let result;
@@ -84,35 +83,35 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
           default:
             throw new Error(`Unsupported content type: ${type}`);
         }
-        
+
         // 检查结果是否为错误，并且是否包含403或forbidden关键词
         if (result.isError && autoDetectMode) {
-          const errorText = result.content && result.content[0] && result.content[0].text 
-            ? String(result.content[0].text) 
+          const errorText = result.content && result.content[0] && result.content[0].text
+            ? String(result.content[0].text)
             : '';
-            
-          const is403Error = errorText.includes('403') || 
-                            errorText.toLowerCase().includes('forbidden');
-                            
+
+          const is403Error = errorText.includes('403') ||
+            errorText.toLowerCase().includes('forbidden');
+
           if (is403Error || shouldSwitchToBrowser(errorText)) {
             if (debug) {
-              log('server.switchingToBrowserMode', debug, { 
-                url: params.url, 
+              log('server.switchingToBrowserMode', debug, {
+                url: params.url,
                 error: errorText,
                 reason: is403Error ? '403 Forbidden' : 'Other error requiring browser'
               }, COMPONENTS.SERVER);
             }
-            
+
             // 确保浏览器已初始化
             await initializeBrowser(debug);
-            
+
             // 设置浏览器模式参数
             const browserParams = {
               ...params,
               useBrowser: true,
               debug: debug
             };
-            
+
             // 根据类型选择合适的浏览器获取方法
             let browserResult;
             switch (type) {
@@ -134,39 +133,39 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
               default:
                 throw new Error(`Unsupported content type: ${type}`);
             }
-            
+
             return browserResult;
           }
         }
-        
+
         return result;
       } catch (error) {
         // 如果标准模式失败且启用了自动检测
         const errorMessage = error instanceof Error ? error.message : String(error);
-        
+
         // 检查是否应该切换到浏览器模式
         // 特别处理 HTTP 403 Forbidden 错误，这是最常见的需要切换到浏览器模式的情况
         const shouldSwitch = autoDetectMode && (
-          shouldSwitchToBrowser(error) || 
-          errorMessage.includes('403') || 
+          shouldSwitchToBrowser(error) ||
+          errorMessage.includes('403') ||
           errorMessage.toLowerCase().includes('forbidden')
         );
-        
+
         if (shouldSwitch) {
           if (debug) {
             log('server.switchingToBrowserMode', debug, { url: params.url }, COMPONENTS.SERVER);
           }
-          
+
           // 确保浏览器已初始化
           await initializeBrowser(debug);
-          
+
           // 设置浏览器模式参数
           const browserParams = {
             ...params,
             useBrowser: true,
             debug: debug
           };
-          
+
           // 根据类型选择合适的浏览器获取方法
           let browserResult;
           switch (type) {
@@ -188,10 +187,10 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
             default:
               throw new Error(`Unsupported content type: ${type}`);
           }
-          
+
           return browserResult;
         }
-        
+
         // 如果不需要切换到浏览器模式，则抛出原始错误
         throw error;
       }
@@ -201,15 +200,12 @@ export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'j
     if (debug) {
       log('server.fetchError', debug, { type, error: error instanceof Error ? error.message : String(error) }, COMPONENTS.SERVER);
     }
-    
+
     // 如果出错且启用了关闭浏览器选项，确保浏览器被关闭
     if (closeBrowserAfterFetch) {
       await closeBrowserInstance(debug);
     }
-    
+
     throw error;
   }
-  
-  // 如果没有匹配的类型，返回错误
-  return BaseFetcher.createErrorResponse(`Unsupported content type: ${type}`);
 }

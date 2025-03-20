@@ -52,10 +52,10 @@ export async function closeBrowserInstance(debug: boolean = false): Promise<void
 export function shouldSwitchToBrowser(error: any): boolean {
   // 检查错误是否表明需要浏览器模式 (Check if error indicates browser mode is needed)
   if (!error) return false;
-  
+
   // 提取错误消息，无论错误对象的形式如何
   let errorMessage: string;
-  
+
   if (typeof error === 'string') {
     errorMessage = error;
   } else if (error instanceof Error) {
@@ -77,40 +77,40 @@ export function shouldSwitchToBrowser(error: any): boolean {
   } else {
     errorMessage = String(error);
   }
-  
+
   // 检查是否包含 HTTP 403 Forbidden 错误，这是最常见的需要切换到浏览器模式的情况
-  if (errorMessage.includes('403') || 
-      errorMessage.toLowerCase().includes('forbidden')) {
+  if (errorMessage.includes('403') ||
+    errorMessage.toLowerCase().includes('forbidden')) {
     return true;
   }
-  
-  return isAccessDeniedError(errorMessage) || 
-         isNetworkError(errorMessage) ||
-         errorMessage.toLowerCase().includes('javascript required') ||
-         errorMessage.toLowerCase().includes('und_err_connect_timeout') ||
-         errorMessage.toLowerCase().includes('fetch failed');
+
+  return isAccessDeniedError(errorMessage) ||
+    isNetworkError(errorMessage) ||
+    errorMessage.toLowerCase().includes('javascript required') ||
+    errorMessage.toLowerCase().includes('und_err_connect_timeout') ||
+    errorMessage.toLowerCase().includes('fetch failed');
 }
 
 /**
  * 检查是否应该使用浏览器模式 (Check if browser mode should be used)
  * 根据响应内容判断是否需要浏览器模式 (Determine if browser mode is needed based on response content)
  * @param response 响应对象 (Response object)
- * @param url 请求URL (Request URL)
+ * @param _url 请求URL (Request URL)
  * @returns 是否应该使用浏览器模式 (Whether to use browser mode)
  */
-export function shouldUseBrowser(response: any, url: string): boolean {
+export function shouldUseBrowser(response: any, _url: string): boolean {
   // 检查响应是否表明需要浏览器模式 (Check if response indicates browser mode is needed)
   if (response.isError) {
     const errorText = response.content[0].text.toLowerCase();
-    return errorText.includes('403') || 
-           errorText.includes('forbidden') ||
-           errorText.includes('access denied') ||
-           errorText.includes('cloudflare') ||
-           errorText.includes('captcha') ||
-           errorText.includes('javascript required') ||
-           errorText.includes('browser') ||
-           errorText.includes('cookie');
+    return errorText.includes('403') ||
+      errorText.includes('forbidden') ||
+      errorText.includes('access denied') ||
+      errorText.includes('cloudflare') ||
+      errorText.includes('captcha') ||
+      errorText.includes('javascript required') ||
+      errorText.includes('browser') ||
+      errorText.includes('cookie');
   }
-  
+
   return false;
 }
