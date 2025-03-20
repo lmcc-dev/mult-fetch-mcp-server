@@ -4,7 +4,7 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import { t, TranslateFunction } from './index.js';
+import { t } from './index.js';
 
 /**
  * 日志级别枚举 (Log level enum)
@@ -36,15 +36,15 @@ export interface Logger {
  * 获取当前日志级别 (Get current log level)
  * @returns 日志级别 (Log level)
  */
-function getCurrentLogLevel(): LogLevel {
+function _getCurrentLogLevel(): LogLevel {
   const debugEnv = process.env.DEBUG;
-  
+
   if (debugEnv === 'none') return LogLevel.NONE;
   if (debugEnv === 'error') return LogLevel.ERROR;
   if (debugEnv === 'warn') return LogLevel.WARN;
   if (debugEnv === 'info') return LogLevel.INFO;
   if (debugEnv === 'debug' || debugEnv === 'true') return LogLevel.DEBUG;
-  
+
   // 默认为 INFO 级别 (Default to INFO level)
   return LogLevel.INFO;
 }
@@ -61,7 +61,7 @@ function translateKey(key: string, params?: LogParams): string {
     const translated = t(key, params);
     // 确保结果是字符串 (Ensure the result is a string)
     let translatedStr = typeof translated === 'string' ? translated : JSON.stringify(translated);
-    
+
     // 检查翻译后的字符串是否仍然包含占位符，如果包含，手动进行插值替换
     // (Check if the translated string still contains placeholders, if so, manually perform interpolation)
     if (params && typeof translatedStr === 'string') {
@@ -72,9 +72,9 @@ function translateKey(key: string, params?: LogParams): string {
         }
       }
     }
-    
+
     return translatedStr;
-  } catch (error) {
+  } catch (_error) {
     // 如果翻译失败，返回原始键名 (If translation fails, return the original key)
     return key;
   }
@@ -102,7 +102,7 @@ export function createLogger(prefix: string): Logger {
         console.error(`[${prefix}] ${translatedMessage}`);
       }
     },
-    
+
     /**
      * 输出信息日志 (Output info log)
      * @param key 翻译键 (Translation key)
@@ -118,7 +118,7 @@ export function createLogger(prefix: string): Logger {
         console.error(`[${prefix}] ${translatedMessage}`);
       }
     },
-    
+
     /**
      * 输出警告日志 (Output warning log)
      * @param key 翻译键 (Translation key)
@@ -131,7 +131,7 @@ export function createLogger(prefix: string): Logger {
       // (In MCP environment, all logs should be output at error level)
       console.error(`[${prefix}] ${translatedMessage}`);
     },
-    
+
     /**
      * 输出错误日志 (Output error log)
      * @param key 翻译键 (Translation key)

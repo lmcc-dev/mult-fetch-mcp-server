@@ -4,7 +4,7 @@
  * Description: This code was collaboratively developed by Martin and AI Assistant.
  */
 
-import i18next, { TOptions, TFunction } from 'i18next';
+import i18next, { TOptions } from 'i18next';
 import { enTranslation } from './locales/en/index.js';
 import { zhTranslation } from './locales/zh/index.js';
 
@@ -31,16 +31,16 @@ const resources = {
  */
 function flattenResources(resources: Record<string, any>): Record<string, any> {
   const flattened: Record<string, any> = {};
-  
+
   // 遍历所有语言 (Iterate through all languages)
   for (const lang in resources) {
     flattened[lang] = { translation: {} };
     const translation = resources[lang].translation;
-    
+
     // 遍历所有命名空间 (Iterate through all namespaces)
     for (const namespace in translation) {
       const nsTranslation = translation[namespace];
-      
+
       // 遍历命名空间中的所有键 (Iterate through all keys in the namespace)
       for (const key in nsTranslation) {
         // 直接使用原始键名，不添加命名空间前缀 (Use the original key directly, without adding namespace prefix)
@@ -48,7 +48,7 @@ function flattenResources(resources: Record<string, any>): Record<string, any> {
       }
     }
   }
-  
+
   return flattened;
 }
 
@@ -61,7 +61,7 @@ const flattenedResources = flattenResources(resources);
 const initializeI18n = () => {
   // 获取当前语言环境 (Get current language environment)
   const currentLanguage = process.env.MCP_LANG || 'en';
-  
+
   // 初始化 i18next (Initialize i18next)
   i18next.init({
     resources: flattenedResources,
@@ -79,11 +79,11 @@ const initializeI18n = () => {
     saveMissing: false, // 不保存缺失的翻译键 (Don't save missing translation keys)
     keySeparator: false, // 禁用键分隔符，使用完整的键路径 (Disable key separator, use full key path)
     nsSeparator: false, // 禁用命名空间分隔符 (Disable namespace separator)
-    missingKeyHandler: (lng, ns, key, fallbackValue) => {
+    missingKeyHandler: (_lng, _ns, _key, _fallbackValue) => {
       // 不输出任何日志，由上层调用决定是否输出 (Don't output any logs, let the upper-level call decide whether to output)
     }
   });
-  
+
   return i18next;
 };
 
@@ -98,7 +98,7 @@ export default i18n;
  * 支持字符串和嵌套对象的翻译 (Supports translation of strings and nested objects)
  */
 export type TranslateFunction = <T = string>(
-  key: string, 
+  key: string,
   options?: TOptions | undefined
 ) => T extends string ? string : any;
 
@@ -115,10 +115,10 @@ export const t: TranslateFunction = (key, options?) => {
     if (!exists) {
       return key as any;
     }
-    
+
     const result = i18n.t(key, options);
     return result;
-  } catch (error) {
+  } catch (_error) {
     return key as any; // 出错时返回原始键 (Return the original key when an error occurs)
   }
 };
@@ -137,7 +137,7 @@ export const changeLanguage = (lng: SupportedLanguage): Promise<unknown> => {
  * 获取当前语言函数 (Get current language function)
  * @returns 当前语言 (Current language)
  */
-export const getCurrentLanguage = (): SupportedLanguage => 
+export const getCurrentLanguage = (): SupportedLanguage =>
   (i18n.language || 'en') as SupportedLanguage;
 
 /**
