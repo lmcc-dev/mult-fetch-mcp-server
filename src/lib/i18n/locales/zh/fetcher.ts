@@ -14,19 +14,21 @@ export default {
   [FETCHER_KEYS.contentLength]: "内容长度: {{length}} 字节",
   [FETCHER_KEYS.contentTooLarge]: "内容过大: {{size}} 字节，限制: {{limit}} 字节",
   [FETCHER_KEYS.contentTruncated]: "内容已从 {{originalSize}} 截断至 {{truncatedSize}} 字节",
-  
+
   // 分块处理相关 (Chunk processing related)
   [FETCHER_KEYS.chunkRetrievalFailed]: "获取分块失败: {{error}}",
-  [FETCHER_KEYS.gettingChunkBySize]: "按大小获取内容分块，起始: {{start}}，结束: {{end}}",
-  [FETCHER_KEYS.chunkNotFound]: "未找到分块: {{chunkId}}",
-  
+  [FETCHER_KEYS.gettingChunkBySize]: "正在获取分块内容，chunkId：{{chunkId}}，起始位置：{{startCursor}}，大小：{{sizeLimit}}",
+  [FETCHER_KEYS.chunkNotFound]: "未找到指定分块内容，chunkId：{{chunkId}}，起始位置：{{startCursor}}",
+  [FETCHER_KEYS.chunkInfo]: "分块信息：获取了 {{fetchedBytes}} 字节，总大小 {{totalBytes}} 字节，剩余 {{remainingBytes}} 字节，完成度 {{percentage}}，是否为最后分块：{{isLastChunk}}",
+  [FETCHER_KEYS.lastChunkDetected]: "检测到这是最后一个分块，已获取字节：{{fetchedBytes}}，总字节：{{totalBytes}}，剩余字节：{{remainingBytes}}",
+
   // 获取类型相关 (Fetch type related)
   [FETCHER_KEYS.fetchingPlainText]: "获取纯文本内容",
-  
+
   // 延迟相关 (Delay related)
   [FETCHER_KEYS.addingDelay]: "添加延迟: {{delay}}毫秒",
   [FETCHER_KEYS.delayCompleted]: "延迟完成",
-  
+
   // 代理相关 (Proxy related)
   [FETCHER_KEYS.usingProxy]: "使用代理: {{proxy}}",
   [FETCHER_KEYS.usingSpecifiedProxy]: "使用指定的代理: {{proxy}}",
@@ -38,20 +40,20 @@ export default {
   [FETCHER_KEYS.usingHttpsProxy]: "使用HTTPS代理",
   [FETCHER_KEYS.usingHttpProxy]: "使用HTTP代理",
   [FETCHER_KEYS.systemProxyDisabled]: "系统代理已禁用",
-  
+
   // 请求相关 (Request related)
   [FETCHER_KEYS.fetchingUrl]: "获取URL: {{url}}",
   [FETCHER_KEYS.usingUserAgent]: "使用User-Agent: {{userAgent}}",
   [FETCHER_KEYS.requestOptions]: "请求选项: {{options}}",
   [FETCHER_KEYS.startingFetch]: "开始获取: {{url}}",
   [FETCHER_KEYS.fetchCompleted]: "获取完成",
-  
+
   // 响应相关 (Response related)
   [FETCHER_KEYS.responseStatus]: "响应状态: {{status}}",
   [FETCHER_KEYS.redirectingTo]: "重定向到: {{url}}",
   [FETCHER_KEYS.constructedFullRedirectUrl]: "构建完整重定向URL: {{url}}",
   [FETCHER_KEYS.requestSuccess]: "请求成功",
-  
+
   // 错误相关 (Error related)
   [FETCHER_KEYS.errorResponse]: "错误响应: {{status}}",
   [FETCHER_KEYS.errorResponseBody]: "错误响应体: {{body}}",
@@ -62,7 +64,7 @@ export default {
   [FETCHER_KEYS.requestTimeout]: "请求超时: {{timeout}}毫秒",
   [FETCHER_KEYS.fetchFailed]: "获取失败: {{error}}",
   [FETCHER_KEYS.tooManyRedirects]: "重定向次数过多",
-  
+
   // 内容类型相关 (Content type related)
   [FETCHER_KEYS.startingHtmlFetch]: "开始获取HTML",
   [FETCHER_KEYS.fetchingHtml]: "获取HTML",
@@ -81,7 +83,7 @@ export default {
   [FETCHER_KEYS.creatingTurndown]: "创建Turndown服务",
   [FETCHER_KEYS.convertingToMarkdown]: "将HTML转换为Markdown",
   [FETCHER_KEYS.markdownContentLength]: "Markdown内容长度: {{length}} 字节",
-  
+
   // 系统代理相关 (System proxy related)
   [FETCHER_KEYS.checkingProxyEnv]: "检查代理环境变量",
   [FETCHER_KEYS.envVarValue]: "环境变量 {{name}}: {{value}}",
@@ -98,7 +100,7 @@ export default {
   [FETCHER_KEYS.errorGettingUnixEnvVars]: "获取Unix环境变量时出错: {{error}}",
   [FETCHER_KEYS.errorGettingSystemEnvVars]: "获取系统环境变量时出错: {{error}}",
   [FETCHER_KEYS.noSystemProxyFound]: "未找到系统代理",
-  
+
   // 通用 (General)
   [FETCHER_KEYS.notSet]: "未设置",
   [FETCHER_KEYS.debug]: "调试: {{message}}",
