@@ -99,15 +99,26 @@ export class BaseFetcher {
 
       // 添加分段提示 (Add chunk prompt)
       const isFirstRequest = true;
-      const chunkWithPrompt = firstChunk + TemplateUtils.generateSizeBasedChunkPrompt(
-        fetchedBytes,
-        totalSize,
-        chunkId,
-        remainingBytes,
-        estimatedRequests,
-        contentSizeLimit,
-        isFirstRequest
-      );
+      let chunkWithPrompt: string;
+
+      // 检查是否已经检索了全部内容
+      if (remainingBytes <= 0) {
+        chunkWithPrompt = firstChunk + TemplateUtils.generateSizeBasedLastChunkPrompt(
+          fetchedBytes,
+          totalSize,
+          isFirstRequest
+        );
+      } else {
+        chunkWithPrompt = firstChunk + TemplateUtils.generateSizeBasedChunkPrompt(
+          fetchedBytes,
+          totalSize,
+          chunkId,
+          remainingBytes,
+          estimatedRequests,
+          contentSizeLimit,
+          isFirstRequest
+        );
+      }
 
       // 创建响应 (Create response)
       return {
@@ -181,14 +192,30 @@ export class BaseFetcher {
     // 获取相关信息 (Get related information)
     const { content, fetchedBytes, remainingBytes, isLastChunk, totalBytes } = chunkResult;
 
+    // 记录是否为最后一个分块的详细信息
+    log('fetcher.chunkInfo', debug, {
+      chunkId,
+      fetchedBytes,
+      totalBytes,
+      remainingBytes,
+      isLastChunk,
+      percentage: `${Math.round((fetchedBytes / totalBytes) * 100)}%`
+    }, component);
+
     // 计算预计还需要的请求次数 (Calculate estimated number of requests needed)
     const estimatedRequests = Math.ceil(remainingBytes / sizeLimit);
 
     // 添加分段提示 (Add chunk prompt)
     let contentWithPrompt: string;
 
-    if (isLastChunk) {
-      // 如果是最后一个分段 (If it's the last chunk)
+    // 如果是最后一个分段或没有剩余内容 (If it's the last chunk or there's no remaining content)
+    if (isLastChunk || remainingBytes <= 0) {
+      log('fetcher.lastChunkDetected', debug, {
+        fetchedBytes,
+        totalBytes,
+        remainingBytes
+      }, component);
+
       contentWithPrompt = content + TemplateUtils.generateSizeBasedLastChunkPrompt(
         fetchedBytes,
         totalBytes,
@@ -221,7 +248,8 @@ export class BaseFetcher {
       totalBytes,
       fetchedBytes,
       remainingBytes,
-      hasMoreChunks: !isLastChunk
+      hasMoreChunks: remainingBytes > 0,
+      isLastChunk // 明确添加isLastChunk属性以便客户端使用
     };
   }
 
@@ -244,15 +272,28 @@ export class BaseFetcher {
       }
 
       // 使用基于字节的提示 (Use byte-based prompt)
-      const promptText = TemplateUtils.generateSizeBasedChunkPrompt(
-        response.fetchedBytes,
-        response.totalBytes,
-        chunkId,
-        response.remainingBytes,
-        estimatedRequests,
-        currentSizeLimit,
-        false // 设置为false表示这不是首次请求 (Set to false indicating this is not the first request)
-      );
+      let promptText;
+
+      // 检查是否还有剩余字节 (Check if there are remaining bytes)
+      if (response.remainingBytes <= 0) {
+        // 没有剩余字节，使用最后一块的提示 (No remaining bytes, use last chunk prompt)
+        promptText = TemplateUtils.generateSizeBasedLastChunkPrompt(
+          response.fetchedBytes,
+          response.totalBytes,
+          false // 设置为false表示这不是首次请求 (Set to false indicating this is not the first request)
+        );
+      } else {
+        // 仍有剩余字节，使用普通分块提示 (Still has remaining bytes, use regular chunk prompt)
+        promptText = TemplateUtils.generateSizeBasedChunkPrompt(
+          response.fetchedBytes,
+          response.totalBytes,
+          chunkId,
+          response.remainingBytes,
+          estimatedRequests,
+          currentSizeLimit,
+          false // 设置为false表示这不是首次请求 (Set to false indicating this is not the first request)
+        );
+      }
 
       // 创建新的响应对象，避免修改原始对象 (Create new response object to avoid modifying the original)
       return {

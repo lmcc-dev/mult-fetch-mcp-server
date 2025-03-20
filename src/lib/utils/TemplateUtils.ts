@@ -61,6 +61,12 @@ export class TemplateUtils {
     currentSizeLimit: number,
     isFirstRequest: boolean = true
   ): string {
+    // 如果剩余字节数为0，使用完成提示而不是继续获取的提示
+    // (If remaining bytes is 0, use completion prompt instead of continuation prompt)
+    if (remainingBytes <= 0) {
+      return this.generateSizeBasedLastChunkPrompt(fetchedBytes, totalBytes, isFirstRequest);
+    }
+
     const prefix = isFirstRequest ? 'Content is too long and has been split. ' : '';
     const fetchedPercent = Math.round((fetchedBytes / totalBytes) * 100);
 
@@ -80,9 +86,8 @@ export class TemplateUtils {
     isFirstRequest: boolean = true
   ): string {
     const prefix = isFirstRequest ? 'Content is too long and has been split. ' : '';
-    const _fetchedPercent = Math.round((fetchedBytes / totalBytes) * 100);
 
-    return `\n\n${TemplateUtils.SYSTEM_NOTE.START}\n${prefix}You've retrieved ${fetchedBytes.toLocaleString()} bytes (100% of total ${totalBytes.toLocaleString()} bytes).\nThis is the last part of the content.\n${TemplateUtils.SYSTEM_NOTE.END}`;
+    return `\n\n${TemplateUtils.SYSTEM_NOTE.START}\n${prefix}You've retrieved ${fetchedBytes.toLocaleString()} bytes (100% of total ${totalBytes.toLocaleString()} bytes).\nThis is the last part of the content. No further requests needed.\n${TemplateUtils.SYSTEM_NOTE.END}`;
   }
 
   /**
