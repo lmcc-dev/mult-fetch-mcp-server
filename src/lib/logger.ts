@@ -9,7 +9,6 @@ import { t } from './i18n/index.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { fileURLToPath } from 'url';
 
 // 导入所有翻译文件 (Import all translation files)
 import serverZh from './i18n/locales/zh/server.js';
@@ -67,8 +66,8 @@ try {
   if (!fs.existsSync(LOG_DIR)) {
     fs.mkdirSync(LOG_DIR, { recursive: true });
   }
-} catch (error) {
-  console.error(`[${COMPONENTS.SERVER}] Failed to create log directory: ${error}`);
+} catch (_error) {
+  console.error(`[${COMPONENTS.SERVER}] Failed to create log directory: ${_error}`);
 }
 
 // 组件日志记录器缓存 (Component logger cache)
@@ -95,7 +94,7 @@ function getLogger(component: string) {
  */
 function getFormattedLocalTime(): string {
   const now = new Date();
-  
+
   // 获取本地时间的年、月、日、时、分、秒、毫秒
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -104,7 +103,7 @@ function getFormattedLocalTime(): string {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
   const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-  
+
   // 格式化为 YYYY-MM-DD HH:MM:SS.mmm
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
@@ -119,8 +118,8 @@ function writeToLogFile(component: string, message: string): void {
     const timestamp = getFormattedLocalTime();
     const logEntry = `${timestamp} [${component}] ${message}\n`;
     fs.appendFileSync(LOG_FILE, logEntry);
-  } catch (error) {
-    console.error(`[${COMPONENTS.SERVER}] Failed to write to log file: ${error}`);
+  } catch (_error) {
+    console.error(`[${COMPONENTS.SERVER}] Failed to write to log file: ${_error}`);
   }
 }
 
@@ -130,8 +129,8 @@ function writeToLogFile(component: string, message: string): void {
 export function clearLogFile(): void {
   try {
     fs.writeFileSync(LOG_FILE, '');
-  } catch (error) {
-    console.error(`[${COMPONENTS.SERVER}] Failed to clear log file: ${error}`);
+  } catch (_error) {
+    console.error(`[${COMPONENTS.SERVER}] Failed to clear log file: ${_error}`);
   }
 }
 
@@ -147,64 +146,27 @@ export function getLogFilePath(): string {
  * 尝试翻译键名 (Try to translate a key)
  * @param key 翻译键 (Translation key)
  * @param options 翻译选项 (Translation options)
- * @param component 组件名称 (Component name)
+ * @param _component 组件名称 (Component name)
  * @returns 翻译后的文本 (Translated text)
  */
-function translateKey(key: string, options?: any, component: string = COMPONENTS.SERVER): string {
+function translateKey(key: string, options?: any, _component: string = COMPONENTS.SERVER): string {
   // 如果没有选项，尝试使用缓存 (If no options, try to use cache)
   if (!options || Object.keys(options).length === 0) {
     // 生成缓存键 (Generate cache key)
     const cacheKey = `${key}`;
-    
+
     // 如果缓存中存在该键，直接返回缓存的翻译 (If the key exists in cache, return the cached translation)
     if (translationCache[cacheKey]) {
       return translationCache[cacheKey];
     }
-    
+
     try {
       // 尝试翻译键名 (Try to translate the key)
       const translated = t(key, options);
-      
-      // 确保结果是字符串 (Ensure the result is a string)
-      const translatedStr = typeof translated === 'string' ? translated : JSON.stringify(translated);
-      
-      // 如果翻译结果与键名相同，可能是嵌套键未被正确处理 (If translation result is the same as key, nested key may not be handled correctly)
-      if (translatedStr === key) {
-        // 尝试手动处理嵌套键 (Try to manually handle nested keys)
-        const parts = key.split('.');
-        if (parts.length > 1) {
-          const namespace = parts[0];
-          const subKey = parts.slice(1).join('.');
-          
-          // 根据命名空间获取对应的翻译对象 (Get translation object based on namespace)
-          const translation = translationMap[namespace];
-          
-          // 如果找到了翻译对象，尝试获取子键的翻译 (If translation object is found, try to get translation of subkey)
-          if (translation && translation[subKey]) {
-            // 将翻译结果存入缓存 (Store the translation result in cache)
-            translationCache[cacheKey] = translation[subKey];
-            return translation[subKey];
-          }
-        }
-      }
-      
-      // 将翻译结果存入缓存 (Store the translation result in cache)
-      translationCache[cacheKey] = translatedStr;
-      
-      return translatedStr;
-    } catch (error) {
-      // 如果翻译失败，返回原始键名 (If translation fails, return the original key)
-      return key;
-    }
-  } else {
-    // 如果有选项，不使用缓存 (If there are options, don't use cache)
-    try {
-      // 尝试翻译键名 (Try to translate the key)
-      const translated = t(key, options);
-      
+
       // 确保结果是字符串 (Ensure the result is a string)
       let translatedStr = typeof translated === 'string' ? translated : JSON.stringify(translated);
-      
+
       // 检查翻译后的字符串是否仍然包含占位符，如果包含，手动进行插值替换
       // (Check if the translated string still contains placeholders, if so, manually perform interpolation)
       if (options && typeof translatedStr === 'string') {
@@ -215,7 +177,7 @@ function translateKey(key: string, options?: any, component: string = COMPONENTS
           }
         }
       }
-      
+
       // 如果翻译结果与键名相同，可能是嵌套键未被正确处理 (If translation result is the same as key, nested key may not be handled correctly)
       if (translatedStr === key) {
         // 尝试手动处理嵌套键 (Try to manually handle nested keys)
@@ -223,10 +185,10 @@ function translateKey(key: string, options?: any, component: string = COMPONENTS
         if (parts.length > 1) {
           const namespace = parts[0];
           const subKey = parts.slice(1).join('.');
-          
+
           // 根据命名空间获取对应的翻译对象 (Get translation object based on namespace)
           const translation = translationMap[namespace];
-          
+
           // 如果找到了翻译对象，尝试获取子键的翻译 (If translation object is found, try to get translation of subkey)
           if (translation && translation[subKey]) {
             // 如果有选项，进行插值 (If there are options, do interpolation)
@@ -241,9 +203,63 @@ function translateKey(key: string, options?: any, component: string = COMPONENTS
           }
         }
       }
-      
+
+      // 将翻译结果存入缓存 (Store the translation result in cache)
+      translationCache[cacheKey] = translatedStr;
+
       return translatedStr;
-    } catch (error) {
+    } catch (_error) {
+      // 如果翻译失败，返回原始键名 (If translation fails, return the original key)
+      return key;
+    }
+  } else {
+    // 如果有选项，不使用缓存 (If there are options, don't use cache)
+    try {
+      // 尝试翻译键名 (Try to translate the key)
+      const translated = t(key, options);
+
+      // 确保结果是字符串 (Ensure the result is a string)
+      let translatedStr = typeof translated === 'string' ? translated : JSON.stringify(translated);
+
+      // 检查翻译后的字符串是否仍然包含占位符，如果包含，手动进行插值替换
+      // (Check if the translated string still contains placeholders, if so, manually perform interpolation)
+      if (options && typeof translatedStr === 'string') {
+        for (const key in options) {
+          const placeholder = `{{${key}}}`;
+          if (translatedStr.includes(placeholder)) {
+            translatedStr = translatedStr.replace(new RegExp(placeholder, 'g'), String(options[key]));
+          }
+        }
+      }
+
+      // 如果翻译结果与键名相同，可能是嵌套键未被正确处理 (If translation result is the same as key, nested key may not be handled correctly)
+      if (translatedStr === key) {
+        // 尝试手动处理嵌套键 (Try to manually handle nested keys)
+        const parts = key.split('.');
+        if (parts.length > 1) {
+          const namespace = parts[0];
+          const subKey = parts.slice(1).join('.');
+
+          // 根据命名空间获取对应的翻译对象 (Get translation object based on namespace)
+          const translation = translationMap[namespace];
+
+          // 如果找到了翻译对象，尝试获取子键的翻译 (If translation object is found, try to get translation of subkey)
+          if (translation && translation[subKey]) {
+            // 如果有选项，进行插值 (If there are options, do interpolation)
+            let result = translation[subKey];
+            for (const key in options) {
+              const placeholder = `{{${key}}}`;
+              if (result.includes(placeholder)) {
+                result = result.replace(new RegExp(placeholder, 'g'), String(options[key]));
+              }
+            }
+            return result;
+          }
+        }
+      }
+
+      return translatedStr;
+    } catch (_error) {
       // 如果翻译失败，返回原始键名 (If translation fails, return the original key)
       return key;
     }
@@ -263,16 +279,16 @@ export function log(key: string, debug: boolean = false, options?: any, componen
   if (!debug) {
     return;
   }
-  
+
   // 获取组件的日志记录器 (Get logger for component)
-  const logger = getLogger(component);
-  
+  const _logger = getLogger(component);
+
   // 翻译键名 (Translate the key)
   const translatedMessage = translateKey(key, options, component);
-  
+
   // 在 MCP 环境中，所有日志都应该使用 error 级别输出 (In MCP environment, all logs should be output at error level)
   console.error(`[${component}] ${translatedMessage}`);
-  
+
   // 写入日志文件 (Write to log file)
   writeToLogFile(component, translatedMessage);
 }
@@ -284,4 +300,4 @@ export function clearTranslationCache(): void {
   Object.keys(translationCache).forEach(key => {
     delete translationCache[key];
   });
-} 
+}
