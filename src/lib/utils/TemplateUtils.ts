@@ -20,16 +20,16 @@ export class TemplateUtils {
     replacements: Record<string, string>
   ): string {
     let result = content;
-    
+
     // 遍历所有替换项 (Iterate through all replacements)
     for (const [key, value] of Object.entries(replacements)) {
       // 创建正则表达式 (Create regular expression)
       const regex = new RegExp(`{{${key}}}`, 'g');
-      
+
       // 替换所有匹配项 (Replace all matches)
       result = result.replace(regex, value);
     }
-    
+
     return result;
   }
 
@@ -63,10 +63,10 @@ export class TemplateUtils {
   ): string {
     const prefix = isFirstRequest ? 'Content is too long and has been split. ' : '';
     const fetchedPercent = Math.round((fetchedBytes / totalBytes) * 100);
-    
+
     return `\n\n${TemplateUtils.SYSTEM_NOTE.START}\n${prefix}You've retrieved ${fetchedBytes.toLocaleString()} bytes (${fetchedPercent}% of total ${totalBytes.toLocaleString()} bytes). ${remainingBytes.toLocaleString()} bytes remaining. With current contentSizeLimit=${currentSizeLimit.toLocaleString()}, approximately ${estimatedRequests} more requests needed to retrieve all content. To continue, use the same tool function with parameters chunkId="${chunkId}" and startCursor=${fetchedBytes}.\n${TemplateUtils.SYSTEM_NOTE.END}`;
   }
-  
+
   /**
    * 生成最后一个分块的基于字节大小的提示信息 (Generate size-based prompt for the last chunk)
    * @param fetchedBytes 已获取的字节数 (Bytes already fetched)
@@ -80,8 +80,8 @@ export class TemplateUtils {
     isFirstRequest: boolean = true
   ): string {
     const prefix = isFirstRequest ? 'Content is too long and has been split. ' : '';
-    const fetchedPercent = Math.round((fetchedBytes / totalBytes) * 100);
-    
+    const _fetchedPercent = Math.round((fetchedBytes / totalBytes) * 100);
+
     return `\n\n${TemplateUtils.SYSTEM_NOTE.START}\n${prefix}You've retrieved ${fetchedBytes.toLocaleString()} bytes (100% of total ${totalBytes.toLocaleString()} bytes).\nThis is the last part of the content.\n${TemplateUtils.SYSTEM_NOTE.END}`;
   }
 

@@ -6,7 +6,7 @@
 
 import { isAccessDeniedError, isNetworkError } from './errorDetection.js';
 import { log, COMPONENTS } from '../logger.js';
-import { ERROR_KEYS } from '../i18n/keys/errors.js';
+// import { ERROR_KEYS } from '../i18n/keys/errors.js';
 
 /**
  * 错误类型枚举
@@ -38,29 +38,29 @@ export class ErrorHandler {
    * @returns 格式化的错误消息 (Formatted error message)
    */
   public static handleError(
-    error: unknown, 
-    component: string = COMPONENTS.SERVER, 
+    error: unknown,
+    component: string = COMPONENTS.SERVER,
     debug: boolean = false,
     context: Record<string, any> = {}
   ): string {
     const errorType = this.classifyError(error);
     const errorMessage = this.getErrorMessage(error);
-    
+
     // 记录错误日志
     // (Log error)
     log(
-      `errors.${errorType}_error`, 
-      debug, 
-      { 
+      `errors.${errorType}_error`,
+      debug,
+      {
         error: errorMessage,
         ...context
-      }, 
+      },
       component
     );
-    
+
     return errorMessage;
   }
-  
+
   /**
    * 分类错误类型
    * (Classify error type)
@@ -70,42 +70,42 @@ export class ErrorHandler {
    */
   public static classifyError(error: unknown): ErrorType {
     const errorMessage = this.getErrorMessage(error);
-    
+
     // 先检查超时错误 (Check timeout errors first)
     if (errorMessage.toLowerCase().includes('timeout')) {
       return ErrorType.TIMEOUT;
     }
-    
+
     if (isNetworkError(errorMessage)) {
       return ErrorType.NETWORK;
     }
-    
+
     if (isAccessDeniedError(errorMessage)) {
       return ErrorType.ACCESS_DENIED;
     }
-    
-    if (errorMessage.toLowerCase().includes('parse') || 
-        errorMessage.toLowerCase().includes('json') ||
-        errorMessage.toLowerCase().includes('syntax')) {
+
+    if (errorMessage.toLowerCase().includes('parse') ||
+      errorMessage.toLowerCase().includes('json') ||
+      errorMessage.toLowerCase().includes('syntax')) {
       return ErrorType.PARSE;
     }
-    
+
     if (errorMessage.toLowerCase().includes('browser') ||
-        errorMessage.toLowerCase().includes('puppeteer') ||
-        errorMessage.toLowerCase().includes('page') ||
-        errorMessage.toLowerCase().includes('chrome')) {
+      errorMessage.toLowerCase().includes('puppeteer') ||
+      errorMessage.toLowerCase().includes('page') ||
+      errorMessage.toLowerCase().includes('chrome')) {
       return ErrorType.BROWSER;
     }
-    
+
     if (errorMessage.toLowerCase().includes('valid') ||
-        errorMessage.toLowerCase().includes('schema') ||
-        errorMessage.toLowerCase().includes('type')) {
+      errorMessage.toLowerCase().includes('schema') ||
+      errorMessage.toLowerCase().includes('type')) {
       return ErrorType.VALIDATION;
     }
-    
+
     return ErrorType.UNKNOWN;
   }
-  
+
   /**
    * 获取错误消息
    * (Get error message)
@@ -117,26 +117,26 @@ export class ErrorHandler {
     if (error instanceof Error) {
       return error.message;
     }
-    
+
     if (typeof error === 'string') {
       return error;
     }
-    
+
     if (error && typeof error === 'object') {
       if ('message' in error && typeof error.message === 'string') {
         return error.message;
       }
-      
+
       try {
         return JSON.stringify(error);
       } catch {
         return String(error);
       }
     }
-    
+
     return String(error);
   }
-  
+
   /**
    * 创建带有错误类型的错误对象
    * (Create error object with error type)

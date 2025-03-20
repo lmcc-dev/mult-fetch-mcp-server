@@ -7,7 +7,6 @@
 import TurndownService from 'turndown';
 import { log, COMPONENTS } from '../logger.js';
 import { ToolError, ErrorType } from '../utils/errors.js';
-import { FetchResponse } from '../fetchers/common/types.js';
 import { convert as htmlToText } from 'html-to-text';
 
 /**
@@ -19,10 +18,9 @@ export class ContentProcessor {
    * 将HTML转换为Markdown (Convert HTML to Markdown)
    * @param html HTML内容 (HTML content)
    * @param debug 是否开启调试 (Whether to enable debugging)
-   * @param component 组件名称 (Component name for logging) - 仅用于向下兼容，实际会使用PROCESSOR组件
    * @returns Markdown内容 (Markdown content)
    */
-  public static htmlToMarkdown(html: string, debug: boolean, component: string): string {
+  public static htmlToMarkdown(html: string, debug: boolean): string {
     // 始终使用COMPONENTS.PROCESSOR作为组件标识符 (Always use COMPONENTS.PROCESSOR as component identifier)
     log('processor.creatingTurndown', debug, {}, COMPONENTS.PROCESSOR);
     const turndownService = new TurndownService({
@@ -30,61 +28,59 @@ export class ContentProcessor {
       codeBlockStyle: 'fenced',
       bulletListMarker: '-'
     });
-    
+
     // 添加表格支持 (Add table support)
     turndownService.addRule('tables', {
       filter: ['table'],
-      replacement: function(content) {
+      replacement: function (content) {
         const tableContent = content.trim();
         return '\n\n' + tableContent + '\n\n';
       }
     });
-    
+
     // 将HTML转换为Markdown (Convert HTML to Markdown)
     log('processor.convertingToMarkdown', debug, {}, COMPONENTS.PROCESSOR);
     const markdown = turndownService.turndown(html);
     log('processor.markdownContentLength', debug, { length: markdown.length }, COMPONENTS.PROCESSOR);
-    
+
     return markdown;
   }
-  
+
   /**
    * 将HTML转换为纯文本 (Convert HTML to plain text)
    * @param html HTML内容 (HTML content)
    * @param debug 是否开启调试 (Whether to enable debugging)
-   * @param component 组件名称 (Component name for logging) - 仅用于向下兼容，实际会使用PROCESSOR组件
    * @returns 纯文本内容 (Plain text content)
    */
-  public static htmlToText(html: string, debug: boolean, component: string): string {
+  public static htmlToText(html: string, debug: boolean): string {
     // 始终使用COMPONENTS.PROCESSOR作为组件标识符 (Always use COMPONENTS.PROCESSOR as component identifier)
     log('processor.creatingHtmlToText', debug, {}, COMPONENTS.PROCESSOR);
-    
+
     // 配置html-to-text选项 (Configure html-to-text options)
     const options = {
-      wordwrap: false as false,
+      wordwrap: false as const,
       selectors: [
         { selector: 'a', options: { hideLinkHrefIfSameAsText: true } },
         { selector: 'img', format: 'skip' },
         { selector: 'table', options: { uppercaseHeaderCells: false } }
       ]
     };
-    
+
     // 将HTML转换为纯文本 (Convert HTML to plain text)
     log('processor.convertingToText', debug, {}, COMPONENTS.PROCESSOR);
     const text = htmlToText(html, options);
     log('processor.textContentLength', debug, { length: text.length }, COMPONENTS.PROCESSOR);
-    
+
     return text;
   }
-  
+
   /**
    * 解析JSON字符串 (Parse JSON string)
    * @param text JSON字符串 (JSON string)
    * @param debug 是否开启调试 (Whether to enable debugging)
-   * @param component 组件名称 (Component name for logging) - 仅用于向下兼容，实际会使用PROCESSOR组件
    * @returns 解析结果 (Parse result - success or error with message)
    */
-  public static parseJson(text: string, debug: boolean, component: string): { success: boolean; result?: any; error?: string } {
+  public static parseJson(text: string, debug: boolean): { success: boolean; result?: any; error?: string } {
     log('processor.parsingJson', debug, {}, COMPONENTS.PROCESSOR);
     try {
       const parsed = JSON.parse(text);
@@ -93,25 +89,24 @@ export class ContentProcessor {
     } catch (parseError) {
       const textPreview = text.length > 100 ? `${text.substring(0, 100)}...` : text;
       const errorMessage = `Invalid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}. Text preview: "${textPreview}", length: ${text.length}`;
-      
-      log('processor.jsonParseError', debug, { 
+
+      log('processor.jsonParseError', debug, {
         error: String(parseError),
         textPreview,
         textLength: text.length
       }, COMPONENTS.PROCESSOR);
-      
+
       return { success: false, error: errorMessage };
     }
   }
-  
+
   /**
    * 处理文本内容，确保是UTF-8编码 (Process text content, ensure it's UTF-8 encoded)
    * @param text 文本内容 (Text content)
    * @param debug 是否开启调试 (Whether to enable debugging)
-   * @param component 组件名称 (Component name for logging) - 仅用于向下兼容，实际会使用PROCESSOR组件
    * @returns 处理后的文本 (Processed text)
    */
-  public static processTextContent(text: string, debug: boolean, component: string): string {
+  public static processTextContent(text: string, debug: boolean): string {
     log('processor.processingText', debug, { length: text.length }, COMPONENTS.PROCESSOR);
     // 这里可以添加文本处理逻辑，如编码转换、去除特殊字符等
     // (Add text processing logic here, such as encoding conversion, removing special characters, etc.)
@@ -123,25 +118,22 @@ export class ContentProcessor {
    * @param content 内容 (Content)
    * @param contentSizeLimit 内容大小限制 (Content size limit)
    * @param debug 是否开启调试 (Whether to enable debugging)
-   * @param component 组件名称 (Component name for logging) - 仅用于向下兼容，实际会使用PROCESSOR组件
-   * @throws {ToolError} 如果内容太大且不允许分割 (If content is too large and splitting is not allowed)
    */
   public static validateContentSize(
-    content: string, 
-    contentSizeLimit: number, 
-    debug: boolean, 
-    component: string
+    content: string,
+    contentSizeLimit: number,
+    debug: boolean
   ): void {
     const contentSize = content.length;
-    
+
     if (contentSize > contentSizeLimit) {
-      log('processor.contentTooLarge', debug, { 
+      log('processor.contentTooLarge', debug, {
         contentSize,
-        contentSizeLimit 
+        contentSizeLimit
       }, COMPONENTS.PROCESSOR);
-      
+
       throw new ToolError(
-        `Content size (${contentSize}) exceeds the allowed limit (${contentSizeLimit})`, 
+        `Content size (${contentSize}) exceeds the allowed limit (${contentSizeLimit})`,
         ErrorType.TOOL_EXECUTION_ERROR,
         COMPONENTS.PROCESSOR,
         {
@@ -150,9 +142,9 @@ export class ContentProcessor {
         }
       );
     } else {
-      log('processor.contentSizeOk', debug, { 
+      log('processor.contentSizeOk', debug, {
         contentSize,
-        contentSizeLimit 
+        contentSizeLimit
       }, COMPONENTS.PROCESSOR);
     }
   }
