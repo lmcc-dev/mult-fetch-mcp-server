@@ -18,7 +18,8 @@
   "include": [
     "src/**/*",
     "tests/**/*",
-    "eslint.config.js"
+    "eslint.config.js",
+    "index.ts"
   ],
   "exclude": [
     "node_modules",
