@@ -43,6 +43,16 @@ export const BrowserParamsSchema = z.object({
 });
 
 /**
+ * 通用提取选项 (Common extraction options)
+ * 用于配置内容提取行为 (Used to configure content extraction behavior)
+ */
+export const ContentExtractionOptionsSchema = z.object({
+  extractContent: z.boolean().optional(),
+  includeMetadata: z.boolean().optional(),
+  fallbackToOriginal: z.boolean().optional()
+});
+
+/**
  * 请求参数模式 (Request parameters schema)
  */
 export const RequestPayloadSchema = z.object({
@@ -67,7 +77,7 @@ export const RequestPayloadSchema = z.object({
   enableContentSplitting: z.boolean().optional(),
   chunkId: z.string().optional(),
   startCursor: z.number().optional(),
-}).merge(BrowserParamsSchema);
+}).merge(BrowserParamsSchema).merge(ContentExtractionOptionsSchema);
 
 export type RequestPayload = z.infer<typeof RequestPayloadSchema>;
 
@@ -83,12 +93,22 @@ export interface FetchResponse {
   currentChunk?: number;
   chunkId?: string;
   hasMoreChunks?: boolean;
-  
+
   // 新增的基于字节的分块属性 (New byte-based chunking properties)
   totalBytes?: number;     // 总字节数 (Total bytes)
   fetchedBytes?: number;   // 已获取的字节数 (Fetched bytes)
   remainingBytes?: number; // 剩余字节数 (Remaining bytes)
   isLastChunk?: boolean;   // 是否是最后一个分块 (Whether it's the last chunk)
+
+  // 新增的内容提取相关属性 (New content extraction related properties)
+  metadata?: {
+    title?: string | null;
+    byline?: string | null;
+    siteName?: string | null;
+    excerpt?: string | null;
+    isReaderable?: boolean;
+    length?: number;
+  };
 }
 
 /**

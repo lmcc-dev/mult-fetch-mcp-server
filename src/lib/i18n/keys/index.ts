@@ -18,4 +18,5 @@ export * from './server.js';
 export * from './tools.js';
 export * from './chunkManager.js';
 export * from './contentSize.js';
-export * from './url.js'; 
+export * from './url.js';
+export * from './extractor.js'; 

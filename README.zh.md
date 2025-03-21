@@ -40,6 +40,7 @@ fetch-mcp/
 │   │   ├── utils/               # 工具模块
 │   │   │   ├── ChunkManager.ts        # 内容分块功能
 │   │   │   ├── ContentProcessor.ts    # HTML到文本转换
+│   │   │   ├── ContentExtractor.ts    # 内容智能提取
 │   │   │   ├── ContentSizeManager.ts  # 内容大小限制
 │   │   │   └── ErrorHandler.ts        # 错误处理
 │   │   ├── server/              # 服务器相关模块
@@ -79,6 +80,10 @@ fetch-mcp/
 - 详细的调试日志输出到标准错误流
 - 支持中英文双语国际化
 - 模块化设计，便于维护和扩展
+- **智能内容提取**：基于Mozilla Readability库，能够从网页中提取有意义的主要内容，过滤广告和导航元素
+- **元数据支持**：能够提取网页元数据，如标题、作者、发布日期、站点信息等
+- **智能内容分析**：自动检测页面是否包含有意义的内容，过滤登录页、错误页等无实质内容的页面
+- **浏览器自动化增强**：支持页面滚动、Cookie管理、选择器等待等高级浏览器交互
 
 ## 安装
 
@@ -525,8 +530,33 @@ console.log('调试获取提示:', debugPrompt);
 - `saveCookies`: 浏览器模式下是否保存cookies（可选，默认为true）
 - `closeBrowser`: 是否关闭浏览器实例（可选，默认为false）
 
+#### 内容提取参数
+- `extractContent`: 是否使用Readability算法提取主要内容（可选，默认为false）
+- `includeMetadata`: 是否在提取的内容中包含元数据（可选，默认为false，仅当`extractContent`为true时有效）
+- `fallbackToOriginal`: 当提取失败时是否回退到原始内容（可选，默认为true，仅当`extractContent`为true时有效）
+
 #### 调试参数
 - `debug`: 是否启用调试输出（可选，默认为false）
+
+### 内容提取特性
+
+使用内容提取功能可以获取网页的核心内容，过滤掉导航栏、广告、侧边栏等干扰元素：
+
+```json
+{
+  "url": "https://example.com/article",
+  "extractContent": true,
+  "includeMetadata": true
+}
+```
+
+提取的内容将包括以下元数据（如果可用）：
+- 标题 (title)
+- 作者 (byline)
+- 站点名称 (siteName)
+- 摘要 (excerpt)
+- 内容长度 (length)
+- 可读性标志 (isReaderable)
 
 ### 特殊用法
 
@@ -563,6 +593,7 @@ console.log('调试获取提示:', debugPrompt);
 - `[CHUNK-MANAGER]`: 内容分块操作相关的日志
 - `[ERROR-HANDLER]`: 错误处理相关的日志
 - `[BROWSER-MANAGER]`: 浏览器实例管理器的日志
+- `[CONTENT-EXTRACTOR]`: 内容提取器的日志
 
 
 ## 许可证

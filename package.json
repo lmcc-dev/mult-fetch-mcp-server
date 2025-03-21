@@ -63,6 +63,7 @@
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
+    "@mozilla/readability": "^0.6.0",
     "@types/html-to-text": "^9.0.4",
     "html-to-text": "^9.0.5",
     "http-proxy-agent": "^7.0.2",

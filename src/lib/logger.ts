@@ -24,6 +24,7 @@ import promptsZh from './i18n/locales/zh/prompts.js';
 import { contentSizeZh } from './i18n/locales/zh/contentSize.js';
 import { chunkManagerZh } from './i18n/locales/zh/chunkManager.js';
 import { processorZh } from './i18n/locales/zh/processor.js';
+import extractorZh from './i18n/locales/zh/extractor.js';
 
 // 创建翻译映射 (Create translation mapping)
 const translationMap: Record<string, any> = {
@@ -39,7 +40,8 @@ const translationMap: Record<string, any> = {
   prompts: promptsZh,
   contentSize: contentSizeZh,
   chunkManager: chunkManagerZh,
-  processor: processorZh
+  processor: processorZh,
+  extractor: extractorZh
 };
 
 // 组件名称常量 (Component name constants)
@@ -51,10 +53,13 @@ export const COMPONENTS = {
   RESOURCES: 'MCP-RESOURCES',
   PROMPTS: 'MCP-PROMPTS',
   TOOLS: 'MCP-TOOLS',
+  FETCHER: 'FETCHER',
   FETCHER_FACTORY: 'FETCHER-FACTORY',
   CONTENT_SIZE: 'CONTENT-SIZE',
+  PROCESSOR: 'CONTENT-PROCESSOR',
   CHUNK_MANAGER: 'CHUNK-MANAGER',
-  PROCESSOR: 'CONTENT-PROCESSOR'
+  CONTENT_SIZE_MANAGER: 'CONTENT-SIZE-MANAGER',
+  EXTRACTOR: 'CONTENT-EXTRACTOR'
 };
 
 // 日志文件路径 (Log file path)

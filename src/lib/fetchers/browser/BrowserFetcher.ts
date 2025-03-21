@@ -190,7 +190,10 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
       enableContentSplitting = true,
       chunkId,
-      startCursor = 0
+      startCursor = 0,
+      extractContent = false,
+      includeMetadata = true,
+      fallbackToOriginal = true
     } = requestPayload;
 
     // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
@@ -212,9 +215,22 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       // 获取HTML内容 (Get HTML content)
       const html = result.content[0].text;
 
+      // 处理内容提取 (Process content extraction)
+      const { content: processedContent, metadata } = this.processWithContentExtraction(
+        html,
+        url,
+        {
+          extractContent,
+          includeMetadata,
+          fallbackToOriginal
+        },
+        debug,
+        COMPONENTS.BROWSER_FETCH
+      );
+
       // 检查内容大小并处理 (Check content size and process)
       const chunkingResult = this.handleContentChunking(
-        html,
+        processedContent,
         contentSizeLimit,
         enableContentSplitting,
         debug,
@@ -222,11 +238,22 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       );
 
       if (chunkingResult) {
+        // 如果有元数据，添加到分块结果中 (If there is metadata, add it to the chunk result)
+        if (metadata) {
+          chunkingResult.metadata = metadata;
+        }
         return chunkingResult;
       }
 
-      // 返回HTML内容 (Return HTML content)
-      return result;
+      // 创建新的结果（使用处理后的内容） (Create new result with processed content)
+      const processedResult = BaseFetcher.createSuccessResponse(processedContent);
+
+      // 如果有元数据，添加到结果中 (If there is metadata, add it to the result)
+      if (metadata) {
+        processedResult.metadata = metadata;
+      }
+
+      return processedResult;
     } catch (error) {
       // 处理错误 (Handle error)
       log('browser.htmlFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);

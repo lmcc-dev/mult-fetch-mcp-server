@@ -9,6 +9,7 @@ import { log } from '../../logger.js';
 import { ChunkManager } from '../../utils/ChunkManager.js';
 import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
 import { TemplateUtils } from '../../utils/TemplateUtils.js';
+import { ContentExtractor } from '../../utils/ContentExtractor.js';
 
 /**
  * 基础获取器类 (Base fetcher class)
@@ -309,5 +310,105 @@ export class BaseFetcher {
 
     // 如果不需要添加提示，返回原始响应 (If no prompt needed, return original response)
     return response;
+  }
+
+  /**
+   * 处理内容提取 (Process content extraction)
+   * 根据参数决定是否提取内容，返回处理后的内容和元数据 (Decide whether to extract content based on parameters, return processed content and metadata)
+   * @param html 原始HTML内容 (Original HTML content)
+   * @param url 页面URL (Page URL)
+   * @param options 内容提取选项 (Content extraction options)
+   * @param debug 是否启用调试 (Whether to enable debugging)
+   * @param component 组件名称，用于日志 (Component name for logging)
+   * @returns 处理后的内容和元数据 (Processed content and metadata)
+   */
+  protected processWithContentExtraction(
+    html: string,
+    url: string,
+    options: {
+      extractContent?: boolean;
+      includeMetadata?: boolean;
+      fallbackToOriginal?: boolean;
+    },
+    debug: boolean = false,
+    component: string
+  ): {
+    content: string;
+    metadata: {
+      title: string | null;
+      byline: string | null;
+      siteName: string | null;
+      excerpt: string | null;
+      isReaderable: boolean;
+      length: number;
+    } | null;
+  } {
+    const {
+      extractContent = false,
+      includeMetadata = true,
+      fallbackToOriginal = true
+    } = options;
+
+    // 如果不需要提取内容，直接返回原始内容 (If content extraction is not needed, return original content)
+    if (!extractContent) {
+      return { content: html, metadata: null };
+    }
+
+    log('fetcher.extractingContent', debug, { url }, component);
+
+    try {
+      // 提取内容 (Extract content)
+      const extractResult = ContentExtractor.extractContent(
+        html,
+        url,
+        debug
+      );
+
+      // 如果提取成功且有内容 (If extraction is successful and has content)
+      if (extractResult.content) {
+        // 准备元数据 (Prepare metadata)
+        const metadata = includeMetadata ? {
+          title: extractResult.title,
+          byline: extractResult.byline,
+          siteName: extractResult.siteName,
+          excerpt: extractResult.excerpt,
+          isReaderable: extractResult.isReaderable,
+          length: extractResult.length
+        } : null;
+
+        log('fetcher.extractionSuccess', debug, {
+          contentLength: extractResult.content.length,
+          title: extractResult.title
+        }, component);
+
+        // 直接返回处理后的内容 (Directly return the processed content)
+        return { content: extractResult.content, metadata };
+      } else {
+        log('fetcher.extractionFailed', debug, { url }, component);
+
+        // 如果提取失败且不允许回退到原始内容 (If extraction failed and fallback is not allowed)
+        if (!fallbackToOriginal) {
+          log('fetcher.noFallback', debug, {}, component);
+          throw new Error("Content extraction failed, and fallback is disabled");
+        }
+
+        log('fetcher.usingOriginalContent', debug, {}, component);
+        return { content: html, metadata: null };
+      }
+    } catch (error) {
+      log('fetcher.extractionError', debug, {
+        error: error instanceof Error ? error.message : String(error),
+        url
+      }, component);
+
+      // 如果不允许回退到原始内容，则抛出错误 (If fallback is not allowed, throw error)
+      if (!fallbackToOriginal) {
+        throw error;
+      }
+
+      // 回退到原始内容 (Fallback to original content)
+      log('fetcher.fallbackToOriginal', debug, {}, component);
+      return { content: html, metadata: null };
+    }
   }
 } 
