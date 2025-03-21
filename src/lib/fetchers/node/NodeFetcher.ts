@@ -11,6 +11,7 @@ import { ErrorHandler } from '../../utils/ErrorHandler.js';
 import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
 import { BaseFetcher } from "../common/BaseFetcher.js";
 import { ContentProcessor } from "../../utils/ContentProcessor.js";
+// import { ContentExtractor } from '../../utils/ContentExtractor.js';
 
 /**
  * Node模式获取器类 (Node mode fetcher class)
@@ -28,7 +29,10 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
       enableContentSplitting = true,
       chunkId,
-      startCursor = 0
+      startCursor = 0,
+      extractContent = false,
+      includeMetadata = true,
+      fallbackToOriginal = true
     } = requestPayload;
 
     // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
@@ -47,9 +51,22 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       const html = await response.text();
       log('node.htmlContentLength', debug, { length: html.length }, COMPONENTS.NODE_FETCH);
 
+      // 处理内容提取 (Process content extraction)
+      const { content: processedContent, metadata } = this.processWithContentExtraction(
+        html,
+        requestPayload.url,
+        {
+          extractContent,
+          includeMetadata,
+          fallbackToOriginal
+        },
+        debug,
+        COMPONENTS.NODE_FETCH
+      );
+
       // 检查内容大小并处理 (Check content size and process)
       const chunkingResult = this.handleContentChunking(
-        html,
+        processedContent,
         contentSizeLimit,
         enableContentSplitting,
         debug,
@@ -57,11 +74,22 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       );
 
       if (chunkingResult) {
+        // 如果有元数据，添加到分块结果中 (If there is metadata, add it to the chunk result)
+        if (metadata) {
+          chunkingResult.metadata = metadata;
+        }
         return chunkingResult;
       }
 
-      // 返回HTML内容 (Return HTML content)
-      return BaseFetcher.createSuccessResponse(html);
+      // 返回内容 (Return content)
+      const result = BaseFetcher.createSuccessResponse(processedContent);
+
+      // 如果有元数据，添加到结果中 (If there is metadata, add it to the result)
+      if (metadata) {
+        result.metadata = metadata;
+      }
+
+      return result;
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(

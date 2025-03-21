@@ -33,20 +33,21 @@ This project implements an MCP-compliant client and server for communication bet
 fetch-mcp/
 ├── src/                         # Source code directory
 │   ├── lib/                     # Library files
-│   │   ├── fetchers/            # Web fetching implementations
+│   │   ├── fetchers/            # Web fetching implementation
 │   │   │   ├── browser/         # Browser-based fetching
-│   │   │   │   ├── BrowserFetcher.ts      # Browser fetching implementation
+│   │   │   │   ├── BrowserFetcher.ts      # Browser fetcher implementation
 │   │   │   │   ├── BrowserInstance.ts     # Browser instance management
 │   │   │   │   └── PageOperations.ts      # Page interaction operations
 │   │   │   ├── node/            # Node.js-based fetching
 │   │   │   └── common/          # Shared fetching utilities
 │   │   ├── utils/               # Utility modules
-│   │   │   ├── ChunkManager.ts        # Content chunking functionality
+│   │   │   ├── ChunkManager.ts        # Content chunking
 │   │   │   ├── ContentProcessor.ts    # HTML to text conversion
+│   │   │   ├── ContentExtractor.ts    # Intelligent content extraction
 │   │   │   ├── ContentSizeManager.ts  # Content size limiting
-│   │   │   └── ErrorHandler.ts        # Error management
+│   │   │   └── ErrorHandler.ts        # Error handling
 │   │   ├── server/              # Server-related modules
-│   │   │   ├── index.ts         # Server entry point
+│   │   │   ├── index.ts         # Server entry
 │   │   │   ├── browser.ts       # Browser management
 │   │   │   ├── fetcher.ts       # Web fetching logic
 │   │   │   ├── tools.ts         # Tool registration and handling
@@ -76,12 +77,16 @@ This project implements the Standard Input/Output (Stdio) transport method.
 - Implementation based on the official MCP SDK
 - Support for Standard Input/Output (Stdio) transport
 - Multiple web scraping methods (HTML, JSON, text, Markdown, plain text conversion)
-- Intelligent mode switching: automatically switches between standard requests and browser mode
-- Content size management: automatically splits large content into manageable chunks to overcome AI context size limitations
+- Intelligent mode switching: automatic switching between standard requests and browser mode
+- Content size management: automatically splits large content into manageable chunks to solve AI model context size limitations
 - Chunked content retrieval: ability to request specific chunks of large content while maintaining context continuity
-- Detailed debug logs output to standard error stream
-- Support for Chinese and English bilingual internationalization
+- Detailed debug logging to stderr
+- Bilingual internationalization (English and Chinese)
 - Modular design for easy maintenance and extension
+- **Intelligent Content Extraction**: Based on Mozilla's Readability library, capable of extracting meaningful content from web pages while filtering out advertisements and navigation elements
+- **Metadata Support**: Ability to extract webpage metadata such as title, author, publication date, and site information
+- **Smart Content Detection**: Automatically detects if a page contains meaningful content, filtering out login pages, error pages, and other pages without substantial content
+- **Browser Automation Enhancements**: Support for page scrolling, cookie management, selector waiting, and other advanced browser interactions
 
 ## Installation
 
@@ -493,8 +498,8 @@ Each tool supports the following parameters:
 
 #### Basic Parameters
 - `url`: URL to fetch (required)
-- `headers`: Custom request headers (optional, default is {})
-- `proxy`: Proxy server URL in format http://host:port or https://host:port (optional)
+- `headers`: Custom request headers (optional, default {})
+- `proxy`: Proxy server URL in the format http://host:port or https://host:port (optional)
 
 #### Network Control Parameters
 - `timeout`: Timeout in milliseconds (optional, default is 30000)
@@ -526,10 +531,57 @@ When content is split into chunks, the response includes metadata that allows th
 - `saveCookies`: Whether to save cookies in browser mode (optional, default is true)
 - `closeBrowser`: Whether to close the browser instance (optional, default is false)
 
+#### Content Extraction Parameters
+- `extractContent`: Whether to use the Readability algorithm to extract main content (optional, default false)
+- `includeMetadata`: Whether to include metadata in the extracted content (optional, default false, only works when `extractContent` is true)
+- `fallbackToOriginal`: Whether to fall back to the original content when extraction fails (optional, default true, only works when `extractContent` is true)
+
 #### Debug Parameters
-- `debug`: Whether to enable debug output (optional, default is false)
+- `debug`: Whether to enable debug output (optional, default false)
+
+### Content Extraction Feature
+
+Use the content extraction feature to get the core content of a webpage, filtering out navigation bars, advertisements, sidebars, and other distracting elements:
+
+```json
+{
+  "url": "https://example.com/article",
+  "extractContent": true,
+  "includeMetadata": true
+}
+```
+
+The extracted content will include the following metadata (if available):
+- Title
+- Byline (author)
+- Site name
+- Excerpt
+- Content length
+- Readability flag (isReaderable)
 
 ### Special Usage
+
+#### Content Extraction Examples
+
+To extract only the meaningful content from an article webpage:
+
+```json
+{
+  "url": "https://example.com/news/article",
+  "extractContent": true,
+  "includeMetadata": true
+}
+```
+
+For websites where content extraction might fail, you can use `fallbackToOriginal` to ensure you get some content:
+
+```json
+{
+  "url": "https://example.com/complex-layout",
+  "extractContent": true,
+  "fallbackToOriginal": true
+}
+```
 
 #### Closing Browser Without Fetching
 To close the browser instance without performing any fetch operation:
@@ -551,19 +603,20 @@ If `proxy` is set, `useSystemProxy` will be automatically set to false.
 
 ### Debug Output
 
-When `debug: true` is set, the logs will be output to stderr with the following prefixes:
+When `debug: true` is set, logs will be output to stderr with the following prefixes:
 - `[MCP-SERVER]`: Logs from the MCP server
 - `[NODE-FETCH]`: Logs from the Node.js fetcher
 - `[BROWSER-FETCH]`: Logs from the browser fetcher
 - `[CLIENT]`: Logs from the client
-- `[TOOLS]`: Logs from the tools implementation
+- `[TOOLS]`: Logs from the tool implementation
 - `[FETCHER]`: Logs from the main fetcher interface
-- `[CONTENT]`: Logs related to content processing
+- `[CONTENT]`: Logs related to content handling
 - `[CONTENT-PROCESSOR]`: Logs from the HTML content processor
 - `[CONTENT-SIZE]`: Logs related to content size management
 - `[CHUNK-MANAGER]`: Logs related to content chunking operations
 - `[ERROR-HANDLER]`: Logs related to error handling
 - `[BROWSER-MANAGER]`: Logs from the browser instance manager
+- `[CONTENT-EXTRACTOR]`: Logs from the content extractor
 
 
 ## License

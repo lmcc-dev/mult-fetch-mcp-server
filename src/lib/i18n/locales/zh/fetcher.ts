@@ -104,5 +104,14 @@ export default {
   // 通用 (General)
   [FETCHER_KEYS.notSet]: "未设置",
   [FETCHER_KEYS.debug]: "调试: {{message}}",
-  [FETCHER_KEYS.none]: "无"
+  [FETCHER_KEYS.none]: "无",
+
+  // 内容提取相关 (Content extraction related)
+  [FETCHER_KEYS.extractingContent]: "正在提取页面主要内容，URL: {{url}}",
+  [FETCHER_KEYS.extractionSuccess]: "内容提取成功，内容长度: {{contentLength}}，标题: {{title}}",
+  [FETCHER_KEYS.extractionFailed]: "内容提取失败，URL: {{url}}",
+  [FETCHER_KEYS.extractionError]: "内容提取过程中出错: {{error}}, URL: {{url}}",
+  [FETCHER_KEYS.noFallback]: "内容提取失败，且禁用了回退选项",
+  [FETCHER_KEYS.usingOriginalContent]: "使用原始HTML内容作为结果",
+  [FETCHER_KEYS.fallbackToOriginal]: "回退到原始HTML内容"
 }; 

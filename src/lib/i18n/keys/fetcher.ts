@@ -110,4 +110,13 @@ export const FETCHER_KEYS = {
   // 新增键
   chunkInfo: keyGen('chunkInfo'),
   lastChunkDetected: keyGen('lastChunkDetected'),
+
+  // 内容提取相关 (Content extraction related)
+  extractingContent: keyGen('extractingContent'),
+  extractionSuccess: keyGen('extractionSuccess'),
+  extractionFailed: keyGen('extractionFailed'),
+  extractionError: keyGen('extractionError'),
+  noFallback: keyGen('noFallback'),
+  usingOriginalContent: keyGen('usingOriginalContent'),
+  fallbackToOriginal: keyGen('fallbackToOriginal'),
 } as const; 
