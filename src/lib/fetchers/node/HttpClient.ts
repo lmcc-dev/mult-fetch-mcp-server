@@ -11,6 +11,7 @@ import { Agent } from "http";
 import { log, COMPONENTS } from '../../logger.js';
 import { RequestPayload } from '../common/types.js';
 import { getRandomUserAgent, randomDelay, getSystemProxy } from '../common/utils.js';
+import { validateFetchUrl, UrlValidationError } from '../../utils/UrlValidator.js';
 
 /**
  * HTTP客户端类 (HTTP client class)
@@ -200,6 +201,8 @@ export class HttpClient {
     let redirectCount = 0;
     let currentUrl = url;
 
+    await validateFetchUrl(currentUrl);
+
     // 记录请求开始时间 (Record request start time)
     const fetchStart = Date.now();
 
@@ -262,6 +265,7 @@ export class HttpClient {
           // 获取重定向URL (Get redirect URL)
           const location = response.headers.get('location') as string;
           currentUrl = this.buildRedirectUrl(location, currentUrl, debug);
+          await validateFetchUrl(currentUrl);
 
           // 增加重定向计数 (Increase redirect count)
           redirectCount++;
@@ -288,6 +292,9 @@ export class HttpClient {
       throw error;
     } catch (error) {
       clearTimeout(timeoutId);
+      if (error instanceof UrlValidationError) {
+        throw error;
+      }
       return this.handleRequestError(error, fetchStart, timeout, redirectCount, maxRedirects, debug);
     }
   }

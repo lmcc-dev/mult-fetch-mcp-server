@@ -13,6 +13,7 @@ import { getRandomUserAgent, getSystemProxy } from '../common/utils.js';
 import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
 import { BaseFetcher } from '../common/BaseFetcher.js';
 import { ContentProcessor } from '../../utils/ContentProcessor.js';
+import { validateFetchUrl } from '../../utils/UrlValidator.js';
 
 /**
  * 浏览器模式获取器类 (Browser mode fetcher class)
@@ -100,6 +101,8 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       if (effectiveProxy) {
         log('browser.usingProxy', debug, { proxy: effectiveProxy }, COMPONENTS.BROWSER_FETCH);
       }
+
+      await validateFetchUrl(url);
 
       // 导航到URL
       log('browser.navigating', debug, { url }, COMPONENTS.BROWSER_FETCH);

@@ -113,32 +113,37 @@ export class BrowserInstance {
           log('browser.startingBrowser', debug, {}, COMPONENTS.BROWSER_FETCH);
 
           // 准备浏览器启动参数 (Prepare browser startup parameters)
+          const browserArgs = [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--disable-infobars',
+            '--window-position=0,0',
+            '--ignore-certificate-errors',
+            '--ignore-certificate-errors-spki-list',
+            '--disable-extensions',
+            '--disable-default-apps',
+            '--enable-features=NetworkService',
+            '--disable-features=IsolateOrigins,site-per-process',
+            '--disable-web-security',
+            '--disable-site-isolation-trials',
+            '--disable-features=IsolateOrigins',
+            '--disable-features=site-per-process',
+            '--disable-blink-features=AutomationControlled',
+            '--user-agent=' + getRandomUserAgent()
+          ];
+
+          if (process.env.ALLOW_PRIVATE_NETWORK_REQUESTS === 'true') {
+            browserArgs.push('--disable-features=BlockInsecurePrivateNetworkRequests');
+          }
+
           const launchOptions: any = {
             headless: 'new',
-            args: [
-              '--no-sandbox',
-              '--disable-setuid-sandbox',
-              '--disable-dev-shm-usage',
-              '--disable-accelerated-2d-canvas',
-              '--no-first-run',
-              '--no-zygote',
-              '--disable-gpu',
-              '--disable-infobars',
-              '--window-position=0,0',
-              '--ignore-certificate-errors',
-              '--ignore-certificate-errors-spki-list',
-              '--disable-extensions',
-              '--disable-default-apps',
-              '--enable-features=NetworkService',
-              '--disable-features=IsolateOrigins,site-per-process',
-              '--disable-web-security',
-              '--disable-site-isolation-trials',
-              '--disable-features=BlockInsecurePrivateNetworkRequests',
-              '--disable-features=IsolateOrigins',
-              '--disable-features=site-per-process',
-              '--disable-blink-features=AutomationControlled',
-              '--user-agent=' + getRandomUserAgent()
-            ],
+            args: browserArgs,
             ignoreHTTPSErrors: true,
             defaultViewport: {
               width: 1920,
