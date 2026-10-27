@@ -62,10 +62,20 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     return listToolsHandler().then((result: any) => {
       expect(result).toHaveProperty('tools');
       expect(result.tools).toBeInstanceOf(Array);
-      expect(result.tools.length).toBe(5); // 应该有5个工具
+      expect(result.tools.length).toBe(6); // fetch + 5 individual aliases
+
+      const fetchTool = result.tools.find((tool: any) => tool.name === 'fetch');
+      expect(fetchTool.inputSchema.properties.format.enum).toEqual([
+        'html', 'markdown', 'plaintext', 'json', 'txt'
+      ]);
+      expect(fetchTool.inputSchema.required).toEqual(['url']);
+      expect(fetchTool.inputSchema.required).not.toContain('startCursor');
+      expect(fetchTool.inputSchema.properties).toHaveProperty('maxChars');
+      expect(fetchTool.inputSchema.properties).toHaveProperty('cursor');
       
       // 验证工具名称
       const toolNames = result.tools.map((tool: any) => tool.name);
+      expect(toolNames).toContain('fetch');
       expect(toolNames).toContain('fetch_html');
       expect(toolNames).toContain('fetch_json');
       expect(toolNames).toContain('fetch_txt');
@@ -82,6 +92,7 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
         expect(tool.inputSchema.properties).toHaveProperty('url');
         // 不同工具可能有不同的 required 字段
         expect(tool.inputSchema).toHaveProperty('required');
+        expect(tool.inputSchema.required).not.toContain('startCursor');
       });
     });
   });
@@ -117,7 +128,14 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com', method: 'fetch_html', startCursor: 0 },
+      expect.objectContaining({
+        url: 'https://example.com',
+        method: 'fetch_html',
+        startCursor: 0,
+        autoDetectMode: false,
+        maxChars: 100000,
+        maxBytes: 1048576
+      }),
       'html'
     );
     
@@ -151,7 +169,12 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/data.json', method: 'fetch_json', startCursor: 0 },
+      expect.objectContaining({
+        url: 'https://example.com/data.json',
+        method: 'fetch_json',
+        startCursor: 0,
+        autoDetectMode: false
+      }),
       'json'
     );
     
@@ -185,7 +208,12 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/text.txt', method: 'fetch_txt', startCursor: 0 },
+      expect.objectContaining({
+        url: 'https://example.com/text.txt',
+        method: 'fetch_txt',
+        startCursor: 0,
+        autoDetectMode: false
+      }),
       'txt'
     );
     
@@ -219,7 +247,13 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com/readme.md', method: 'fetch_markdown', startCursor: 0 },
+      expect.objectContaining({
+        url: 'https://example.com/readme.md',
+        method: 'fetch_markdown',
+        startCursor: 0,
+        autoDetectMode: false,
+        extractContent: true
+      }),
       'markdown'
     );
     
@@ -253,7 +287,13 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { url: 'https://example.com', method: 'fetch_plaintext', startCursor: 0 },
+      expect.objectContaining({
+        url: 'https://example.com',
+        method: 'fetch_plaintext',
+        startCursor: 0,
+        autoDetectMode: false,
+        extractContent: true
+      }),
       'plaintext'
     );
     
@@ -308,12 +348,13 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确，包含分块信息
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { 
+      expect.objectContaining({ 
         url: 'https://example.com', 
         method: 'fetch_html',
         chunkId: 'test-chunk-id',
-        startCursor: 1000
-      },
+        startCursor: 1000,
+        autoDetectMode: false
+      }),
       'html'
     );
     
@@ -378,13 +419,18 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     
     // 验证 fetchWithAutoDetect 被调用，且参数正确
     expect(fetchWithAutoDetect).toHaveBeenCalledWith(
-      { 
+      expect.objectContaining({ 
         url: 'https://example.com', 
         method: 'fetch_html',
         enableContentSplitting: true,
         contentSizeLimit: 1024,
-        startCursor: 0
-      },
+        startCursor: 0,
+        autoDetectMode: false
+      }),
+      'html'
+    );
+    expect(fetchWithAutoDetect).toHaveBeenCalledWith(
+      expect.not.objectContaining({ maxChars: expect.anything() }),
       'html'
     );
     
@@ -402,6 +448,34 @@ describe('工具注册和调用测试 (Tools Registration and Calling Tests)', (
     expect(result.content[0].metadata.chunkInfo).toHaveProperty('isLastChunk', false);
   });
   
+  test('fetch 在不传 startCursor 时仍会抓取 (fetch works without startCursor)', async () => {
+    registerTools(mockServer as unknown as Server);
+    const callToolHandler = mockSetRequestHandler.mock.calls[1][1];
+
+    const result = await callToolHandler({
+      params: {
+        name: 'fetch',
+        arguments: {
+          url: 'https://example.com/article'
+        }
+      }
+    });
+
+    expect(fetchWithAutoDetect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://example.com/article',
+        method: 'fetch',
+        autoDetectMode: false,
+        maxChars: 100000,
+        maxBytes: 1048576,
+        extractContent: true
+      }),
+      'markdown'
+    );
+    expect(result.isError).toBe(false);
+    expect(result.content[0].text).toBe('mock content');
+  });
+
   test('应该正确处理未知工具调用 (Should handle unknown tool call correctly)', async () => {
     // 调用被测试的函数
     registerTools(mockServer as unknown as Server);

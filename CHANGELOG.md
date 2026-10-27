@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [中文更新说明](CHANGELOG.zh.md)
 
+## [2.0.0] - 2026-10-27
+
+### Breaking
+- `startCursor` is no longer required. The first call returns the body in one response.
+- Primary tool is `fetch` with `format`: `html` | `markdown` | `plaintext` | `json` | `txt` (default `markdown`). `fetch_html`, `fetch_json`, `fetch_txt`, `fetch_markdown`, and `fetch_plaintext` remain as thin aliases.
+- Continuation is optional. A truncated response includes `nextCursor` and `chunkId`. Pass `cursor` to read the next slice. Do not send `startCursor` unless you are resuming a legacy byte chunk.
+- Default budget is `maxChars=100000` and `maxBytes=1048576`. Cuts prefer a newline or space.
+- `markdown` and `plaintext` extract readable content with Readability before conversion. Set `extractContent: false` to keep the whole document.
+- Browser fallback is off unless `useBrowser` or `autoDetectMode` is true.
+
+### Security
+- SSRF checks from 1.3.x are unchanged: private, loopback, link-local, and cloud metadata targets are blocked before the request, including redirects.
+
 ## [1.3.4] - 2026-10-27
 
 ### Changed

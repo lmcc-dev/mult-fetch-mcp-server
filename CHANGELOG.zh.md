@@ -4,6 +4,19 @@
 
 英文说明见 [CHANGELOG.md](CHANGELOG.md)。
 
+## [2.0.0] - 2026-10-27
+
+### 破坏性变更
+- `startCursor` 不再是必填。第一次调用默认一次返回正文。
+- 主工具改为 `fetch`，用 `format` 选择 `html` | `markdown` | `plaintext` | `json` | `txt`（默认 `markdown`）。`fetch_html`、`fetch_json`、`fetch_txt`、`fetch_markdown`、`fetch_plaintext` 保留为薄别名。
+- 只有响应被截断时才需要续传。截断结果带 `nextCursor` 和 `chunkId`。下一次把 `cursor` 设为 `nextCursor`。除非在恢复旧的字节分块，否则不要传 `startCursor`。
+- 默认预算是 `maxChars=100000`、`maxBytes=1048576`。截断尽量落在换行或空格上。
+- `markdown` 和 `plaintext` 会先用 Readability 抽取正文再转换。需要整页时传 `extractContent: false`。
+- 除非显式设置 `useBrowser` 或 `autoDetectMode`，否则不会自动改走浏览器。
+
+### 安全
+- 1.3.x 的 SSRF 校验保持不变：私网、环回、链路本地和云元数据地址会在请求前拦截，重定向目标同样校验。
+
 ## [1.3.4] - 2026-10-27
 
 ### 变更
