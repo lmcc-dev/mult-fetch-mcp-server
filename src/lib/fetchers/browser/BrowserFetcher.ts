@@ -131,7 +131,7 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
           log('browser.fetchError', debug, { error: String(requestError), url: requestUrl }, COMPONENTS.BROWSER_FETCH);
           try {
             await request.abort('blockedbyclient');
-          } catch (_abortError) {
+          } catch {
             // 请求可能已经结束 (The request may already be settled)
           }
         }
