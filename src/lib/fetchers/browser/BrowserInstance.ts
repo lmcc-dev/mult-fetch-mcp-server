@@ -38,6 +38,12 @@ export class BrowserInstance {
   private static browserStartPromise: Promise<Browser> | null = null;
 
   /**
+   * 当前浏览器实例使用的代理服务器 (Proxy server used by the current browser)
+   * 代理变更时需要重启浏览器 (The browser is relaunched when the proxy changes)
+   */
+  private static browserProxy = '';
+
+  /**
    * 上次内存检查时间 (Last memory check time)
    */
   private static lastMemoryCheck: number = 0;
@@ -86,9 +92,16 @@ export class BrowserInstance {
    * @param debug 是否启用调试输出 (Whether to enable debug output)
    * @returns 浏览器实例 (Browser instance)
    */
-  public static async getBrowser(debug: boolean = false): Promise<Browser> {
+  public static async getBrowser(debug: boolean = false, proxyServer?: string): Promise<Browser> {
     // 检查内存使用情况 (Check memory usage)
     this.checkMemoryUsage(debug);
+
+    const normalizedProxy = proxyServer || '';
+
+    // 代理变化时关闭旧实例，否则请求会绕过新代理 (Relaunch when the proxy changes so requests cannot skip it)
+    if (this.browser && this.browserProxy !== normalizedProxy) {
+      await this.closeBrowser(debug);
+    }
 
     // 如果浏览器已经存在，直接返回 (If browser already exists, return directly)
     if (this.browser) {
@@ -137,6 +150,10 @@ export class BrowserInstance {
             '--user-agent=' + getRandomUserAgent()
           ];
 
+          if (normalizedProxy) {
+            browserArgs.push(`--proxy-server=${normalizedProxy}`);
+          }
+
           if (process.env.ALLOW_PRIVATE_NETWORK_REQUESTS === 'true') {
             browserArgs.push('--disable-features=BlockInsecurePrivateNetworkRequests');
           }
@@ -166,9 +183,12 @@ export class BrowserInstance {
           log('browser.browserStarted', debug, {}, COMPONENTS.BROWSER_FETCH);
 
           // 设置浏览器关闭事件处理 (Set browser close event handling)
+          this.browserProxy = normalizedProxy;
+
           this.browser.on('disconnected', () => {
             log('browser.browserDisconnected', debug, {}, COMPONENTS.BROWSER_FETCH);
             this.browser = null;
+            this.browserProxy = '';
             this.browserStarting = false;
             this.browserStartPromise = null;
           });
@@ -184,6 +204,7 @@ export class BrowserInstance {
 
           // 重置标志 (Reset flags)
           this.browser = null;
+          this.browserProxy = '';
           this.browserStarting = false;
           this.browserStartPromise = null;
 
@@ -207,6 +228,7 @@ export class BrowserInstance {
       if (this.browser) {
         await this.browser.close();
         this.browser = null;
+        this.browserProxy = '';
         log('browser.closed', debug, { debug }, COMPONENTS.BROWSER_FETCH);
       }
     } catch (error) {

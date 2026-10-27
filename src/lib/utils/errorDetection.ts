@@ -11,6 +11,19 @@
  * @param errorText 错误文本 (Error text to check)
  * @returns 是否为访问被拒绝错误 (Whether it's an access denied error)
  */
+/**
+ * SSRF 校验失败不应触发浏览器模式重试
+ * (SSRF validation failures must not be retried through the browser)
+ */
+export function isBlockedFetchError(errorText: string): boolean {
+  if (!errorText) return false;
+
+  return /blocked ip address/i.test(errorText) ||
+    /blocked hostname/i.test(errorText) ||
+    /blocked url scheme/i.test(errorText) ||
+    errorText.includes('EBLOCKEDURL');
+}
+
 export function isAccessDeniedError(errorText: string): boolean {
   if (!errorText) return false;
   

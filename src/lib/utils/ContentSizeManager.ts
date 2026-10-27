@@ -27,6 +27,37 @@ export class ContentSizeManager {
   }
 
   /**
+   * 按 UTF-8 字节数截断，不拆开多字节字符
+   * (Truncate to a UTF-8 byte budget without splitting a multibyte character)
+   * @param content 原始内容 (Original content)
+   * @param maxBytes 最大字节数 (Maximum bytes)
+   * @returns 截断后的内容 (Truncated content)
+   */
+  public static truncateToBytes(content: string, maxBytes: number): string {
+    if (maxBytes <= 0) {
+      return '';
+    }
+
+    if (Buffer.byteLength(content, 'utf8') <= maxBytes) {
+      return content;
+    }
+
+    const chars = [...content];
+    let result = '';
+    let size = 0;
+    for (const char of chars) {
+      const charSize = Buffer.byteLength(char, 'utf8');
+      if (size + charSize > maxBytes) {
+        break;
+      }
+      result += char;
+      size += charSize;
+    }
+
+    return result;
+  }
+
+  /**
    * 检查内容大小是否超过限制 (Check if content size exceeds limit)
    * @param content 内容 (Content)
    * @param sizeLimit 大小限制，单位为字节 (Size limit in bytes)

@@ -6,7 +6,7 @@
 
 import { BrowserInstance } from '../fetchers/browser/BrowserInstance.js';
 import { log, COMPONENTS } from '../logger.js';
-import { isAccessDeniedError, isNetworkError } from '../utils/errorDetection.js';
+import { isAccessDeniedError, isBlockedFetchError, isNetworkError } from '../utils/errorDetection.js';
 
 // 全局浏览器实例 (Global browser instance)
 let browserInitialized = false;
@@ -78,6 +78,12 @@ export function shouldSwitchToBrowser(error: any): boolean {
     errorMessage = String(error);
   }
 
+  // 内网/元数据拦截必须停在这里，不能再换浏览器重试
+  // (Private-network and metadata blocks must stop here instead of retrying in the browser)
+  if (isBlockedFetchError(errorMessage)) {
+    return false;
+  }
+
   // 检查是否包含 HTTP 403 Forbidden 错误，这是最常见的需要切换到浏览器模式的情况
   if (errorMessage.includes('403') ||
     errorMessage.toLowerCase().includes('forbidden')) {
@@ -102,6 +108,9 @@ export function shouldUseBrowser(response: any, _url: string): boolean {
   // 检查响应是否表明需要浏览器模式 (Check if response indicates browser mode is needed)
   if (response.isError) {
     const errorText = response.content[0].text.toLowerCase();
+    if (isBlockedFetchError(errorText)) {
+      return false;
+    }
     return errorText.includes('403') ||
       errorText.includes('forbidden') ||
       errorText.includes('access denied') ||

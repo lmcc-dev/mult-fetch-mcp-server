@@ -67,10 +67,98 @@ export function getDomain(url: string): string {
  * @param component 组件名称 (Component name)
  * @returns 系统代理URL或undefined (System proxy URL or undefined)
  */
+/**
+ * 从 URL 取出主机名，解析失败时返回空字符串
+ * (Read a URL hostname, or an empty string when the URL is invalid)
+ */
+/**
+ * 目标命中 NO_PROXY 时不使用系统代理 (Skip the system proxy when the target matches NO_PROXY)
+ */
+function bypassProxy(targetUrl: string | undefined, debug: boolean, component: string): boolean {
+  if (!targetUrl) {
+    return false;
+  }
+
+  const noProxy = process.env.NO_PROXY || process.env.no_proxy;
+  if (!isNoProxyMatch(safeHostname(targetUrl), noProxy)) {
+    return false;
+  }
+
+  log('fetcher.foundNoProxy', debug, { noProxy }, component);
+  return true;
+}
+
+function safeHostname(targetUrl: string): string {
+  try {
+    return new URL(targetUrl).hostname;
+  } catch (_error) {
+    return '';
+  }
+}
+
+/**
+ * 判断主机名是否命中 NO_PROXY (Whether a hostname matches a NO_PROXY list)
+ * @param hostname 目标主机名 (Target hostname)
+ * @param noProxy NO_PROXY 列表，逗号分隔 (Comma-separated NO_PROXY list)
+ */
+export function isNoProxyMatch(hostname: string, noProxy: string | undefined): boolean {
+  if (!noProxy || !hostname) {
+    return false;
+  }
+
+  const host = hostname.toLowerCase().replace(/\.$/, '').replace(/^\[|\]$/g, '');
+  const rules = noProxy.split(',').map((rule) => rule.trim().toLowerCase()).filter(Boolean);
+
+  for (const rule of rules) {
+    if (rule === '*') {
+      return true;
+    }
+
+    const normalized = rule.replace(/^\./, '').replace(/\.$/, '');
+    if (!normalized) {
+      continue;
+    }
+
+    if (host === normalized || host.endsWith(`.${normalized}`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * 拆出代理服务器地址和认证信息 (Split a proxy URL into server address and credentials)
+ * Chrome 的 --proxy-server 不接受 userinfo，认证要单独交给页面
+ * (Chrome's --proxy-server flag rejects userinfo; credentials are applied on the page)
+ */
+export function splitProxyAuth(proxy: string | undefined): {
+  server?: string;
+  username?: string;
+  password?: string;
+} {
+  if (!proxy) {
+    return {};
+  }
+
+  try {
+    const parsed = new URL(proxy);
+    const port = parsed.port ? `:${parsed.port}` : '';
+    return {
+      server: `${parsed.protocol}//${parsed.hostname}${port}`,
+      username: parsed.username ? decodeURIComponent(parsed.username) : undefined,
+      password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
+    };
+  } catch (_error) {
+    return { server: proxy };
+  }
+}
+
 export function getSystemProxy(
   useSystemProxy: boolean = true,
   debug: boolean = false,
-  component: string = COMPONENTS.NODE_FETCH
+  component: string = COMPONENTS.NODE_FETCH,
+  targetUrl?: string
 ): string | undefined {
   // 如果不使用系统代理，直接返回undefined (If not using system proxy, return undefined directly)
   if (!useSystemProxy) {
@@ -99,6 +187,10 @@ export function getSystemProxy(
     process.env.ALL_PROXY || process.env.all_proxy;
 
   if (proxyUrl) {
+    if (bypassProxy(targetUrl, debug, component)) {
+      return undefined;
+    }
+
     log('fetcher.foundSystemProxy', debug, { proxy: proxyUrl }, component);
     return proxyUrl;
   }
@@ -134,6 +226,9 @@ export function getSystemProxy(
       const proxyMatch = shellOutput.match(/(?:HTTP_PROXY|HTTPS_PROXY|http_proxy|https_proxy)=([^\s]+)/i);
       if (proxyMatch && proxyMatch[1]) {
         const systemProxyUrl = proxyMatch[1];
+        if (bypassProxy(targetUrl, debug, component)) {
+          return undefined;
+        }
         log('fetcher.foundProxyFromCommand', debug, { proxy: systemProxyUrl }, component);
         return systemProxyUrl;
       }

@@ -11,7 +11,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { log, COMPONENTS } from './lib/logger.js';
 import { execSync } from 'child_process';
-import { isAccessDeniedError, isNetworkError } from './lib/utils/errorDetection.js';
+import { isAccessDeniedError, isBlockedFetchError, isNetworkError } from './lib/utils/errorDetection.js';
 import fs from 'fs';
 import os from 'os';
 import { ContentSizeManager } from './lib/utils/ContentSizeManager.js';
@@ -83,6 +83,11 @@ function responseRequiresBrowser(response: any, debug: boolean = false): boolean
           log('errors.connectionProblem', debug, {}, COMPONENTS.CLIENT);
         }
       }
+    }
+
+    // 内网地址被拦截时不要切换到浏览器 (Do not switch to the browser after a private-network block)
+    if (isBlockedFetchError(errorText)) {
+      return false;
     }
 
     // 检查是否包含 HTTP 403 Forbidden 错误，这是最常见的需要切换到浏览器模式的情况

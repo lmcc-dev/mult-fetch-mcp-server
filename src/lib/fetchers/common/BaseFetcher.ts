@@ -146,7 +146,7 @@ export class BaseFetcher {
         truncatedLength: contentSizeLimit
       }, component);
 
-      const truncatedContent = content.substring(0, contentSizeLimit);
+      const truncatedContent = ContentSizeManager.truncateToBytes(content, contentSizeLimit);
 
       return BaseFetcher.createSuccessResponse(
         truncatedContent + `\n\n${TemplateUtils.SYSTEM_NOTE.START}\nContent was too large (${contentBytes} bytes) and has been truncated to ${contentSizeLimit} bytes. Enable content splitting to view the full content.\n${TemplateUtils.SYSTEM_NOTE.END}`

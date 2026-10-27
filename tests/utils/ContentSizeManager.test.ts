@@ -208,4 +208,12 @@ describe('ContentSizeManager 测试 (ContentSizeManager Tests)', () => {
     expect(result.chunks[0]).toBe(content);
     expect(result.totalBytes).toBe(13);
   });
+
+  test('truncateToBytes应按 UTF-8 字节截断且不拆开字符 (truncateToBytes should truncate on UTF-8 bytes without splitting characters)', () => {
+    expect(ContentSizeManager.truncateToBytes('你好世界', 4)).toBe('你');
+    expect(Buffer.byteLength(ContentSizeManager.truncateToBytes('你好世界', 4), 'utf8')).toBeLessThanOrEqual(4);
+    expect(ContentSizeManager.truncateToBytes('abcdef', 3)).toBe('abc');
+    expect(ContentSizeManager.truncateToBytes('abc', 10)).toBe('abc');
+    expect(ContentSizeManager.truncateToBytes('abc', 0)).toBe('');
+  });
 }); 
