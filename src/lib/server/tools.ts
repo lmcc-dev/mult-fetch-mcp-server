@@ -262,6 +262,7 @@ function resolveFormat(name: string, args: Record<string, any>): FetchFormat | n
 function buildFetchParams(name: string, args: Record<string, any>, format: FetchFormat): FetchParams {
   const params: FetchParams = {
     ...args,
+    url: typeof args.url === 'string' ? args.url : '',
     method: name,
     autoDetectMode: args.autoDetectMode === true
   };

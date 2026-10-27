@@ -24,6 +24,82 @@
 
 [English](./README.md) | [中文文档](./README.zh.md)
 
+## 2.0 版本
+
+调用 `fetch`，传入 URL。默认格式是 Markdown：走 HTTP 抓取，并抽取可读正文。不需要传 `startCursor`。
+
+| `format` | 返回内容 |
+| --- | --- |
+| `markdown` | 可读正文的 Markdown（默认） |
+| `plaintext` | 可读正文的纯文本 |
+| `html` | HTML |
+| `json` | JSON 文档 |
+| `txt` | 原始响应体 |
+
+普通页面一次返回。默认预算是 `maxChars` 100000、`maxBytes` 1048576，截断尽量落在换行或空格上。正文更长时，响应里会有 `nextCursor` 和 `chunkId`。再次调用 `fetch`，把 `cursor` 设为 `nextCursor`。
+
+`fetch_html`、`fetch_json`、`fetch_txt`、`fetch_markdown`、`fetch_plaintext` 是固定格式的薄别名。
+
+### Cursor
+
+写入 `~/.cursor/mcp.json`，或项目里的 `.cursor/mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "mult-fetch": {
+      "command": "npx",
+      "args": ["-y", "@lmcc-dev/mult-fetch-mcp-server"],
+      "env": {
+        "MCP_LANG": "zh"
+      }
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "mult-fetch": {
+      "command": "npx",
+      "args": ["-y", "@lmcc-dev/mult-fetch-mcp-server"],
+      "env": {
+        "MCP_LANG": "zh"
+      }
+    }
+  }
+}
+```
+
+保存后重启宿主，让它抓取一个 URL。它应该调用 `fetch`，并且不传 `startCursor`。
+
+### 浏览器模式
+
+默认的 HTTP 抓取不需要 Chrome 或 Puppeteer。正常安装可以不装它们（`npm install --omit=optional` 会跳过可选包）。需要无头浏览器渲染时，安装可选包并设置 `useBrowser: true`：
+
+```bash
+npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+```
+
+`autoDetectMode` 默认为 false。出现 403 时不会自动打开浏览器，除非显式打开这个开关。
+
+### 安全
+
+每次请求（包括重定向）在发出前都会检查：
+
+- 环回地址（`127.0.0.0/8`、`::1`、`localhost`）
+- 私网（`10.0.0.0/8`、`172.16.0.0/12`、`192.168.0.0/16`）
+- 链路本地和云元数据（`169.254.0.0/16`，包括 `169.254.169.254`，以及 IPv6 `fe80::/10`）
+- 运营商级 NAT `100.64.0.0/10`、文档地址，以及嵌在 6to4、NAT64 或 IPv4 映射地址里的私网地址
+
+直连会固定到已通过校验的地址。默认超时 30 秒，单次响应受 `maxChars` 和 `maxBytes` 限制。浏览器模式使用同一套 URL 校验。只有确实需要浏览器访问私网时，才设置 `ALLOW_PRIVATE_NETWORK_REQUESTS=true`。
+
 ## 项目结构
 
 ```
@@ -73,10 +149,9 @@ fetch-mcp/
 
 - 基于官方 MCP SDK 的实现
 - 支持标准输入输出（Stdio）传输方式
-- 提供了多种网页抓取方法（HTML、JSON、文本、Markdown、纯文本转换）
-- 智能模式切换：自动在标准请求和浏览器模式之间切换
-- 内容大小管理：自动将大型内容分割成可管理的块，以解决AI模型上下文大小限制问题
-- 分块内容检索：能够请求大型内容的特定块，同时保持上下文连续性
+- 一个 `fetch` 工具，用 `format` 选择 HTML、JSON、文本、Markdown 或纯文本
+- 默认走 HTTP 抓取，无头浏览器渲染是可选项
+- 单次响应窗口（`maxChars` / `maxBytes`），正文被截断时用 `cursor` 续传
 - 详细的调试日志输出到标准错误流
 - 支持中英文双语国际化
 - 模块化设计，便于维护和扩展
@@ -133,7 +208,7 @@ npx @lmcc-dev/mult-fetch-mcp-server
   "mcpServers": {
     "mult-fetch-mcp-server": {
       "command": "npx",
-      "args": ["mult-fetch-mcp-server"],
+      "args": ["-y", "@lmcc-dev/mult-fetch-mcp-server"],
       "env": {
         "MCP_LANG": "zh"  // 设置语言为中文，可选值: "zh" 或 "en"
       }
@@ -174,11 +249,8 @@ npx @lmcc-dev/mult-fetch-mcp-server
 
 配置完成后，重启 Claude 桌面版，然后您可以在对话中使用以下工具：
 
-- `fetch_html`: 获取网页 HTML 内容
-- `fetch_json`: 获取 JSON 数据
-- `fetch_txt`: 获取纯文本内容
-- `fetch_markdown`: 获取 Markdown 格式内容
-- `fetch_plaintext`: 获取从HTML转换的纯文本内容（去除HTML标签）
+- `fetch`: 抓取 URL。`format` 取 `html`、`markdown`（默认）、`plaintext`、`json` 或 `txt`
+- `fetch_html`、`fetch_json`、`fetch_txt`、`fetch_markdown`、`fetch_plaintext`: 1.x 保留的别名
 
 ## 构建
 
@@ -431,11 +503,8 @@ if (result.isError) {
 
 ### 支持的工具
 
-- `fetch_html`: 获取网页HTML内容
-- `fetch_json`: 获取JSON数据
-- `fetch_txt`: 获取纯文本内容
-- `fetch_markdown`: 获取Markdown格式内容
-- `fetch_plaintext`: 获取从HTML转换的纯文本内容（去除HTML标签）
+- `fetch`: 抓取 URL。`format` 取 `html`、`markdown`（默认）、`plaintext`、`json` 或 `txt`
+- `fetch_html`、`fetch_json`、`fetch_txt`、`fetch_markdown`、`fetch_plaintext`: 1.x 别名
 
 ### 资源支持
 
@@ -506,22 +575,23 @@ console.log('调试获取提示:', debugPrompt);
 - `noDelay`: 是否禁用请求间的随机延迟（可选，默认为false）
 - `useSystemProxy`: 是否使用系统代理（可选，默认为true）
 
-#### 内容大小控制参数
-- `enableContentSplitting`: 是否将大内容分割成多个块（可选，默认为true）
-- `contentSizeLimit`: 内容分割前的最大字节数（可选，默认为50000）
-- `startCursor`: 字节级偏移量，用于从特定位置开始获取内容（可选，默认为0）
-
-这些参数有助于管理超出AI模型上下文大小限制的大型内容，允许您以可管理的块获取网页内容，同时保持处理完整信息的能力。
+#### 内容窗口
+- `maxChars`: 本次响应的最大字符数（可选，默认 100000）。截断尽量落在换行或空格上。
+- `maxBytes`: 本次响应的最大 UTF-8 字节数（可选，默认 1048576）。
+- `cursor`: 来自 `nextCursor` 的续传令牌。第一次调用不要传。设置后服务器不会重新请求 URL。
+- `enableContentSplitting`: 设为 false 时，超长内容只截断、不返回游标（可选，默认 true）。
+- `contentSizeLimit`: 旧版字节分块大小。在未设置 `maxChars` / `maxBytes` 时沿用 1.x 字节分割。
+- `startCursor`: 旧版字节偏移。不是必填。只在配合 1.x 的 `chunkId` 时使用。
 
 #### 分块管理
-- `chunkId`: 内容分割时的块集唯一标识符（用于请求后续块）
+- `chunkId`: 响应被截断时和 `nextCursor` 一起返回的文档 ID。
 
-当内容被分割成多个块时，响应中包含元数据，允许AI使用`chunkId`和`startCursor`参数请求后续块。系统使用字节级分块管理提供对内容检索的精确控制，实现从内容中任何位置无缝处理。
+把 `cursor` 传回 `fetch` 即可读取下一段。这个流程不使用 `startCursor`。
 
 #### 模式控制参数
 - `useBrowser`: 是否使用浏览器模式（可选，默认为false）
 - `useNodeFetch`: 是否强制使用Node.js模式（可选，默认为false，与`useBrowser`互斥）
-- `autoDetectMode`: 是否在标准模式失败（出现403/Forbidden错误）时自动检测并切换到浏览器模式（可选，默认为true）。设置为false可以严格使用指定的模式，不进行自动切换。
+- `autoDetectMode`: 在 403 或验证页时改用浏览器重试（可选，默认 false）。需要已安装可选的 Puppeteer 包。
 
 #### 浏览器模式特有参数
 - `waitForSelector`: 浏览器模式下等待的选择器（可选，默认为'body'）
@@ -531,7 +601,7 @@ console.log('调试获取提示:', debugPrompt);
 - `closeBrowser`: 是否关闭浏览器实例（可选，默认为false）
 
 #### 内容提取参数
-- `extractContent`: 是否使用Readability算法提取主要内容（可选，默认为false）
+- `extractContent`: 转换前使用 Readability（可选）。`markdown` 和 `plaintext` 默认为 true，`html`、`json`、`txt` 默认为 false。
 - `includeMetadata`: 是否在提取的内容中包含元数据（可选，默认为false，仅当`extractContent`为true时有效）
 - `fallbackToOriginal`: 当提取失败时是否回退到原始内容（可选，默认为true，仅当`extractContent`为true时有效）
 

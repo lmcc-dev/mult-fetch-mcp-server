@@ -224,18 +224,14 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       url,
       debug = false,
       closeBrowser: _closeBrowser = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0,
       extractContent = false,
       includeMetadata = true,
       fallbackToOriginal = true
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.BROWSER_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('browser.startingHtmlFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
@@ -265,32 +261,13 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
         COMPONENTS.BROWSER_FETCH
       );
 
-      // 检查内容大小并处理 (Check content size and process)
-      const chunkingResult = this.handleContentChunking(
+      return this.finishContent(
         processedContent,
-        contentSizeLimit,
-        enableContentSplitting,
+        requestPayload,
         debug,
-        COMPONENTS.BROWSER_FETCH
+        COMPONENTS.BROWSER_FETCH,
+        metadata ?? undefined
       );
-
-      if (chunkingResult) {
-        // 如果有元数据，添加到分块结果中 (If there is metadata, add it to the chunk result)
-        if (metadata) {
-          chunkingResult.metadata = metadata;
-        }
-        return chunkingResult;
-      }
-
-      // 创建新的结果（使用处理后的内容） (Create new result with processed content)
-      const processedResult = BaseFetcher.createSuccessResponse(processedContent);
-
-      // 如果有元数据，添加到结果中 (If there is metadata, add it to the result)
-      if (metadata) {
-        processedResult.metadata = metadata;
-      }
-
-      return processedResult;
     } catch (error) {
       // 处理错误 (Handle error)
       log('browser.htmlFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
@@ -308,17 +285,12 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
   public async json(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
       url,
-      debug = false,
-      closeBrowser: _closeBrowser = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0
+      debug = false
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.BROWSER_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('browser.startingJsonFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
@@ -340,21 +312,7 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
         JSON.parse(text);
         log('browser.jsonParsed', debug, {}, COMPONENTS.BROWSER_FETCH);
 
-        // 检查内容大小并处理 (Check content size and process)
-        const chunkingResult = this.handleContentChunking(
-          text,
-          contentSizeLimit,
-          enableContentSplitting,
-          debug,
-          COMPONENTS.BROWSER_FETCH
-        );
-
-        if (chunkingResult) {
-          return chunkingResult;
-        }
-
-        // 返回JSON内容 (Return JSON content)
-        return result;
+        return this.finishContent(text, requestPayload, debug, COMPONENTS.BROWSER_FETCH);
       } catch (parseError) {
         // 处理JSON解析错误 (Handle JSON parse error)
         log('browser.jsonParseError', debug, { error: String(parseError) }, COMPONENTS.BROWSER_FETCH);
@@ -378,17 +336,12 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
   public async txt(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
       url,
-      debug = false,
-      closeBrowser: _closeBrowser = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0
+      debug = false
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.BROWSER_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('browser.startingTxtFetch', debug, { url }, COMPONENTS.BROWSER_FETCH);
@@ -411,21 +364,7 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       const text = dom.window.document.body.textContent || '';
       log('browser.textExtracted', debug, { length: text.length }, COMPONENTS.BROWSER_FETCH);
 
-      // 检查内容大小并处理 (Check content size and process)
-      const chunkingResult = this.handleContentChunking(
-        text,
-        contentSizeLimit,
-        enableContentSplitting,
-        debug,
-        COMPONENTS.BROWSER_FETCH
-      );
-
-      if (chunkingResult) {
-        return chunkingResult;
-      }
-
-      // 返回纯文本内容 (Return plain text content)
-      return BaseFetcher.createSuccessResponse(text);
+      return this.finishContent(text, requestPayload, debug, COMPONENTS.BROWSER_FETCH);
     } catch (error) {
       // 处理错误 (Handle error)
       log('browser.txtFetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
@@ -441,18 +380,12 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
    */
   public async plainText(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
-      url: _url,
-      debug = false,
-      closeBrowser: _closeBrowser = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0
+      debug = false
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.BROWSER_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('browser.startingPlainTextFetch', debug, { url: requestPayload.url }, COMPONENTS.BROWSER_FETCH);
@@ -481,28 +414,13 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
     // 使用ContentProcessor将HTML转换为纯文本 (Use ContentProcessor to convert HTML to plain text)
     const plainText = ContentProcessor.htmlToText(processedHtml, debug);
 
-    // 检查内容大小并处理 (Check content size and process)
-    const chunkingResult = this.handleContentChunking(
+    return this.finishContent(
       plainText,
-      contentSizeLimit,
-      enableContentSplitting,
+      requestPayload,
       debug,
-      COMPONENTS.BROWSER_FETCH
+      COMPONENTS.BROWSER_FETCH,
+      metadata ?? undefined
     );
-
-    if (chunkingResult) {
-      if (metadata) {
-        chunkingResult.metadata = metadata;
-      }
-      return chunkingResult;
-    }
-
-    // 返回纯文本内容 (Return plain text content)
-    const plainTextResult = BaseFetcher.createSuccessResponse(plainText);
-    if (metadata) {
-      plainTextResult.metadata = metadata;
-    }
-    return plainTextResult;
   }
 
   /**
@@ -512,18 +430,12 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
    */
   public async markdown(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
-      url: _url,
-      debug = false,
-      closeBrowser: _closeBrowser = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0
+      debug = false
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.BROWSER_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.BROWSER_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('browser.startingMarkdownFetch', debug, { url: requestPayload.url }, COMPONENTS.BROWSER_FETCH);
@@ -552,27 +464,12 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
     // 使用ContentProcessor将HTML转换为Markdown (Use ContentProcessor to convert HTML to Markdown)
     const markdown = ContentProcessor.htmlToMarkdown(processedHtml, debug);
 
-    // 检查内容大小并处理 (Check content size and process)
-    const chunkingResult = this.handleContentChunking(
+    return this.finishContent(
       markdown,
-      contentSizeLimit,
-      enableContentSplitting,
+      requestPayload,
       debug,
-      COMPONENTS.BROWSER_FETCH
+      COMPONENTS.BROWSER_FETCH,
+      metadata ?? undefined
     );
-
-    if (chunkingResult) {
-      if (metadata) {
-        chunkingResult.metadata = metadata;
-      }
-      return chunkingResult;
-    }
-
-    // 返回Markdown内容 (Return Markdown content)
-    const markdownResult = BaseFetcher.createSuccessResponse(markdown);
-    if (metadata) {
-      markdownResult.metadata = metadata;
-    }
-    return markdownResult;
   }
 } 

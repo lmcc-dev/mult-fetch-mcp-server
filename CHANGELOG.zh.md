@@ -13,6 +13,7 @@
 - 默认预算是 `maxChars=100000`、`maxBytes=1048576`。截断尽量落在换行或空格上。
 - `markdown` 和 `plaintext` 会先用 Readability 抽取正文再转换。需要整页时传 `extractContent: false`。
 - 除非显式设置 `useBrowser` 或 `autoDetectMode`，否则不会自动改走浏览器。
+- `puppeteer`、`puppeteer-extra`、`puppeteer-extra-plugin-stealth` 改为可选依赖。HTTP 抓取的安装和运行不依赖它们。
 
 ### 安全
 - 1.3.x 的 SSRF 校验保持不变：私网、环回、链路本地和云元数据地址会在请求前拦截，重定向目标同样校验。

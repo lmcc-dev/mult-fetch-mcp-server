@@ -22,7 +22,7 @@ export class Fetcher {
     const { debug = false } = requestPayload;
     log('fetcher.fetchingHtml', debug, { url: requestPayload.url }, COMPONENTS.SERVER);
     
-    const fetcher = FetcherFactory.createFetcher(requestPayload);
+    const fetcher = await FetcherFactory.createFetcher(requestPayload);
     return await fetcher.html(requestPayload);
   }
 
@@ -35,7 +35,7 @@ export class Fetcher {
     const { debug = false } = requestPayload;
     log('fetcher.fetchingJson', debug, { url: requestPayload.url }, COMPONENTS.SERVER);
     
-    const fetcher = FetcherFactory.createFetcher(requestPayload);
+    const fetcher = await FetcherFactory.createFetcher(requestPayload);
     return await fetcher.json(requestPayload);
   }
 
@@ -48,7 +48,7 @@ export class Fetcher {
     const { debug = false } = requestPayload;
     log('fetcher.fetchingTxt', debug, { url: requestPayload.url }, COMPONENTS.SERVER);
     
-    const fetcher = FetcherFactory.createFetcher(requestPayload);
+    const fetcher = await FetcherFactory.createFetcher(requestPayload);
     return await fetcher.txt(requestPayload);
   }
 
@@ -61,7 +61,7 @@ export class Fetcher {
     const { debug = false } = requestPayload;
     log('fetcher.fetchingPlainText', debug, { url: requestPayload.url }, COMPONENTS.SERVER);
     
-    const fetcher = FetcherFactory.createFetcher(requestPayload);
+    const fetcher = await FetcherFactory.createFetcher(requestPayload);
     return await fetcher.plainText(requestPayload);
   }
 
@@ -74,13 +74,13 @@ export class Fetcher {
     const { debug = false } = requestPayload;
     log('fetcher.fetchingMarkdown', debug, { url: requestPayload.url }, COMPONENTS.SERVER);
     
-    const fetcher = FetcherFactory.createFetcher(requestPayload);
+    const fetcher = await FetcherFactory.createFetcher(requestPayload);
     return await fetcher.markdown(requestPayload);
   }
 }
 
-// 导出所有类型和类 (Export all types and classes)
+// 导出所有类型和类。浏览器获取器按需动态加载，避免安装时依赖 Puppeteer。
+// (Export shared types. The browser fetcher is loaded on demand so install does not require Puppeteer.)
 export * from './common/types.js';
-export * from './browser/BrowserFetcher.js';
 export * from './node/NodeFetcher.js';
 export * from './FetcherFactory.js'; 

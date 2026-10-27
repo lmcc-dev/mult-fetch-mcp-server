@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Default budget is `maxChars=100000` and `maxBytes=1048576`. Cuts prefer a newline or space.
 - `markdown` and `plaintext` extract readable content with Readability before conversion. Set `extractContent: false` to keep the whole document.
 - Browser fallback is off unless `useBrowser` or `autoDetectMode` is true.
+- Puppeteer, puppeteer-extra, and puppeteer-extra-plugin-stealth are optional dependencies. The HTTP fetcher installs and runs without them.
 
 ### Security
 - SSRF checks from 1.3.x are unchanged: private, loopback, link-local, and cloud metadata targets are blocked before the request, including redirects.
