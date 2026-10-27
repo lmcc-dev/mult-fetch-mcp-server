@@ -19,12 +19,23 @@ describe('UrlValidator', () => {
   });
 
   test('allows public https URLs after DNS resolution', async () => {
-    await expect(validateFetchUrl('https://example.com/path')).resolves.toBeUndefined();
+    await expect(validateFetchUrl('https://example.com/path')).resolves.toEqual([
+      { address: '93.184.216.34', family: 4 },
+    ]);
     expect(lookup).toHaveBeenCalledWith('example.com', { all: true, verbatim: true });
   });
 
   test('allows public http URLs', async () => {
-    await expect(validateFetchUrl('http://example.org')).resolves.toBeUndefined();
+    await expect(validateFetchUrl('http://example.org')).resolves.toEqual([
+      { address: '93.184.216.34', family: 4 },
+    ]);
+  });
+
+  test('allows literal public addresses without DNS lookup', async () => {
+    await expect(validateFetchUrl('http://8.8.8.8/')).resolves.toEqual([
+      { address: '8.8.8.8', family: 4 },
+    ]);
+    expect(lookup).not.toHaveBeenCalled();
   });
 
   test('blocks non-http schemes', async () => {
@@ -49,6 +60,25 @@ describe('UrlValidator', () => {
     await expect(validateFetchUrl('http://10.0.0.1/')).rejects.toThrow(UrlValidationError);
     await expect(validateFetchUrl('http://192.168.1.1/')).rejects.toThrow(UrlValidationError);
     await expect(validateFetchUrl('http://172.16.0.1/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://100.64.0.1/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://100.127.255.255/')).rejects.toThrow(UrlValidationError);
+  });
+
+  test('allows addresses outside the CGNAT range', async () => {
+    await expect(validateFetchUrl('http://100.128.0.1/')).resolves.toEqual([
+      { address: '100.128.0.1', family: 4 },
+    ]);
+    await expect(validateFetchUrl('http://192.0.3.1/')).resolves.toEqual([
+      { address: '192.0.3.1', family: 4 },
+    ]);
+  });
+
+  test('blocks documentation and obfuscated loopback addresses', async () => {
+    await expect(validateFetchUrl('http://192.0.2.1/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://198.51.100.1/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://203.0.113.1/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://2130706433/')).rejects.toThrow(/Blocked IP address/);
+    await expect(validateFetchUrl('http://0x7f000001/')).rejects.toThrow(/Blocked IP address/);
   });
 
   test('blocks localhost hostnames without DNS lookup', async () => {
@@ -71,6 +101,16 @@ describe('UrlValidator', () => {
 
   test('blocks IPv4-mapped loopback addresses', async () => {
     await expect(validateFetchUrl('http://[::ffff:127.0.0.1]/')).rejects.toThrow(UrlValidationError);
+  });
+
+  test('blocks tunneled and multicast IPv6 addresses that embed private targets', async () => {
+    await expect(validateFetchUrl('http://[64:ff9b::7f00:1]/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://[2002:a9fe:a9fe::]/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://[ff02::1]/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://[::7f00:1]/')).rejects.toThrow(UrlValidationError);
+    await expect(validateFetchUrl('http://[2606:4700:4700::1111]/')).resolves.toEqual([
+      { address: '2606:4700:4700::1111', family: 6 },
+    ]);
   });
 
   test('rejects invalid URLs', async () => {

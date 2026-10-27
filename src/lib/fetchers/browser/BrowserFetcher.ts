@@ -5,15 +5,16 @@
  */
 
 import { JSDOM } from 'jsdom';
+import type { Page } from 'puppeteer';
 import { log, COMPONENTS } from '../../logger.js';
 import { RequestPayload, FetchResponse, IFetcher } from '../common/types.js';
 import { BrowserInstance } from './BrowserInstance.js';
 import { PageOperations, CookieManager } from './PageOperations.js';
-import { getRandomUserAgent, getSystemProxy } from '../common/utils.js';
+import { getRandomUserAgent, getSystemProxy, splitProxyAuth } from '../common/utils.js';
 import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
 import { BaseFetcher } from '../common/BaseFetcher.js';
 import { ContentProcessor } from '../../utils/ContentProcessor.js';
-import { validateFetchUrl } from '../../utils/UrlValidator.js';
+import { isBrowserInternalUrl, validateFetchUrl } from '../../utils/UrlValidator.js';
 
 /**
  * 浏览器模式获取器类 (Browser mode fetcher class)
@@ -53,7 +54,11 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
     BrowserInstance.checkMemoryUsage(debug);
 
     // 获取代理设置 - 优先使用用户指定的代理，其次使用系统代理
-    const effectiveProxy = proxy || (useSystemProxy ? getSystemProxy(useSystemProxy, debug, COMPONENTS.BROWSER_FETCH) : undefined);
+    const systemProxy = useSystemProxy
+      ? getSystemProxy(useSystemProxy, debug, COMPONENTS.BROWSER_FETCH, url)
+      : undefined;
+    const effectiveProxy = proxy || systemProxy;
+    const proxyAuth = splitProxyAuth(effectiveProxy);
 
     // 详细记录代理设置情况
     if (proxy) {
@@ -66,18 +71,19 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
 
     log('fetcher.finalProxyUsed', debug, { proxy: effectiveProxy || 'none' }, COMPONENTS.BROWSER_FETCH);
 
+    let page: Page | null = null;
+
     try {
       // 如果只是要关闭浏览器，不需要获取内容
       if (url === 'about:blank' && closeBrowser) {
-        await BrowserInstance.closeBrowser(debug);
         return BaseFetcher.createSuccessResponse('Browser closed successfully');
       }
 
-      // 获取浏览器实例
-      const browser = await BrowserInstance.getBrowser(debug);
+      // 获取浏览器实例，并把代理传给启动参数 (Launch or reuse a browser with the proxy applied)
+      const browser = await BrowserInstance.getBrowser(debug, proxyAuth.server);
 
       // 创建新页面
-      const page = await browser.newPage();
+      page = await browser.newPage();
 
       // 设置页面超时
       page.setDefaultTimeout(timeout);
@@ -85,15 +91,22 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       // 设置用户代理
       await page.setUserAgent(getRandomUserAgent());
 
-      // 设置请求头
-      await page.setExtraHTTPHeaders(headers);
-
-      // 如果有存储的cookies，使用它们
+      // 设置请求头；Cookie 必须和用户头合并，否则会覆盖掉前面的头
+      // (Merge cookies with caller headers so the second call does not drop them)
       const storedCookies = CookieManager.getCookies(url);
+      const extraHeaders = { ...headers };
       if (storedCookies && saveCookies) {
         log('browser.usingStoredCookies', debug, { domain: url }, COMPONENTS.BROWSER_FETCH);
-        await page.setExtraHTTPHeaders({
-          'Cookie': storedCookies
+        extraHeaders.Cookie = storedCookies;
+      }
+      if (Object.keys(extraHeaders).length > 0) {
+        await page.setExtraHTTPHeaders(extraHeaders);
+      }
+
+      if (proxyAuth.username) {
+        await page.authenticate({
+          username: proxyAuth.username,
+          password: proxyAuth.password || '',
         });
       }
 
@@ -103,6 +116,26 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       }
 
       await validateFetchUrl(url);
+
+      // 拦截后续导航、重定向和子资源，避免只校验了初始 URL
+      // (Screen later navigations, redirects, and subresources; the initial URL check is not enough)
+      await page.setRequestInterception(true);
+      page.on('request', async (request) => {
+        const requestUrl = request.url();
+        try {
+          if (!isBrowserInternalUrl(requestUrl)) {
+            await validateFetchUrl(requestUrl);
+          }
+          await request.continue();
+        } catch (requestError) {
+          log('browser.fetchError', debug, { error: String(requestError), url: requestUrl }, COMPONENTS.BROWSER_FETCH);
+          try {
+            await request.abort('blockedbyclient');
+          } catch {
+            // 请求可能已经结束 (The request may already be settled)
+          }
+        }
+      });
 
       // 导航到URL
       log('browser.navigating', debug, { url }, COMPONENTS.BROWSER_FETCH);
@@ -147,35 +180,36 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
       }
 
       // 记录内容长度
-      const contentLength = content.length;
+      const contentLength = Buffer.byteLength(content, 'utf8');
       log('browser.contentLength', debug, { length: contentLength }, COMPONENTS.BROWSER_FETCH);
 
-      // 如果内容太长，截断它
+      // 如果内容太长，按字节截断，避免把多字节字符截断一半
+      // (Truncate by bytes so a multibyte character is not split in half)
       let finalContent = content;
-      if (contentLength > 10 * 1024 * 1024) { // 10MB
-        finalContent = content.substring(0, 10 * 1024 * 1024);
+      const maxBrowserBytes = 10 * 1024 * 1024;
+      if (contentLength > maxBrowserBytes) {
+        finalContent = ContentSizeManager.truncateToBytes(content, maxBrowserBytes);
         log('browser.contentTruncated', debug, {}, COMPONENTS.BROWSER_FETCH);
-      }
-
-      // 关闭页面
-      await page.close();
-      log('browser.pageClosed', debug, {}, COMPONENTS.BROWSER_FETCH);
-
-      // 如果需要关闭浏览器
-      if (closeBrowser) {
-        await BrowserInstance.closeBrowser(debug);
       }
 
       return BaseFetcher.createSuccessResponse(finalContent);
     } catch (error) {
       log('browser.fetchError', debug, { error: String(error) }, COMPONENTS.BROWSER_FETCH);
 
-      // 如果需要关闭浏览器
+      return BaseFetcher.createErrorResponse(`Error fetching ${url}: ${error}`);
+    } finally {
+      if (page) {
+        try {
+          await page.close();
+          log('browser.pageClosed', debug, {}, COMPONENTS.BROWSER_FETCH);
+        } catch (closeError) {
+          log('browser.fetchError', debug, { error: String(closeError) }, COMPONENTS.BROWSER_FETCH);
+        }
+      }
+
       if (closeBrowser) {
         await BrowserInstance.closeBrowser(debug);
       }
-
-      return BaseFetcher.createErrorResponse(`Error fetching ${url}: ${error}`);
     }
   }
 
@@ -423,18 +457,29 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
 
     log('browser.startingPlainTextFetch', debug, { url: requestPayload.url }, COMPONENTS.BROWSER_FETCH);
 
-    // 使用HTML方法获取内容 (Use HTML method to get content)
-    const result = await this.html(requestPayload);
+    // 先拿到完整 HTML 再转换，避免 html() 先分块后只转换第一段
+    // (Convert the full HTML document; html() may already return only the first chunk)
+    const result = await BrowserFetcher.fetch(requestPayload);
 
     if (result.isError) {
       return result;
     }
 
-    // 获取HTML内容 (Get HTML content)
     const html = result.content[0].text;
+    const { content: processedHtml, metadata } = this.processWithContentExtraction(
+      html,
+      requestPayload.url,
+      {
+        extractContent: requestPayload.extractContent,
+        includeMetadata: requestPayload.includeMetadata,
+        fallbackToOriginal: requestPayload.fallbackToOriginal
+      },
+      debug,
+      COMPONENTS.BROWSER_FETCH
+    );
 
     // 使用ContentProcessor将HTML转换为纯文本 (Use ContentProcessor to convert HTML to plain text)
-    const plainText = ContentProcessor.htmlToText(html, debug);
+    const plainText = ContentProcessor.htmlToText(processedHtml, debug);
 
     // 检查内容大小并处理 (Check content size and process)
     const chunkingResult = this.handleContentChunking(
@@ -446,11 +491,18 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
     );
 
     if (chunkingResult) {
+      if (metadata) {
+        chunkingResult.metadata = metadata;
+      }
       return chunkingResult;
     }
 
     // 返回纯文本内容 (Return plain text content)
-    return BaseFetcher.createSuccessResponse(plainText);
+    const plainTextResult = BaseFetcher.createSuccessResponse(plainText);
+    if (metadata) {
+      plainTextResult.metadata = metadata;
+    }
+    return plainTextResult;
   }
 
   /**
@@ -476,18 +528,29 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
 
     log('browser.startingMarkdownFetch', debug, { url: requestPayload.url }, COMPONENTS.BROWSER_FETCH);
 
-    // 使用HTML方法获取内容 (Use HTML method to get content)
-    const result = await this.html(requestPayload);
+    // 先拿到完整 HTML 再转换，避免 html() 先分块后只转换第一段
+    // (Convert the full HTML document; html() may already return only the first chunk)
+    const result = await BrowserFetcher.fetch(requestPayload);
 
     if (result.isError) {
       return result;
     }
 
-    // 获取HTML内容 (Get HTML content)
     const html = result.content[0].text;
+    const { content: processedHtml, metadata } = this.processWithContentExtraction(
+      html,
+      requestPayload.url,
+      {
+        extractContent: requestPayload.extractContent,
+        includeMetadata: requestPayload.includeMetadata,
+        fallbackToOriginal: requestPayload.fallbackToOriginal
+      },
+      debug,
+      COMPONENTS.BROWSER_FETCH
+    );
 
     // 使用ContentProcessor将HTML转换为Markdown (Use ContentProcessor to convert HTML to Markdown)
-    const markdown = ContentProcessor.htmlToMarkdown(html, debug);
+    const markdown = ContentProcessor.htmlToMarkdown(processedHtml, debug);
 
     // 检查内容大小并处理 (Check content size and process)
     const chunkingResult = this.handleContentChunking(
@@ -499,10 +562,17 @@ export class BrowserFetcher extends BaseFetcher implements IFetcher {
     );
 
     if (chunkingResult) {
+      if (metadata) {
+        chunkingResult.metadata = metadata;
+      }
       return chunkingResult;
     }
 
     // 返回Markdown内容 (Return Markdown content)
-    return BaseFetcher.createSuccessResponse(markdown);
+    const markdownResult = BaseFetcher.createSuccessResponse(markdown);
+    if (metadata) {
+      markdownResult.metadata = metadata;
+    }
+    return markdownResult;
   }
 } 

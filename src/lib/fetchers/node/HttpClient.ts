@@ -12,6 +12,7 @@ import { log, COMPONENTS } from '../../logger.js';
 import { RequestPayload } from '../common/types.js';
 import { getRandomUserAgent, randomDelay, getSystemProxy } from '../common/utils.js';
 import { validateFetchUrl, UrlValidationError } from '../../utils/UrlValidator.js';
+import { createPinnedAgent } from './PinnedAgent.js';
 
 /**
  * HTTP客户端类 (HTTP client class)
@@ -81,14 +82,9 @@ export class HttpClient {
    * @returns 完整的重定向URL (Complete redirect URL)
    */
   private static buildRedirectUrl(location: string, currentUrl: string, debug: boolean): string {
-    let redirectUrl = location;
-
-    if (location.startsWith('/')) {
-      const urlObj = new URL(currentUrl);
-      redirectUrl = `${urlObj.protocol}//${urlObj.host}${location}`;
-    } else if (!location.startsWith('http')) {
-      redirectUrl = new URL(location, currentUrl).toString();
-    }
+    // 统一用 URL 解析，覆盖协议相对地址 //host 和相对路径
+    // (Resolve every redirect with the URL parser, including protocol-relative //host targets)
+    const redirectUrl = new URL(location, currentUrl).toString();
 
     log('node.constructedFullRedirectUrl', debug, { redirectUrl }, COMPONENTS.NODE_FETCH);
     return redirectUrl;
@@ -190,7 +186,7 @@ export class HttpClient {
     log('node.fetchingUrl', debug, { url }, COMPONENTS.NODE_FETCH);
 
     // 处理代理设置 (Handle proxy settings)
-    const systemProxy = getSystemProxy(useSystemProxy, debug, COMPONENTS.NODE_FETCH);
+    const systemProxy = getSystemProxy(useSystemProxy, debug, COMPONENTS.NODE_FETCH, url);
     const finalProxy = proxy || systemProxy;
 
     if (finalProxy) {
@@ -200,8 +196,6 @@ export class HttpClient {
     // 初始化重定向计数器 (Initialize redirect counter)
     let redirectCount = 0;
     let currentUrl = url;
-
-    await validateFetchUrl(currentUrl);
 
     // 记录请求开始时间 (Record request start time)
     const fetchStart = Date.now();
@@ -221,13 +215,20 @@ export class HttpClient {
         // 准备请求头 (Prepare request headers)
         const requestHeaders = this.prepareHeaders(headers, debug);
 
-        // 设置代理 (Set proxy)
-        const agent = this.setupProxy(currentUrl, finalProxy, debug);
+        // 每次请求（含重定向）都重新校验，并在直连时把套接字固定到该地址
+        // (Validate every request, including redirects, and pin direct sockets to that address)
+        const validatedAddresses = await validateFetchUrl(currentUrl);
+        const agent = finalProxy
+          ? this.setupProxy(currentUrl, finalProxy, debug)
+          : createPinnedAgent(currentUrl, validatedAddresses);
 
         // 准备请求选项 (Prepare request options)
+        // redirect: 'manual' 让 node-fetch 把 3xx 交回这里，避免它自己跟随到未校验的地址
+        // (redirect: 'manual' returns 3xx to this loop so node-fetch cannot follow an unchecked target)
         const fetchOptions: any = {
           method: 'GET',
           headers: requestHeaders,
+          redirect: 'manual',
           timeout,
           signal: controller.signal,
         };
@@ -265,7 +266,6 @@ export class HttpClient {
           // 获取重定向URL (Get redirect URL)
           const location = response.headers.get('location') as string;
           currentUrl = this.buildRedirectUrl(location, currentUrl, debug);
-          await validateFetchUrl(currentUrl);
 
           // 增加重定向计数 (Increase redirect count)
           redirectCount++;

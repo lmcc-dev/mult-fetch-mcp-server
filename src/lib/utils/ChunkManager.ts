@@ -8,6 +8,29 @@ import { log, COMPONENTS } from '../logger.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
+ * 按 UTF-8 字节偏移截取字符串，不拆开多字节字符
+ * (Slice a string at a UTF-8 byte offset without splitting a multibyte character)
+ */
+function sliceFromUtf8Byte(content: string, startByte: number): string {
+  if (startByte <= 0) {
+    return content;
+  }
+
+  const chars = [...content];
+  let size = 0;
+  let index = 0;
+  for (; index < chars.length; index++) {
+    const charSize = Buffer.byteLength(chars[index], 'utf8');
+    if (size + charSize > startByte) {
+      break;
+    }
+    size += charSize;
+  }
+
+  return chars.slice(index).join('');
+}
+
+/**
  * 分段内容管理器 (Chunk content manager)
  * 用于存储和管理分段内容 (Used to store and manage chunked content)
  */
@@ -130,12 +153,30 @@ export class ChunkManager {
     // 从找到的分块开始，读取指定大小的内容 (Start reading from the found chunk, up to the specified size)
     let bytesToFetch = sizeLimit;
     let bytesActuallyFetched = 0;
+    let isFirstPiece = true;
 
     while (chunkIndex < chunks.length && bytesToFetch > 0) {
-      resultContent += chunks[chunkIndex];
-      bytesActuallyFetched += fetchedBytes[chunkIndex];
-      bytesToFetch -= fetchedBytes[chunkIndex];
+      let piece = chunks[chunkIndex];
+      let pieceBytes = fetchedBytes[chunkIndex];
+
+      // 游标落在分块中间时只返回剩余字节，避免把已返回的前缀再发一遍
+      // (When the cursor lands inside a chunk, return only the unread tail)
+      if (isFirstPiece && currentPosition < startCursor) {
+        const skip = startCursor - currentPosition;
+        const actualBytes = Buffer.byteLength(piece, 'utf8');
+        if (skip > 0 && skip < pieceBytes && actualBytes === pieceBytes) {
+          piece = sliceFromUtf8Byte(piece, skip);
+          pieceBytes -= skip;
+        } else if (skip > 0 && skip < pieceBytes) {
+          pieceBytes -= skip;
+        }
+      }
+
+      resultContent += piece;
+      bytesActuallyFetched += pieceBytes;
+      bytesToFetch -= pieceBytes;
       chunkIndex++;
+      isFirstPiece = false;
     }
 
     // 计算总获取字节数和剩余字节数 (Calculate total fetched bytes and remaining bytes)

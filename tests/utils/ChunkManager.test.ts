@@ -134,6 +134,23 @@ describe('ChunkManager 测试 (ChunkManager Tests)', () => {
     expect(ChunkManager.getChunkBySize(chunkId, 700)).toBeNull();
   });
 
+  test('getChunkBySize应从分块中间的字节游标开始 (getChunkBySize should start at a mid-chunk byte cursor)', () => {
+    const chunkId = ChunkManager.storeChunks(['abcd', 'efgh'], 8);
+
+    const partial = ChunkManager.getChunkBySize(chunkId, 2, 2);
+    expect(partial).not.toBeNull();
+    expect(partial?.content).toBe('cd');
+    expect(partial?.fetchedBytes).toBe(4);
+    expect(partial?.remainingBytes).toBe(4);
+    expect(partial?.isLastChunk).toBe(false);
+
+    const rest = ChunkManager.getChunkBySize(chunkId, partial?.fetchedBytes, 4);
+    expect(rest?.content).toBe('efgh');
+    expect(rest?.fetchedBytes).toBe(8);
+    expect(rest?.remainingBytes).toBe(0);
+    expect(rest?.isLastChunk).toBe(true);
+  });
+
   test('getSizeInfo应返回正确的大小信息 (getSizeInfo should return correct size information)', () => {
     // 准备测试数据
     const chunkId = 'test-chunk-id';

@@ -86,6 +86,8 @@ describe('BrowserInstance 类测试 (BrowserInstance Class Tests)', () => {
     BrowserInstance.browserStartPromise = null;
     // @ts-ignore
     BrowserInstance.lastMemoryCheck = 0;
+    // @ts-ignore
+    BrowserInstance.browserProxy = '';
   });
 
   describe('内存管理测试 (Memory Management Tests)', () => {
@@ -224,6 +226,22 @@ describe('BrowserInstance 类测试 (BrowserInstance Class Tests)', () => {
         expect.any(Object),
         COMPONENTS.BROWSER_FETCH
       );
+    });
+
+    test('应该把代理传给浏览器启动参数 (Should pass the proxy to browser launch args)', async () => {
+      await BrowserInstance.getBrowser(true, 'http://proxy.example:8080');
+
+      expect(mockLaunch).toHaveBeenCalledWith(expect.objectContaining({
+        args: expect.arrayContaining(['--proxy-server=http://proxy.example:8080']),
+      }));
+    });
+
+    test('代理变化时应该重启浏览器 (Should relaunch the browser when the proxy changes)', async () => {
+      await BrowserInstance.getBrowser(true, 'http://proxy-a.example:8080');
+      await BrowserInstance.getBrowser(true, 'http://proxy-b.example:8080');
+
+      expect(mockBrowser.close).toHaveBeenCalled();
+      expect(mockLaunch).toHaveBeenCalledTimes(2);
     });
   });
 }); 
