@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [中文更新说明](CHANGELOG.zh.md)
 
+## [1.3.4] - 2026-10-27
+
+### Changed
+- Republish the GitHub `v1.3.3` release as `1.3.4`. npm already has `@lmcc-dev/mult-fetch-mcp-server@1.3.3`, published on 2026-09-26. That tarball is an earlier build and cannot be overwritten.
+- `1.3.4` contains the same SSRF hardening and fetch bugfixes that are on GitHub `main` and tag `v1.3.3` (PR #12). There is no additional behavior change in this version.
+
 ## [1.3.3] - 2026-10-27
 
 ### Security
