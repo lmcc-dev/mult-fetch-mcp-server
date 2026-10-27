@@ -19,11 +19,37 @@ export class ContentSizeManager {
   private static readonly DEFAULT_SIZE_LIMIT = 50 * 1024; // 50KB
 
   /**
+   * 2.0 默认单次响应字符预算 (Default character budget for one 2.0 response)
+   */
+  public static readonly DEFAULT_MAX_CHARS = 100_000;
+
+  /**
+   * 2.0 默认单次响应字节上限 (Default byte cap for one 2.0 response)
+   */
+  public static readonly DEFAULT_MAX_BYTES = 1024 * 1024;
+
+  /**
    * 获取默认大小限制 (Get default size limit)
    * @returns 默认大小限制，单位为字节 (Default size limit in bytes)
    */
   public static getDefaultSizeLimit(): number {
     return this.DEFAULT_SIZE_LIMIT;
+  }
+
+  /**
+   * 获取默认字符预算 (Get the default character budget)
+   * @returns 默认最大字符数 (Default max characters)
+   */
+  public static getDefaultMaxChars(): number {
+    return this.DEFAULT_MAX_CHARS;
+  }
+
+  /**
+   * 获取默认字节上限 (Get the default byte cap)
+   * @returns 默认最大字节数 (Default max bytes)
+   */
+  public static getDefaultMaxBytes(): number {
+    return this.DEFAULT_MAX_BYTES;
   }
 
   /**

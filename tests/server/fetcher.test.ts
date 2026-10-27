@@ -130,7 +130,7 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
   });
   
   test('应该在 Fetcher 失败时自动切换到浏览器模式 (Should automatically switch to browser mode when Fetcher fails)', async () => {
-    const params = { url: 'https://example.com', startCursor: 0 };
+    const params = { url: 'https://example.com', startCursor: 0, autoDetectMode: true };
     
     // 设置 Fetcher 第一次调用抛出错误，第二次调用成功
     (Fetcher.html as ReturnType<typeof vi.fn>)
@@ -157,7 +157,7 @@ describe('fetchWithAutoDetect 函数测试 (fetchWithAutoDetect Function Tests)'
   });
   
   test('应该在 Fetcher 失败且不需要切换时抛出原始错误 (Should throw original error when Fetcher fails and no switch is needed)', async () => {
-    const params = { url: 'https://example.com', startCursor: 0 };
+    const params = { url: 'https://example.com', startCursor: 0, autoDetectMode: true };
     
     // 设置 Fetcher 抛出错误
     const originalError = new Error('Fetch failed');

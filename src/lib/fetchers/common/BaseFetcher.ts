@@ -10,6 +10,7 @@ import { ChunkManager } from '../../utils/ChunkManager.js';
 import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
 import { TemplateUtils } from '../../utils/TemplateUtils.js';
 import { ContentExtractor } from '../../utils/ContentExtractor.js';
+import { ContentWindowResult, formatContinuationNote, presentContent, readCursor } from '../../utils/ContentWindow.js';
 
 /**
  * 基础获取器类 (Base fetcher class)
@@ -45,6 +46,111 @@ export class BaseFetcher {
         {
           type: 'text',
           text: errorMessage
+        }
+      ]
+    };
+  }
+
+  /**
+   * 续传已保存的内容；没有游标或 chunkId 时返回 null
+   * (Continue a stored document. Returns null when neither cursor nor chunkId is set)
+   * @param requestPayload 请求参数 (Request parameters)
+   * @param debug 是否启用调试 (Whether debug is enabled)
+   * @param component 日志组件 (Log component)
+   * @returns 续传响应或 null (Continuation response, or null)
+   */
+  protected takeContinuation(
+    requestPayload: { cursor?: string; chunkId?: string; startCursor?: number; contentSizeLimit?: number; maxBytes?: number; maxChars?: number; enableContentSplitting?: boolean },
+    debug: boolean,
+    component: string
+  ): FetchResponse | null {
+    if (requestPayload.cursor) {
+      const window = readCursor(requestPayload.cursor, {
+        maxChars: requestPayload.maxChars ?? ContentSizeManager.getDefaultMaxChars(),
+        maxBytes: requestPayload.maxBytes ?? requestPayload.contentSizeLimit ?? ContentSizeManager.getDefaultMaxBytes()
+      });
+      if (!window) {
+        log('fetcher.chunkNotFound', debug, { chunkId: requestPayload.cursor }, component);
+        return BaseFetcher.createErrorResponse(`Continuation cursor not found or expired: ${requestPayload.cursor}`);
+      }
+      return this.wrapWindow(window);
+    }
+
+    if (requestPayload.chunkId) {
+      const startCursor = requestPayload.startCursor ?? 0;
+      const sizeLimit = requestPayload.contentSizeLimit ?? requestPayload.maxBytes ?? ContentSizeManager.getDefaultSizeLimit();
+      return this.getChunkContent(requestPayload.chunkId, startCursor, sizeLimit, debug, component);
+    }
+
+    return null;
+  }
+
+  /**
+   * 按 2.0 字符窗口或 1.x 字节分块返回正文
+   * (Return content with the 2.0 character window, or legacy byte chunks)
+   * @param content 正文 (Body text)
+   * @param requestPayload 请求参数 (Request parameters)
+   * @param debug 是否启用调试 (Whether debug is enabled)
+   * @param component 日志组件 (Log component)
+   * @param metadata 可选元数据 (Optional metadata)
+   * @returns 最终响应 (Final response)
+   */
+  protected finishContent(
+    content: string,
+    requestPayload: { contentSizeLimit?: number; maxChars?: number; maxBytes?: number; enableContentSplitting?: boolean },
+    debug: boolean,
+    component: string,
+    metadata?: FetchResponse['metadata']
+  ): FetchResponse {
+    const legacyByteChunks = requestPayload.contentSizeLimit !== undefined
+      && requestPayload.maxChars === undefined
+      && requestPayload.maxBytes === undefined;
+
+    let response: FetchResponse;
+    if (legacyByteChunks) {
+      const chunked = this.handleContentChunking(
+        content,
+        requestPayload.contentSizeLimit,
+        requestPayload.enableContentSplitting !== false,
+        debug,
+        component
+      );
+      response = chunked ?? BaseFetcher.createSuccessResponse(content);
+    } else {
+      const window = presentContent(content, {
+        maxChars: requestPayload.maxChars ?? ContentSizeManager.getDefaultMaxChars(),
+        maxBytes: requestPayload.maxBytes ?? ContentSizeManager.getDefaultMaxBytes(),
+        enableContinuation: requestPayload.enableContentSplitting !== false
+      });
+      response = this.wrapWindow(window);
+    }
+
+    if (metadata) {
+      response.metadata = metadata;
+    }
+    return response;
+  }
+
+  /**
+   * 把字符窗口结果包成获取响应 (Wrap a character window as a fetch response)
+   * @param window 窗口结果 (Window result)
+   * @returns 获取响应 (Fetch response)
+   */
+  private wrapWindow(window: ContentWindowResult): FetchResponse {
+    const note = formatContinuationNote(window);
+    return {
+      isError: false,
+      isChunked: window.truncated,
+      hasMoreChunks: Boolean(window.nextCursor),
+      chunkId: window.chunkId,
+      nextCursor: window.nextCursor,
+      totalChars: window.totalChars,
+      fetchedChars: window.fetchedChars,
+      truncated: window.truncated,
+      content: [
+        {
+          type: 'text',
+          text: window.text + note
         }
       ]
     };

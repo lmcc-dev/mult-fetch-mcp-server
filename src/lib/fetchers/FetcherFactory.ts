@@ -5,7 +5,6 @@
  */
 
 import { RequestPayload, IFetcher } from './common/types.js';
-import { BrowserFetcher } from './browser/BrowserFetcher.js';
 import { NodeFetcher } from './node/NodeFetcher.js';
 import { log, COMPONENTS } from '../logger.js';
 
@@ -19,7 +18,7 @@ export class FetcherFactory {
    * @param requestPayload 请求参数 (Request parameters)
    * @returns 抓取器实例 (Fetcher instance)
    */
-  public static createFetcher(requestPayload: RequestPayload): IFetcher {
+  public static async createFetcher(requestPayload: RequestPayload): Promise<IFetcher> {
     const { 
       useBrowser = false, 
       useNodeFetch = false, 
@@ -27,10 +26,19 @@ export class FetcherFactory {
       debug = false 
     } = requestPayload;
     
-    // 如果明确指定使用浏览器模式 (If browser mode is explicitly specified)
+    // 浏览器是可选路径，只有显式开启时才加载 Puppeteer
+    // (Browser mode is optional and loads Puppeteer only when explicitly requested)
     if (useBrowser) {
       log('factory.using_browser_mode', debug, {}, COMPONENTS.FETCHER_FACTORY);
-      return new BrowserFetcher();
+      try {
+        const { BrowserFetcher } = await import('./browser/BrowserFetcher.js');
+        return new BrowserFetcher();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(
+          `Browser mode requires the optional packages puppeteer, puppeteer-extra, and puppeteer-extra-plugin-stealth. ${message}`
+        );
+      }
     }
     
     // 如果明确指定使用Node模式 (If Node mode is explicitly specified)

@@ -18,7 +18,7 @@ import { initializeBrowser, closeBrowserInstance, shouldSwitchToBrowser } from '
  */
 export async function fetchWithAutoDetect(params: FetchParams, type: 'html' | 'json' | 'txt' | 'markdown' | 'plaintext') {
   const useBrowser = params.useBrowser === true;
-  const autoDetectMode = params.autoDetectMode !== false; // 除非明确设置为 false，否则默认为 true (Unless explicitly set to false, default to true)
+  const autoDetectMode = params.autoDetectMode === true; // 2.0 默认走 HTTP，浏览器回退需要显式打开 (2.0 stays on HTTP unless browser fallback is explicit)
   const closeBrowserAfterFetch = params.closeBrowser === true; // 是否在获取后关闭浏览器 (Whether to close the browser after fetching)
 
   // 严格从调用参数中获取debug值

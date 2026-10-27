@@ -1,7 +1,7 @@
 /**
  * Author: Martin <lmccc.dev@gmail.com>  
  * Co-Author: AI Assistant (Claude)
- * Description: This code was collaboratively developed by Martin and AI Assistant.
+ * Description: MCP tool registration. 2.0 exposes one fetch tool plus thin aliases. / MCP 工具注册。2.0 暴露一个 fetch 工具和薄别名。
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -12,6 +12,25 @@ import { FetchParams } from './types.js';
 import { closeBrowserInstance } from './browser.js';
 import { BaseFetcher } from '../fetchers/common/BaseFetcher.js';
 import { TemplateUtils } from '../utils/TemplateUtils.js';
+import { ContentSizeManager } from '../utils/ContentSizeManager.js';
+
+/**
+ * 2.0 支持的正文格式 (Body formats supported in 2.0)
+ */
+const FETCH_FORMATS = ['html', 'markdown', 'plaintext', 'json', 'txt'] as const;
+
+type FetchFormat = typeof FETCH_FORMATS[number];
+
+/**
+ * 1.x 工具名到格式的映射 (Map of 1.x tool names to formats)
+ */
+const ALIAS_FORMATS: Record<string, FetchFormat> = {
+  fetch_html: 'html',
+  fetch_json: 'json',
+  fetch_txt: 'txt',
+  fetch_markdown: 'markdown',
+  fetch_plaintext: 'plaintext'
+};
 
 /**
  * 基本请求参数定义 (Basic request parameters definition)
@@ -20,39 +39,35 @@ import { TemplateUtils } from '../utils/TemplateUtils.js';
 const baseRequestParams = {
   url: {
     type: "string",
-    description: "URL of the website to fetch",
-  },
-  startCursor: {
-    type: "number",
-    description: "Starting cursor position in bytes. Set to 0 for initial requests, and use the value from previous responses for subsequent requests to resume content retrieval.",
+    description: "Absolute http(s) URL to fetch. Required on the first call. Optional when cursor or chunkId continues a truncated response.",
   },
   headers: {
     type: "object",
-    description: "Optional headers to include in the request",
+    description: "Optional request headers as a string-to-string map.",
   },
   proxy: {
     type: "string",
-    description: "Optional proxy server to use (format: http://host:port or https://host:port)",
+    description: "Optional proxy URL (http://host:port or https://host:port).",
   },
   timeout: {
     type: "number",
-    description: "Optional timeout in milliseconds (default: 30000)",
+    description: "Request timeout in milliseconds. Default: 30000.",
   },
   maxRedirects: {
     type: "number",
-    description: "Optional maximum number of redirects to follow (default: 10)",
+    description: "Maximum redirects to follow. Default: 10. Each redirect is checked for SSRF.",
   },
   useSystemProxy: {
     type: "boolean",
-    description: "Optional flag to use system proxy environment variables (default: true)",
+    description: "Use HTTP_PROXY / HTTPS_PROXY / NO_PROXY when no proxy argument is set. Default: true.",
   },
   debug: {
     type: "boolean",
-    description: "Optional flag to enable detailed debug logging (default: false)",
+    description: "Write debug logs to stderr. Default: false. Do not enable unless the user asked for diagnostics.",
   },
   noDelay: {
     type: "boolean",
-    description: "Optional flag to disable random delay between requests (default: false)",
+    description: "Skip the random delay between redirects. Default: false.",
   }
 };
 
@@ -63,50 +78,66 @@ const baseRequestParams = {
 const browserParams = {
   useBrowser: {
     type: "boolean",
-    description: "Optional flag to use headless browser for fetching (default: false)",
+    description: "Use the optional headless browser. Default: false. Requires puppeteer to be installed. Leave false for normal HTTP fetches.",
   },
   waitForSelector: {
     type: "string",
-    description: "Optional CSS selector to wait for when using browser mode",
+    description: "CSS selector to wait for in browser mode.",
   },
   waitForTimeout: {
     type: "number",
-    description: "Optional timeout to wait after page load in browser mode (default: 5000)",
+    description: "Extra wait after load in browser mode, in milliseconds. Default: 5000.",
   },
   scrollToBottom: {
     type: "boolean",
-    description: "Optional flag to scroll to bottom of page in browser mode (default: false)",
+    description: "Scroll to the bottom before reading the page in browser mode. Default: false.",
   },
   closeBrowser: {
     type: "boolean",
-    description: "Optional flag to close the browser after fetching (default: false)",
+    description: "Close the browser after this call. Default: false.",
   },
   saveCookies: {
     type: "boolean",
-    description: "Optional flag to save cookies for future requests to the same domain (default: true)",
+    description: "Keep cookies for the same site across browser-mode calls. Default: true.",
   },
   autoDetectMode: {
     type: "boolean",
-    description: "Optional flag to automatically switch to browser mode if standard fetch fails (default: true). Set to false to strictly use the specified mode without automatic switching.",
+    description: "Retry with the browser after an HTTP 403 or challenge page. Default: false. Set true only when the HTTP fetch is blocked and puppeteer is installed.",
   }
 };
 
 /**
- * 内容管理参数定义 (Content management parameters definition)
- * 与内容大小和分块相关的参数 (Parameters related to content size and chunking)
+ * 内容窗口参数 (Content window parameters)
+ * 默认一次返回正文，只有被截断时才需要续传 (Return the body once; continue only when truncated)
  */
-const contentManagementParams = {
-  contentSizeLimit: {
+const contentWindowParams = {
+  maxChars: {
     type: "number",
-    description: "Optional maximum content size in bytes before splitting into chunks (default: 50KB). Set between 20KB-50KB for optimal results. For large content, prefer smaller values (20KB-30KB) to avoid truncation.",
+    description: "Maximum characters to return in this response. Default: 100000. The cut prefers a newline or space. Omit this on a normal fetch.",
   },
-  enableContentSplitting: {
-    type: "boolean",
-    description: "Optional flag to enable content splitting for large responses (default: true)",
+  maxBytes: {
+    type: "number",
+    description: "Maximum UTF-8 bytes to return in this response. Default: 1048576. Used together with maxChars; the smaller budget wins.",
+  },
+  cursor: {
+    type: "string",
+    description: "Continuation token from a previous truncated response (nextCursor). Omit on the first call. When set, the server returns the next slice and does not refetch the URL.",
   },
   chunkId: {
     type: "string",
-    description: `Optional chunk ID for retrieving a specific chunk of content from a previous request. The system adds prompts in the format ${TemplateUtils.SYSTEM_NOTE.START} ... ${TemplateUtils.SYSTEM_NOTE.END} which AI models should ignore when processing the content.`,
+    description: "Legacy or document id. Prefer cursor. With a 1.x byte chunk, also pass startCursor.",
+  },
+  startCursor: {
+    type: "number",
+    description: "Legacy byte offset used only with chunkId from a 1.x split. Not required. Do not send this for a normal fetch or for a cursor continuation.",
+  },
+  contentSizeLimit: {
+    type: "number",
+    description: "Legacy byte chunk size. When set without maxChars/maxBytes, the 1.x byte splitter is used. Prefer maxChars.",
+  },
+  enableContentSplitting: {
+    type: "boolean",
+    description: "When false, oversized content is truncated with no continuation cursor. Default: true.",
   }
 };
 
@@ -117,15 +148,15 @@ const contentManagementParams = {
 const contentExtractionParams = {
   extractContent: {
     type: "boolean",
-    description: "Optional flag to enable intelligent content extraction using Readability algorithm (default: false). Extracts main article content from web pages."
+    description: "Extract the main article with Readability before converting. Default: true for markdown and plaintext, false for html, json, and txt.",
   },
   includeMetadata: {
     type: "boolean",
-    description: "Optional flag to include metadata (title, author, etc.) in the extracted content (default: false). Only works when extractContent is true."
+    description: "Include title, byline, and site name when extractContent is true. Default: true.",
   },
   fallbackToOriginal: {
     type: "boolean",
-    description: "Optional flag to fall back to the original content when extraction fails (default: true). Only works when extractContent is true."
+    description: "If Readability finds no article, convert the original document. Default: true.",
   }
 };
 
@@ -141,81 +172,53 @@ function mergeParams(...objects: Record<string, any>[]) {
 }
 
 /**
- * 获取HTML获取工具定义 (Get HTML fetch tool definition)
- * @returns HTML获取工具定义 (HTML fetch tool definition)
+ * 主工具 fetch (Primary fetch tool)
+ * @returns 工具定义 (Tool definition)
  */
-function getHtmlFetchToolDefinition() {
+function getFetchToolDefinition() {
   return {
-    name: "fetch_html",
-    description: "Fetch a website and return the content as HTML. Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large pages. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
+    name: "fetch",
+    description: "Fetch an http(s) URL and return its content in one response. Use this to read a web page or a JSON/text URL. Default format is markdown with readable-article extraction. Do not send startCursor. Parameters that matter: url (required on the first call), format (html | markdown | plaintext | json | txt, default markdown). Optional: maxChars (default 100000), maxBytes (default 1048576), timeout (default 30000). If the response is truncated it includes nextCursor and chunkId; call fetch again with that cursor to continue. Private, loopback, and link-local targets are blocked. Browser rendering is off unless useBrowser or autoDetectMode is true.",
     inputSchema: {
       type: "object",
-      properties: mergeParams(baseRequestParams, browserParams, contentManagementParams, contentExtractionParams),
-      required: ["url", "startCursor"],
+      properties: mergeParams(
+        {
+          format: {
+            type: "string",
+            enum: [...FETCH_FORMATS],
+            description: "Output format. markdown (default) and plaintext extract readable content over HTTP. html returns markup. json expects a JSON document. txt returns the raw body.",
+          }
+        },
+        baseRequestParams,
+        browserParams,
+        contentWindowParams,
+        contentExtractionParams
+      ),
+      required: ["url"],
     },
   };
 }
 
 /**
- * 获取JSON获取工具定义 (Get JSON fetch tool definition)
- * @returns JSON获取工具定义 (JSON fetch tool definition)
+ * 1.x 别名工具 (Thin 1.x alias tool)
+ * @param name 工具名 (Tool name)
+ * @param format 固定格式 (Fixed format)
+ * @param summary 给模型的一句说明 (One-line description for the model)
+ * @returns 工具定义 (Tool definition)
  */
-function getJsonFetchToolDefinition() {
-  return {
-    name: "fetch_json",
-    description: "Fetch a JSON file from a URL. Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large files. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
-    inputSchema: {
-      type: "object",
-      properties: mergeParams(baseRequestParams, browserParams, contentManagementParams),
-      required: ["url", "startCursor"],
-    },
-  };
-}
+function getAliasToolDefinition(name: string, format: FetchFormat, summary: string) {
+  const properties = mergeParams(baseRequestParams, browserParams, contentWindowParams);
+  if (format !== 'json' && format !== 'txt') {
+    Object.assign(properties, contentExtractionParams);
+  }
 
-/**
- * 获取文本获取工具定义 (Get text fetch tool definition)
- * @returns 文本获取工具定义 (Text fetch tool definition)
- */
-function getTextFetchToolDefinition() {
   return {
-    name: "fetch_txt",
-    description: "Fetch a website, return the content as plain text (no HTML). Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large pages. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
+    name,
+    description: `Deprecated alias of fetch with format="${format}". ${summary} Prefer the fetch tool. startCursor is not required.`,
     inputSchema: {
       type: "object",
-      properties: mergeParams(baseRequestParams, browserParams, contentManagementParams, contentExtractionParams),
-      required: ["url", "startCursor"],
-    },
-  };
-}
-
-/**
- * 获取Markdown获取工具定义 (Get Markdown fetch tool definition)
- * @returns Markdown获取工具定义 (Markdown fetch tool definition)
- */
-function getMarkdownFetchToolDefinition() {
-  return {
-    name: "fetch_markdown",
-    description: "Fetch a website and return the content as Markdown. Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large pages. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
-    inputSchema: {
-      type: "object",
-      properties: mergeParams(baseRequestParams, browserParams, contentManagementParams, contentExtractionParams),
-      required: ["url", "startCursor"],
-    },
-  };
-}
-
-/**
- * 获取纯文本获取工具定义 (Get plain text fetch tool definition)
- * @returns 纯文本获取工具定义 (Plain text fetch tool definition)
- */
-function getPlainTextFetchToolDefinition() {
-  return {
-    name: "fetch_plaintext",
-    description: "Fetch a website and return the content as plain text with HTML tags removed. Best practices: 1) Always set startCursor=0 for initial requests, and use the fetchedBytes value from previous response for subsequent requests to ensure content continuity. 2) Set contentSizeLimit between 20000-50000 for large pages. 3) When handling large content, use the chunking system by following the startCursor instructions in the system notes rather than increasing contentSizeLimit. 4) If content retrieval fails, you can retry using the same chunkId and startCursor, or adjust startCursor as needed but you must handle any resulting data duplication or gaps yourself. 5) Always explain to users when content is chunked and ask if they want to continue retrieving subsequent parts.",
-    inputSchema: {
-      type: "object",
-      properties: mergeParams(baseRequestParams, browserParams, contentManagementParams, contentExtractionParams),
-      required: ["url", "startCursor"],
+      properties,
+      required: ["url"],
     },
   };
 }
@@ -226,12 +229,62 @@ function getPlainTextFetchToolDefinition() {
  */
 function getAllToolDefinitions() {
   return [
-    getHtmlFetchToolDefinition(),
-    getJsonFetchToolDefinition(),
-    getTextFetchToolDefinition(),
-    getMarkdownFetchToolDefinition(),
-    getPlainTextFetchToolDefinition()
+    getFetchToolDefinition(),
+    getAliasToolDefinition('fetch_html', 'html', 'Returns HTML.'),
+    getAliasToolDefinition('fetch_json', 'json', 'Returns a JSON document.'),
+    getAliasToolDefinition('fetch_txt', 'txt', 'Returns the raw response body.'),
+    getAliasToolDefinition('fetch_markdown', 'markdown', 'Returns Markdown.'),
+    getAliasToolDefinition('fetch_plaintext', 'plaintext', 'Returns plain text extracted from HTML.')
   ];
+}
+
+/**
+ * 解析本次调用的格式 (Resolve the format for this call)
+ * @param name 工具名 (Tool name)
+ * @param args 参数 (Arguments)
+ * @returns 格式，无法识别时返回 null (Format, or null when it is not recognized)
+ */
+function resolveFormat(name: string, args: Record<string, any>): FetchFormat | null {
+  if (name === 'fetch') {
+    const format = (args.format ?? 'markdown') as string;
+    return (FETCH_FORMATS as readonly string[]).includes(format) ? format as FetchFormat : null;
+  }
+  return ALIAS_FORMATS[name] ?? null;
+}
+
+/**
+ * 组装获取参数，并补上 2.0 默认值 (Build fetch params and apply 2.0 defaults)
+ * @param name 工具名 (Tool name)
+ * @param args 调用参数 (Call arguments)
+ * @param format 正文格式 (Body format)
+ * @returns 获取参数 (Fetch parameters)
+ */
+function buildFetchParams(name: string, args: Record<string, any>, format: FetchFormat): FetchParams {
+  const params: FetchParams = {
+    ...args,
+    url: typeof args.url === 'string' ? args.url : '',
+    method: name,
+    autoDetectMode: args.autoDetectMode === true
+  };
+
+  const legacyByteLimit = args.contentSizeLimit !== undefined
+    && args.maxChars === undefined
+    && args.maxBytes === undefined;
+
+  if (!legacyByteLimit) {
+    if (args.maxChars === undefined) {
+      params.maxChars = ContentSizeManager.getDefaultMaxChars();
+    }
+    if (args.maxBytes === undefined) {
+      params.maxBytes = ContentSizeManager.getDefaultMaxBytes();
+    }
+  }
+
+  if ((format === 'markdown' || format === 'plaintext') && args.extractContent === undefined) {
+    params.extractContent = true;
+  }
+
+  return params;
 }
 
 /**
@@ -259,25 +312,17 @@ function registerToolCallHandler(server: Server) {
     log('tools.callReceived', debug, { name, args: JSON.stringify(args) }, COMPONENTS.SERVER);
 
     try {
-      // 处理不同类型的获取请求 (Handle different types of fetch requests)
-      if (name === 'fetch_html' || name === 'fetch_json' || name === 'fetch_txt' || name === 'fetch_markdown' || name === 'fetch_plaintext') {
+      if (name === 'fetch' || name in ALIAS_FORMATS) {
         const result = await handleFetchRequest(name, args, debug);
-
-        // 直接返回符合 MCP SDK 要求的格式
         return result;
-      } else {
-        // 未知工具 (Unknown tool)
-        log('tools.unknownTool', debug, { name }, COMPONENTS.SERVER);
-
-        return BaseFetcher.createErrorResponse(`Unknown tool: ${name}`);
       }
-    } catch (error: any) {
-      // 处理错误 (Handle error)
-      log('tools.callError', debug, { name, error: error.message }, COMPONENTS.SERVER);
 
-      return BaseFetcher.createErrorResponse(`Error fetching ${args.url || `chunk ${args.chunkId}`}: ${error.message}`);
+      log('tools.unknownTool', debug, { name }, COMPONENTS.SERVER);
+      return BaseFetcher.createErrorResponse(`Unknown tool: ${name}`);
+    } catch (error: any) {
+      log('tools.callError', debug, { name, error: error.message }, COMPONENTS.SERVER);
+      return BaseFetcher.createErrorResponse(`Error fetching ${args.url || args.cursor || `chunk ${args.chunkId}`}: ${error.message}`);
     } finally {
-      // 如果请求参数中指定了关闭浏览器，则关闭浏览器 (If request parameters specify to close browser, close browser)
       if (args.closeBrowser === true) {
         await closeBrowserInstance(debug);
       }
@@ -293,92 +338,62 @@ function registerToolCallHandler(server: Server) {
  * @returns 请求结果 (Request result)
  */
 async function handleFetchRequest(name: string, args: any, debug: boolean) {
-  // 验证URL参数 (Validate URL parameter)
-  if (!args.url && !args.chunkId) {
+  const format = resolveFormat(name, args);
+  if (!format) {
+    return BaseFetcher.createErrorResponse(`Unsupported format: ${args.format}. Use one of: ${FETCH_FORMATS.join(', ')}.`);
+  }
+
+  if (!args.url && !args.chunkId && !args.cursor) {
     log('tools.missingUrlOrChunkId', debug, {}, COMPONENTS.SERVER);
-
-    return BaseFetcher.createErrorResponse("Either URL or chunkId parameter is required");
+    return BaseFetcher.createErrorResponse("url is required unless cursor or chunkId continues a truncated response");
   }
 
-  // 验证startCursor参数 (Validate startCursor parameter)
-  if (args.startCursor === undefined) {
-    log('tools.missingStartCursor', debug, {}, COMPONENTS.SERVER);
-
-    return BaseFetcher.createErrorResponse("startCursor parameter is required. Use 0 for initial requests.");
-  }
-
-  // 记录请求 (Log request)
-  if (args.chunkId) {
-    log('tools.fetchChunkRequest', debug, { chunkId: args.chunkId, startCursor: args.startCursor, type: name }, COMPONENTS.SERVER);
+  if (args.cursor || args.chunkId) {
+    log('tools.fetchChunkRequest', debug, { chunkId: args.chunkId || args.cursor, startCursor: args.startCursor, type: name }, COMPONENTS.SERVER);
   } else {
     log('tools.fetchRequest', debug, { url: args.url, startCursor: args.startCursor, type: name }, COMPONENTS.SERVER);
   }
 
-  // 执行获取请求 (Execute fetch request)
   try {
-    const params: FetchParams = {
-      ...args,
-      method: name
-    };
+    const params = buildFetchParams(name, args, format);
+    let result = await fetchWithAutoDetect(params, format);
 
-    // 根据工具名称确定内容类型 (Determine content type based on tool name)
-    const type = name.replace('fetch_', '') as 'html' | 'json' | 'txt' | 'markdown' | 'plaintext';
-
-    let result = await fetchWithAutoDetect(params, type);
-
-    // 确保返回标准结构体 (Ensure returning standard structure)
     if (result.isError) {
-      // 确保错误内容有正确的类型 (Ensure error content has correct type)
       if (!result.content[0].type) {
         result.content[0].type = "text";
       }
     } else {
-      // 对于 JSON 类型，验证内容是否为有效的 JSON (For JSON type, validate if content is valid JSON)
-      if (type === 'json') {
+      if (format === 'json') {
         try {
-          // 尝试解析 JSON (Try to parse JSON)
           JSON.parse(result.content[0].text);
         } catch (jsonError: any) {
-          // JSON 解析失败，但仍然返回原始内容 (JSON parsing failed, but still return original content)
           log('tools.jsonParseWarning', debug, { error: jsonError.message }, COMPONENTS.SERVER);
-
-          // 不将 isError 设置为 true，保持原始结果
-          // (Don't set isError to true, keep original result)
         }
       }
 
-      // 确保成功内容有正确的类型 (Ensure success content has correct type)
       if (!result.content[0].type) {
         result.content[0].type = "text";
       }
 
-      // 如果内容是分段的，添加提示词 (If content is chunked, add prompt)
-      if (result.isChunked && result.hasMoreChunks) {
-        // 检查内容中是否已经包含系统提示，避免重复添加
-        // Check if content already contains system note to avoid duplicate
-        if (!TemplateUtils.hasSystemPrompt(result.content[0].text || '')) {
-          // 使用BaseFetcher的addChunkPrompt方法添加提示词 (Use BaseFetcher's addChunkPrompt method to add prompt)
-          result = BaseFetcher.addChunkPrompt(result);
-        }
+      if (result.isChunked && result.hasMoreChunks && !TemplateUtils.hasSystemPrompt(result.content[0].text || '')) {
+        result = BaseFetcher.addChunkPrompt(result);
       }
     }
 
-    // 如果没有匹配的类型，返回错误
     if (!result.content[0].type) {
-      return BaseFetcher.createErrorResponse(`Unsupported content type: ${type}`);
+      return BaseFetcher.createErrorResponse(`Unsupported content type: ${format}`);
     }
 
-    // 将FetchResponse转换为符合MCP SDK要求的格式
     return {
       content: result.content,
-      isError: result.isError
+      isError: result.isError,
+      ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
+      ...(result.chunkId && result.hasMoreChunks ? { chunkId: result.chunkId } : {}),
+      ...(result.truncated ? { truncated: true } : {})
     };
   } catch (error: any) {
-    // 处理错误 (Handle error)
     log('tools.fetchError', debug, { url: args.url, error: error.message }, COMPONENTS.SERVER);
-
-    // 返回错误信息 (Return error message)
-    return BaseFetcher.createErrorResponse(`Error fetching ${args.url || `chunk ${args.chunkId}`}: ${error.message}`);
+    return BaseFetcher.createErrorResponse(`Error fetching ${args.url || args.cursor || `chunk ${args.chunkId}`}: ${error.message}`);
   }
 }
 
@@ -388,9 +403,6 @@ async function handleFetchRequest(name: string, args: any, debug: boolean) {
  * @param server MCP服务器实例 (MCP server instance)
  */
 export function registerTools(server: Server): void {
-  // 注册工具列表处理程序 (Register tool list handler)
   registerToolListHandler(server);
-
-  // 注册工具调用处理程序 (Register tool call handler)
   registerToolCallHandler(server);
 }

@@ -104,9 +104,39 @@ export interface FetchParams {
    * 内容大小限制(字节) (Content size limit in bytes)
    */
   contentSizeLimit?: number;
+
+  /**
+   * 单次响应最大字符数 (Maximum characters in one response)
+   */
+  maxChars?: number;
+
+  /**
+   * 单次响应最大字节数 (Maximum bytes in one response)
+   */
+  maxBytes?: number;
+
+  /**
+   * 截断后续传游标 (Continuation cursor after truncation)
+   */
+  cursor?: string;
   
   /**
    * 是否启用内容分割 (Whether to enable content splitting)
    */
   enableContentSplitting?: boolean;
+
+  /**
+   * 是否提取可读正文 (Whether to extract readable content)
+   */
+  extractContent?: boolean;
+
+  /**
+   * 是否在提取结果中包含元数据 (Whether extracted output includes metadata)
+   */
+  includeMetadata?: boolean;
+
+  /**
+   * 提取失败时是否回退到原文 (Whether to fall back to the original document)
+   */
+  fallbackToOriginal?: boolean;
 }

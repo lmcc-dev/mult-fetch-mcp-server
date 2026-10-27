@@ -8,7 +8,6 @@ import { RequestPayload, FetchResponse, IFetcher } from "../common/types.js";
 import { log, COMPONENTS } from '../../logger.js';
 import { HttpClient } from './HttpClient.js';
 import { ErrorHandler } from '../../utils/ErrorHandler.js';
-import { ContentSizeManager } from '../../utils/ContentSizeManager.js';
 import { BaseFetcher } from "../common/BaseFetcher.js";
 import { ContentProcessor } from "../../utils/ContentProcessor.js";
 // import { ContentExtractor } from '../../utils/ContentExtractor.js';
@@ -26,18 +25,15 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
   public async html(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
       debug = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0,
       extractContent = false,
       includeMetadata = true,
       fallbackToOriginal = true
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.NODE_FETCH);
+    // 续传优先于重新请求 (Continuation takes priority over a new request)
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.NODE_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('node.startingHtmlFetch', debug, {}, COMPONENTS.NODE_FETCH);
@@ -64,32 +60,8 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
         COMPONENTS.NODE_FETCH
       );
 
-      // 检查内容大小并处理 (Check content size and process)
-      const chunkingResult = this.handleContentChunking(
-        processedContent,
-        contentSizeLimit,
-        enableContentSplitting,
-        debug,
-        COMPONENTS.NODE_FETCH
-      );
-
-      if (chunkingResult) {
-        // 如果有元数据，添加到分块结果中 (If there is metadata, add it to the chunk result)
-        if (metadata) {
-          chunkingResult.metadata = metadata;
-        }
-        return chunkingResult;
-      }
-
-      // 返回内容 (Return content)
-      const result = BaseFetcher.createSuccessResponse(processedContent);
-
-      // 如果有元数据，添加到结果中 (If there is metadata, add it to the result)
-      if (metadata) {
-        result.metadata = metadata;
-      }
-
-      return result;
+      // 按字符窗口或旧版字节分块返回 (Return via the character window or legacy byte chunks)
+      return this.finishContent(processedContent, requestPayload, debug, COMPONENTS.NODE_FETCH, metadata ?? undefined);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -111,16 +83,12 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
    */
   public async json(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
-      debug = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0
+      debug = false
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.NODE_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.NODE_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('node.startingJsonFetch', debug, {}, COMPONENTS.NODE_FETCH);
@@ -138,21 +106,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
         JSON.parse(text);
         log('node.jsonParsed', debug, {}, COMPONENTS.NODE_FETCH);
 
-        // 检查内容大小并处理 (Check content size and process)
-        const chunkingResult = this.handleContentChunking(
-          text,
-          contentSizeLimit,
-          enableContentSplitting,
-          debug,
-          COMPONENTS.NODE_FETCH
-        );
-
-        if (chunkingResult) {
-          return chunkingResult;
-        }
-
-        // 返回JSON内容 (Return JSON content)
-        return BaseFetcher.createSuccessResponse(text);
+        return this.finishContent(text, requestPayload, debug, COMPONENTS.NODE_FETCH);
       } catch (parseError) {
         // 处理JSON解析错误 (Handle JSON parse error)
         const textPreview = text.length > 100 ? `${text.substring(0, 100)}...` : text;
@@ -190,16 +144,12 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
    */
   public async txt(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
-      debug = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0
+      debug = false
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.NODE_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.NODE_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('node.startingTxtFetch', debug, {}, COMPONENTS.NODE_FETCH);
@@ -213,21 +163,7 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       const text = await response.text();
       log('node.textContentLength', debug, { length: text.length }, COMPONENTS.NODE_FETCH);
 
-      // 检查内容大小并处理 (Check content size and process)
-      const chunkingResult = this.handleContentChunking(
-        text,
-        contentSizeLimit,
-        enableContentSplitting,
-        debug,
-        COMPONENTS.NODE_FETCH
-      );
-
-      if (chunkingResult) {
-        return chunkingResult;
-      }
-
-      // 返回纯文本内容 (Return plain text content)
-      return BaseFetcher.createSuccessResponse(text);
+      return this.finishContent(text, requestPayload, debug, COMPONENTS.NODE_FETCH);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -250,15 +186,14 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
   public async plainText(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
       debug = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0
+      extractContent = false,
+      includeMetadata = true,
+      fallbackToOriginal = true
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.NODE_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.NODE_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('node.startingPlainTextFetch', debug, { url: requestPayload.url }, COMPONENTS.NODE_FETCH);
@@ -270,24 +205,19 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       // 读取响应文本 (Read response text)
       const html = await response.text();
 
-      // 将HTML转换为纯文本 (Convert HTML to plain text)
-      const plainText = ContentProcessor.htmlToText(html, debug);
-
-      // 检查内容大小并处理 (Check content size and process)
-      const chunkingResult = this.handleContentChunking(
-        plainText,
-        contentSizeLimit,
-        enableContentSplitting,
+      // markdown/plaintext 默认先抽取可读正文 (Readable extraction runs before plain-text conversion)
+      const { content: processedHtml, metadata } = this.processWithContentExtraction(
+        html,
+        requestPayload.url,
+        { extractContent, includeMetadata, fallbackToOriginal },
         debug,
         COMPONENTS.NODE_FETCH
       );
 
-      if (chunkingResult) {
-        return chunkingResult;
-      }
+      // 将HTML转换为纯文本 (Convert HTML to plain text)
+      const plainText = ContentProcessor.htmlToText(processedHtml, debug);
 
-      // 返回纯文本内容 (Return plain text content)
-      return BaseFetcher.createSuccessResponse(plainText);
+      return this.finishContent(plainText, requestPayload, debug, COMPONENTS.NODE_FETCH, metadata ?? undefined);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(
@@ -310,15 +240,14 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
   public async markdown(requestPayload: RequestPayload): Promise<FetchResponse> {
     const {
       debug = false,
-      contentSizeLimit = ContentSizeManager.getDefaultSizeLimit(),
-      enableContentSplitting = true,
-      chunkId,
-      startCursor = 0
+      extractContent = false,
+      includeMetadata = true,
+      fallbackToOriginal = true
     } = requestPayload;
 
-    // 如果提供了分段ID和起始游标，则从缓存中获取分段内容 (If chunk ID and startCursor are provided, get chunk content from cache)
-    if (chunkId && startCursor !== undefined) {
-      return this.getChunkContent(chunkId, startCursor, contentSizeLimit, debug, COMPONENTS.NODE_FETCH);
+    const continued = this.takeContinuation(requestPayload, debug, COMPONENTS.NODE_FETCH);
+    if (continued) {
+      return continued;
     }
 
     log('node.startingMarkdownFetch', debug, { url: requestPayload.url }, COMPONENTS.NODE_FETCH);
@@ -330,24 +259,19 @@ export class NodeFetcher extends BaseFetcher implements IFetcher {
       // 读取响应文本 (Read response text)
       const html = await response.text();
 
-      // 将HTML转换为Markdown (Convert HTML to Markdown)
-      const markdown = ContentProcessor.htmlToMarkdown(html, debug);
-
-      // 检查内容大小并处理 (Check content size and process)
-      const chunkingResult = this.handleContentChunking(
-        markdown,
-        contentSizeLimit,
-        enableContentSplitting,
+      // markdown/plaintext 默认先抽取可读正文 (Readable extraction runs before Markdown conversion)
+      const { content: processedHtml, metadata } = this.processWithContentExtraction(
+        html,
+        requestPayload.url,
+        { extractContent, includeMetadata, fallbackToOriginal },
         debug,
         COMPONENTS.NODE_FETCH
       );
 
-      if (chunkingResult) {
-        return chunkingResult;
-      }
+      // 将HTML转换为Markdown (Convert HTML to Markdown)
+      const markdown = ContentProcessor.htmlToMarkdown(processedHtml, debug);
 
-      // 返回Markdown内容 (Return Markdown content)
-      return BaseFetcher.createSuccessResponse(markdown);
+      return this.finishContent(markdown, requestPayload, debug, COMPONENTS.NODE_FETCH, metadata ?? undefined);
     } catch (error) {
       // 使用ErrorHandler处理错误 (Use ErrorHandler to handle error)
       const errorMessage = ErrorHandler.handleError(

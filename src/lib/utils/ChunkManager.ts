@@ -42,6 +42,12 @@ export class ChunkManager {
   private static chunks: Map<string, string[]> = new Map();
 
   /**
+   * 整篇文档缓存，供字符窗口续传使用
+   * (Full-document cache used for character-window continuation)
+   */
+  private static documents: Map<string, string> = new Map();
+
+  /**
    * 存储分段内容大小信息的Map (Map to store chunk size information)
    * 键为分段ID，值为{totalBytes, fetchedBytes}对象 (Key is chunk ID, value is {totalBytes, fetchedBytes} object)
    */
@@ -98,6 +104,38 @@ export class ChunkManager {
     }, COMPONENTS.CHUNK_MANAGER);
 
     return chunkId;
+  }
+
+  /**
+   * 保存整篇文档以便按字符窗口续传
+   * (Store a full document for character-window continuation)
+   * @param content 完整内容 (Full content)
+   * @param debug 是否启用调试模式 (Whether debug mode is enabled)
+   * @returns 文档 ID (Document id)
+   */
+  public static storeDocument(content: string, debug: boolean = false): string {
+    this.cleanupExpiredChunks(debug);
+    const chunkId = uuidv4();
+    this.documents.set(chunkId, content);
+    this.expirations.set(chunkId, Date.now() + this.EXPIRATION_TIME);
+    log('chunkManager.storedChunks', debug, {
+      chunkId,
+      count: 1,
+      totalChunks: 1,
+      totalBytes: Buffer.byteLength(content, 'utf8'),
+      totalChars: content.length
+    }, COMPONENTS.CHUNK_MANAGER);
+    return chunkId;
+  }
+
+  /**
+   * 读取已保存的整篇文档 (Read a stored full document)
+   * @param chunkId 文档 ID (Document id)
+   * @returns 文档内容；不存在或已过期时返回 null (Document text, or null when missing or expired)
+   */
+  public static readDocument(chunkId: string): string | null {
+    this.cleanupExpiredChunks(false);
+    return this.documents.get(chunkId) ?? null;
   }
 
   /**
@@ -235,6 +273,7 @@ export class ChunkManager {
       // 如果分段内容已过期，则删除 (If chunk content has expired, delete it)
       if (expirationTime < now) {
         this.chunks.delete(chunkId);
+        this.documents.delete(chunkId);
         this.sizeInfo.delete(chunkId);
         this.expirations.delete(chunkId);
         expiredCount++;

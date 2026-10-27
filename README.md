@@ -29,6 +29,82 @@ This project implements an MCP-compliant client and server for communication bet
 
 [English](./README.md) | [中文文档](./README.zh.md)
 
+## Version 2.0
+
+Call the `fetch` tool with a URL. The default format is Markdown, using an HTTP fetch plus readable-article extraction. `startCursor` is not required.
+
+| `format` | What you get |
+| --- | --- |
+| `markdown` | Readable article as Markdown (default) |
+| `plaintext` | Readable article as plain text |
+| `html` | HTML markup |
+| `json` | JSON document |
+| `txt` | Raw response body |
+
+A normal page comes back in one response. The default budget is `maxChars` 100000 and `maxBytes` 1048576, and a cut prefers a newline or a space. When the body is longer, the response includes `nextCursor` and `chunkId`. Call `fetch` again with `cursor` set to `nextCursor`.
+
+`fetch_html`, `fetch_json`, `fetch_txt`, `fetch_markdown`, and `fetch_plaintext` are thin aliases of `fetch` with a fixed format.
+
+### Cursor
+
+Add this to `~/.cursor/mcp.json`, or to `.cursor/mcp.json` in a project:
+
+```json
+{
+  "mcpServers": {
+    "mult-fetch": {
+      "command": "npx",
+      "args": ["-y", "@lmcc-dev/mult-fetch-mcp-server"],
+      "env": {
+        "MCP_LANG": "en"
+      }
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "mult-fetch": {
+      "command": "npx",
+      "args": ["-y", "@lmcc-dev/mult-fetch-mcp-server"],
+      "env": {
+        "MCP_LANG": "en"
+      }
+    }
+  }
+}
+```
+
+Restart the host after saving. Ask it to fetch a URL. It should call `fetch` without `startCursor`.
+
+### Browser mode
+
+The default HTTP fetcher does not need Chrome or Puppeteer. A normal install works without them (`npm install --omit=optional` skips the optional packages). To render pages in a headless browser, install the optional packages and set `useBrowser` to true:
+
+```bash
+npm install puppeteer puppeteer-extra puppeteer-extra-plugin-stealth
+```
+
+`autoDetectMode` defaults to false, so a 403 does not launch a browser unless you set that flag.
+
+### Security
+
+Every request, including redirects, is checked before it is sent:
+
+- Loopback (`127.0.0.0/8`, `::1`, `localhost`)
+- Private networks (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`)
+- Link-local and cloud metadata (`169.254.0.0/16`, including `169.254.169.254`, and IPv6 `fe80::/10`)
+- Carrier-grade NAT `100.64.0.0/10`, documentation ranges, and private addresses embedded in 6to4, NAT64, or IPv4-mapped IPv6
+
+Direct connections are pinned to the addresses that passed that check. The default timeout is 30 seconds, and each response is limited by `maxChars` and `maxBytes`. Browser mode keeps the same URL checks. Set `ALLOW_PRIVATE_NETWORK_REQUESTS=true` only when you intentionally want the browser to open a private-network target.
+
 ## Project Structure
 
 ```
@@ -78,10 +154,9 @@ This project implements the Standard Input/Output (Stdio) transport method.
 
 - Implementation based on the official MCP SDK
 - Support for Standard Input/Output (Stdio) transport
-- Multiple web scraping methods (HTML, JSON, text, Markdown, plain text conversion)
-- Intelligent mode switching: automatic switching between standard requests and browser mode
-- Content size management: automatically splits large content into manageable chunks to solve AI model context size limitations
-- Chunked content retrieval: ability to request specific chunks of large content while maintaining context continuity
+- One `fetch` tool with `format` set to HTML, JSON, text, Markdown, or plain text
+- HTTP fetch by default, with optional headless-browser rendering
+- Single-response content window (`maxChars` / `maxBytes`) and optional `cursor` continuation when the body is truncated
 - Detailed debug logging to stderr
 - Bilingual internationalization (English and Chinese)
 - Modular design for easy maintenance and extension
@@ -179,11 +254,8 @@ The image shows how Claude can use the fetch tools to retrieve web content and p
 
 After configuration, restart Claude desktop, and you can use the following tools in your conversation:
 
-- `fetch_html`: Get HTML content of a webpage
-- `fetch_json`: Get JSON data
-- `fetch_txt`: Get plain text content
-- `fetch_markdown`: Get Markdown formatted content
-- `fetch_plaintext`: Get plain text content converted from HTML (strips HTML tags)
+- `fetch`: Fetch a URL. Set `format` to `html`, `markdown` (default), `plaintext`, `json`, or `txt`
+- `fetch_html`, `fetch_json`, `fetch_txt`, `fetch_markdown`, `fetch_plaintext`: aliases of `fetch` kept from 1.x
 
 ## Build
 
@@ -434,11 +506,8 @@ if (result.isError) {
 
 ### Supported Tools
 
-- `fetch_html`: Get HTML content of a webpage
-- `fetch_json`: Get JSON data
-- `fetch_txt`: Get plain text content
-- `fetch_markdown`: Get Markdown formatted content
-- `fetch_plaintext`: Get plain text content converted from HTML (strips HTML tags)
+- `fetch`: Fetch a URL. `format` is `html`, `markdown` (default), `plaintext`, `json`, or `txt`
+- `fetch_html`, `fetch_json`, `fetch_txt`, `fetch_markdown`, `fetch_plaintext`: 1.x aliases of `fetch`
 
 ### Resources Support
 
@@ -509,22 +578,23 @@ Each tool supports the following parameters:
 - `noDelay`: Whether to disable random delay between requests (optional, default is false)
 - `useSystemProxy`: Whether to use system proxy (optional, default is true)
 
-#### Content Size Control Parameters
-- `enableContentSplitting`: Whether to split large content into chunks (optional, default is true)
-- `contentSizeLimit`: Maximum content size in bytes before splitting (optional, default is 50000)
-- `startCursor`: Starting cursor position in bytes for retrieving content from a specific position (optional, default is 0)
-
-These parameters help manage large content that would exceed AI model context size limits, allowing you to retrieve web content in manageable chunks while maintaining the ability to process the complete information.
+#### Content Window
+- `maxChars`: Maximum characters in this response (optional, default 100000). The cut prefers a newline or space.
+- `maxBytes`: Maximum UTF-8 bytes in this response (optional, default 1048576).
+- `cursor`: Continuation token from `nextCursor`. Omit it on the first call. When it is set, the server does not refetch the URL.
+- `enableContentSplitting`: When false, oversized content is truncated with no cursor (optional, default true).
+- `contentSizeLimit`: Legacy byte-chunk size. When set without `maxChars` or `maxBytes`, the 1.x byte splitter is used.
+- `startCursor`: Legacy byte offset. Not required. Use it only with a 1.x `chunkId`.
 
 #### Chunk Management
-- `chunkId`: Unique identifier for a chunk set when content is split (used for requesting subsequent chunks)
+- `chunkId`: Document id returned with `nextCursor` when a response was truncated.
 
-When content is split into chunks, the response includes metadata that allows the AI to request subsequent chunks using the `chunkId` and `startCursor` parameters. The system uses byte-level chunk management to provide precise control over content retrieval, enabling seamless processing of content from any position.
+Pass `cursor` back to `fetch` to read the next slice. `startCursor` is not part of that flow.
 
 #### Mode Control Parameters
 - `useBrowser`: Whether to use browser mode (optional, default is false)
 - `useNodeFetch`: Whether to force using Node.js mode (optional, default is false, mutually exclusive with `useBrowser`)
-- `autoDetectMode`: Whether to automatically detect and switch to browser mode if standard mode fails with 403/Forbidden errors (optional, default is true). Set to false to strictly use the specified mode without automatic switching.
+- `autoDetectMode`: Retry a 403 or challenge page in the browser (optional, default false). Requires the optional Puppeteer packages.
 
 #### Browser Mode Specific Parameters
 - `waitForSelector`: Selector to wait for in browser mode (optional, default is 'body')
@@ -534,7 +604,7 @@ When content is split into chunks, the response includes metadata that allows th
 - `closeBrowser`: Whether to close the browser instance (optional, default is false)
 
 #### Content Extraction Parameters
-- `extractContent`: Whether to use the Readability algorithm to extract main content (optional, default false)
+- `extractContent`: Use Readability before conversion (optional). Default true for `markdown` and `plaintext`, false for `html`, `json`, and `txt`.
 - `includeMetadata`: Whether to include metadata in the extracted content (optional, default false, only works when `extractContent` is true)
 - `fallbackToOriginal`: Whether to fall back to the original content when extraction fails (optional, default true, only works when `extractContent` is true)
 

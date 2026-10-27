@@ -77,6 +77,9 @@ export const RequestPayloadSchema = z.object({
   enableContentSplitting: z.boolean().optional(),
   chunkId: z.string().optional(),
   startCursor: z.number().optional(),
+  maxChars: z.number().optional(),
+  maxBytes: z.number().optional(),
+  cursor: z.string().optional(),
 }).merge(BrowserParamsSchema).merge(ContentExtractionOptionsSchema);
 
 export type RequestPayload = z.infer<typeof RequestPayloadSchema>;
@@ -99,6 +102,12 @@ export interface FetchResponse {
   fetchedBytes?: number;   // 已获取的字节数 (Fetched bytes)
   remainingBytes?: number; // 剩余字节数 (Remaining bytes)
   isLastChunk?: boolean;   // 是否是最后一个分块 (Whether it's the last chunk)
+
+  // 字符窗口续传 (Character-window continuation)
+  nextCursor?: string;
+  totalChars?: number;
+  fetchedChars?: number;
+  truncated?: boolean;
 
   // 新增的内容提取相关属性 (New content extraction related properties)
   metadata?: {
